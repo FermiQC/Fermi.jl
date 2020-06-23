@@ -1,0 +1,2 @@
+split out tests into runnable .jl files for each submodule
+then `include("example.jl")` for each in runtests.jl

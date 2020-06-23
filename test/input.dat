@@ -1,0 +1,15 @@
+molecule = """
+0 1
+O
+H 1 1.1
+H 1 1.1 2 104.0
+"""
+--
+options = Dict(
+    "reference" => "rhf",
+    "basis" => "cc-pvdz",
+    :doprint => true,
+    :quiet => true
+)
+--
+command = Fermi.CoupledCluster.RCCSD.do_rccsd
