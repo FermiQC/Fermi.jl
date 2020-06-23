@@ -202,12 +202,6 @@ uuid = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
 deps = ["Libdl"]
 uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 
-[[Lints]]
-deps = ["CxxWrap", "Eigen_jll", "Libdl", "Pkg", "Test", "boost_jll", "libint_jll"]
-path = "/home/gustavo/.julia/dev/Lints"
-uuid = "969b4477-8239-4824-a7ce-fb2a72cbc115"
-version = "0.1.0"
-
 [[Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 
