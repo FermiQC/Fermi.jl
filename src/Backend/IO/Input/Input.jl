@@ -45,9 +45,6 @@ cont is composed of:
          "command"=>command::function)
 """
 function exec(cont)
-    if !occursin("symmetry c1",lowercase(cont["molecule"]))
-        cont["molecule"] *= "symmetry c1"
-    end
     open("/tmp/molfile.xyz","w") do molfile
         write(molfile,"3\n\n")
         write(molfile,cont["molecule"])

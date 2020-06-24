@@ -1,39 +1,9 @@
 module RHF
 using Fermi
-using TensorOperations
-using LinearAlgebra
-using Lints
 using Fermi.Output
+using LinearAlgebra
 
-export RHF
-export RHFWfn
-export RHFCompute
-
-struct RHFWfn
-    energy::Array{Float64,1}
-    molecule::Lints.MoleculeAllocated
-    basis::Lints.BasisSetAllocated
-    nelec::Int
-    C::Array{Float64,2}
-    eps::Array{Float64,1}
-    H::Array{Float64,2}
-    S::Array{Float64,2}
-    A::Array{Float64,2}
-    D::Array{Float64,2}
-    I::Array{Float64,4}
-    vnuc::Float64
-    ndocc::Int
-    grad::Bool
-    hess::Bool
-    GradN::Array{Float64,2}
-    GradS::Array{Float64,2}
-    GradSp::Array{Float64,2}
-    GradV::Array{Float64,2}
-    GradT::Array{Float64,2}
-    GradJ::Array{Float64,2}
-    GradK::Array{Float64,2}
-    Grad::Array{Float64,2}
-end
+export do_RHF
 
 function RHFWfn(basis,molecule,nelec;debug=false,grad=false,hess=false)
     dummy2 = Array{Float64}(undef,0,0)
@@ -74,49 +44,57 @@ function RHFWfn(basis,molecule,nelec;debug=false,grad=false,hess=false)
 end
 
 
-function RHFCompute(wfn::RHFWfn;doprint=false,maxit=50,Etol=1E-7,Dtol=1E-7)
+function do_RHF(Fermi.ReferenceWavefunction; doprint=false,maxit=50,Etol=1E-7,Dtol=1E-7)
     Fermi.HartreeFock.print_header()
     @output "    executing RHF\n"
-    @output "    computing AO basis integrals ... \n"
-    @output "           using {:>2} engines for integral computation.\n" Threads.nthreads()
-    nprim = Lints.max_nprim(wfn.basis)
-    l = Lints.max_l(wfn.basis)
-    engines = []
-    for i in 1:Threads.nthreads()
-        push!(engines,Lints.ERIEngine(nprim,l))
-    end
-    Lints.make_ERI(wfn.I,engines,wfn.basis)
-    G = 2*wfn.I - permutedims(wfn.I,[1,3,2,4])
-    t = 0.0
-    @output "    done in {:>5.2f}s\n" t
+    #@output "    computing AO basis integrals ... \n"
+    #@output "           using {:>2} engines for integral computation.\n" Threads.nthreads()
+    #t = @elapsed begin 
+    #    nprim = Lints.max_nprim(wfn.basis)
+    #    l = Lints.max_l(wfn.basis)
+    #    I_engines = []
+    #    for i in 1:Threads.nthreads()
+    #        push!(I_engines,Lints.ERIEngine(nprim,l))
+    #    end
+    #    Lints.make_ERI(wfn.ERI,I_engines,wfn.basis)
+    #    G = Fermi.IntegralTransformation.antisymmetrize(wfn.ERI) #2*wfn.I - permutedims(wfn.I,[1,3,2,4])
+    #end
+    #@output "    done in {:>5.2f}s\n" t
     @output "    Forming initial Fock matrix ... "
+    A = wfn.S^(-1/2)
     t = @elapsed begin
-        Ft = transpose(wfn.A)*wfn.H*wfn.A
+        Ft = transpose(A)*(wfn.T+wfn.V)*A
         e,Ct = eigen(Ft)
         C = wfn.A*Ct
         Co = C[:,1:wfn.ndocc]
     end
     @output "done in {:>5.2f}s\n" t
-    @tensor D[u,v] := Co[u,m]*Co[v,m]
-    @tensor F[m,n] := D[r,s]*G[m,n,r,s]
-    F += wfn.H
-    E = 0#RHFEnergy(D,wfn.H,F) + wfn.vnuc
-    #if doprint println("@RHF 0 $E") end
-
+    #@tensor D[u,v] := Co[u,m]*Co[v,m]
+    D = Fermi.contract(Co,Co,"um","vm")
+    #@tensor F[m,n] := D[r,s]*G[m,n,r,s]
+    F = Fermi.contract(D,G,"rs","mnrs")
+    F += wfn.T
+    F += wfn.V
+    E = 0
     @output "\n"
     @output " Iter.   {:<20} {:>11} {:>11} {:>8}\n" "E[RHF]" "dE" "√|D|²" "t"
     @output repeat("~",80)*"\n"
     t = @elapsed for i in 1:maxit
         t_iter = @elapsed begin
-            @tensor F[m,n] := wfn.H[m,n] + D[r,s]*G[m,n,r,s]
-            Eelec = RHFEnergy(D,wfn.H,F)
+            F .= 0
+            F += wfn.T
+            F += wfn.V
+            #@tensor F[m,n] := wfn.H[m,n] + D[r,s]*G[m,n,r,s]
+            Fermi.contract!(F,D,G,"mn","rs","mnrs")
+            Eelec = RHFEnergy(D,wfn.T+wfn.V,F)
             Enew = Eelec + wfn.vnuc
-            Ft = transpose(wfn.A)*F*wfn.A
+            Ft = transpose(A)*F*A
             Ft = Symmetric(Ft)
             e,Ct = eigen(Ft)#,sortby = x->-abs(x))
-            C = wfn.A*Ct
-            Co = C[:,1:wfn.ndocc]
-            @tensor Dnew[u,v] := Co[u,m]*Co[v,m]
+            C = A*Ct
+            Co = C[:,1:wfn.nocca]
+            #@tensor Dnew[u,v] := Co[u,m]*Co[v,m]
+            Dnew = Fermi.contract(Co,Co,"um","vm")
             dD = Dnew - D
             Drms = sqrt(sum(dD)^2)
             dE = Enew - E
@@ -130,9 +108,11 @@ function RHFCompute(wfn::RHFWfn;doprint=false,maxit=50,Etol=1E-7,Dtol=1E-7)
         end
     end
     @output repeat("~",80)*"\n"
-    wfn.eps .= e
-    wfn.C .= C 
-    wfn.energy[1] = E
+    wfn.epsa .= e
+    wfn.epsb .= e
+    wfn.Ca .= C 
+    wfn.Cb .= C 
+    wfn.refEnergy = E
     @output "    RHF done in {:>5.2f}s\n" t
     @output "    @E[RHF] = {:>20.17f}\n" E
 end
@@ -150,19 +130,7 @@ two electron integrals in the AO basis, as well as the desired density matrix.
     E::Float            -> SCF energy
 """
 function RHFEnergy(D,H,F)
-    temp = H + F
-    @tensor begin
-        E[] := D[m,n]*temp[m,n]
-    end
-    return E[]
-end
-
-function get_nuclear_repulsion()
-    open("/tmp/molfile.xyz","w") do molfile
-        for l in eachline(molfile)
-            println(l)
-        end
-    end
+    sum(D .* (H .+ F))
 end
 
 end #module

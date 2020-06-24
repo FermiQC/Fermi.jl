@@ -1,5 +1,6 @@
 module HartreeFock
 using Fermi
+using Lints
 #using PyCall
 using TensorOperations
 using LinearAlgebra
@@ -16,6 +17,5 @@ defaults = Dict{Any,Any}(
                         :e_convergence => 1E-10,
                         :d_convergence => 1E-10
                         )
-
 end #module
 
