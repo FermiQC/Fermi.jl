@@ -60,9 +60,7 @@ function exec(cont)
                        :frozen => 1,
                        :active => 8
                       )
-    #e,wfn = psi4.energy("scf",return_wfn=true)
-    rhfwfn = RHFWfn(bas,mol,10)
-    RHFCompute(rhfwfn)
+    rhfwfn = ReferenceWavefunction(bas,mol,)
     JuWfn = Fermi.Wavefunction.Wfn(rhfwfn)
     com = cont["command"]
     E = com(JuWfn; Fermi_options...)

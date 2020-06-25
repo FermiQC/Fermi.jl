@@ -21,14 +21,52 @@ begin
 end
 
 function ReferenceWavefunction(basis,molecule,nocca,noccb)
+    ReferenceWavefunction(basis,molecule,nocca,noccb,
+                          Fermi.ComputeEnvironment.interconnect,
+                          Fermi.ComputeEnvironment.communicator,
+                          Fermi.ComputeEnvironment.accelerator)
+end
+
+function ReferenceWavefunction(basis,molecule,nocca,noccb,
+                               interconnect::Fermi.Environments.No_IC,
+                               communicator::Fermi.Environments.NoCommunicator,
+                               accelerator::Fermi.Environments.NoAccelerator)
+    sz = Lints.getsize(S_engine,basis)
     S_engine = Lints.OverlapEngine(nprim,l)
     T_engine = Lints.KineticEngine(nprim,l)
     V_engine = Lints.NuclearEngine(nprim,l,molecule)
+    I_engines = []
+    for i in 1:Threads.nthreads()
+        push!(I_engines,Lints.ERIEngine(nprim,l))
+    end
     S = zeros(sz,sz)
+    Ca = zeros(size(S))
+    Cb = zeros(size(S))
     T = zeros(sz,sz)
     V = zeros(sz,sz)
+    I = zeros(sz,sz,sz,sz)
     Lints.make_2D(S,S_engine,basis)
     Lints.make_2D(T,T_engine,basis)
     Lints.make_2D(V,V_engine,basis)
+    Lints.make_ERI(I,I_engines,basis)
+    ReferenceWavefunction{Float64}(
+                                   0.0,
+                                   0.0,
+                                   nocca,
+                                   noccb,
+                                   sz-nocca,
+                                   sz-noccb,
+                                   basis,
+                                   molecule,
+                                   Ca,
+                                   Cb,
+                                   S,
+                                   T,
+                                   V,
+                                   zeros(Float64,sz),
+                                   zeros(Float64,sz)
+                                   I
+                                  )
 
+end
 

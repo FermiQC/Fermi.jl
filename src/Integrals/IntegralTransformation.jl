@@ -11,7 +11,7 @@ Module to handle integral transformations from AO to MO.
 """
 module IntegralTransformation
 using TensorOperations
-using Fermi.Wavefunction
+using Fermi
 
 export get_eri
 export get_fock
@@ -35,7 +35,7 @@ From a Wavefunction object, return a specified ERI array.
                 Default: "phys".
 
 """
-function get_eri(wfn::Wfn, eri_string::String; notation::String = "phys", fcn::Int = 0)
+function get_eri(wfn::Fermi.ReferenceWavefunction, eri_string::String; notation::String = "phys", fcn::Int = 0)
 
     # Size of eri_string must be 4.
     if sizeof(eri_string) != 4
@@ -116,7 +116,7 @@ From a Wavefunction object, return the Fock matrix.
             Case insensitive. 
 
 """
-function get_fock(wfn::Wfn; spin = "alpha")
+function get_fock(wfn::Fermi.ReferenceWavefunction; spin = "alpha")
 
     if lowercase(spin) in ["alpha", "up", "a"]
         C  = wfn.Ca

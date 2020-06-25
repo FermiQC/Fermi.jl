@@ -44,22 +44,9 @@ function RHFWfn(basis,molecule,nelec;debug=false,grad=false,hess=false)
 end
 
 
-function do_RHF(Fermi.ReferenceWavefunction; doprint=false,maxit=50,Etol=1E-7,Dtol=1E-7)
+function do_RHF(wfn::Fermi.ReferenceWavefunction; doprint=false,maxit=50,Etol=1E-7,Dtol=1E-7)
     Fermi.HartreeFock.print_header()
     @output "    executing RHF\n"
-    #@output "    computing AO basis integrals ... \n"
-    #@output "           using {:>2} engines for integral computation.\n" Threads.nthreads()
-    #t = @elapsed begin 
-    #    nprim = Lints.max_nprim(wfn.basis)
-    #    l = Lints.max_l(wfn.basis)
-    #    I_engines = []
-    #    for i in 1:Threads.nthreads()
-    #        push!(I_engines,Lints.ERIEngine(nprim,l))
-    #    end
-    #    Lints.make_ERI(wfn.ERI,I_engines,wfn.basis)
-    #    G = Fermi.IntegralTransformation.antisymmetrize(wfn.ERI) #2*wfn.I - permutedims(wfn.I,[1,3,2,4])
-    #end
-    #@output "    done in {:>5.2f}s\n" t
     @output "    Forming initial Fock matrix ... "
     A = wfn.S^(-1/2)
     t = @elapsed begin
@@ -69,9 +56,7 @@ function do_RHF(Fermi.ReferenceWavefunction; doprint=false,maxit=50,Etol=1E-7,Dt
         Co = C[:,1:wfn.ndocc]
     end
     @output "done in {:>5.2f}s\n" t
-    #@tensor D[u,v] := Co[u,m]*Co[v,m]
     D = Fermi.contract(Co,Co,"um","vm")
-    #@tensor F[m,n] := D[r,s]*G[m,n,r,s]
     F = Fermi.contract(D,G,"rs","mnrs")
     F += wfn.T
     F += wfn.V
@@ -84,7 +69,6 @@ function do_RHF(Fermi.ReferenceWavefunction; doprint=false,maxit=50,Etol=1E-7,Dt
             F .= 0
             F += wfn.T
             F += wfn.V
-            #@tensor F[m,n] := wfn.H[m,n] + D[r,s]*G[m,n,r,s]
             Fermi.contract!(F,D,G,"mn","rs","mnrs")
             Eelec = RHFEnergy(D,wfn.T+wfn.V,F)
             Enew = Eelec + wfn.vnuc
@@ -93,7 +77,6 @@ function do_RHF(Fermi.ReferenceWavefunction; doprint=false,maxit=50,Etol=1E-7,Dt
             e,Ct = eigen(Ft)#,sortby = x->-abs(x))
             C = A*Ct
             Co = C[:,1:wfn.nocca]
-            #@tensor Dnew[u,v] := Co[u,m]*Co[v,m]
             Dnew = Fermi.contract(Co,Co,"um","vm")
             dD = Dnew - D
             Drms = sqrt(sum(dD)^2)

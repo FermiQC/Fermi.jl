@@ -1,4 +1,4 @@
-module Environment
+module Environments
 import MPI
 
 abstract type  AbstractInterconnect end
@@ -49,7 +49,7 @@ struct Environment
     interconnect::T where T <: AbstractInterconnect
     homogenous::Bool
     accelerator::T  where T <: AbstractAccelerator
-    comm::T         where T <: AbstractCommunicator
+    communicator::T         where T <: AbstractCommunicator
     contractor::T   where T <: AbstractContractor
 end
 

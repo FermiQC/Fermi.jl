@@ -17,10 +17,10 @@ end
 function contract!(C,A,B, #tensors
                    sC,sA,sB, #scaling factors
                    iC,iA,iB, #indices
-                   ic::I where I <: Fermi.Environment.AbstractInterconnect,
-                   comm::Fermi.Environment.NoCommunicator,
-                   acc::Fermi.Environment.NoAccelerator,
-                   contractor::Fermi.Environment.TTGT)
+                   ic::I where I <: Fermi.Environments.AbstractInterconnect,
+                   comm::Fermi.Environments.NoCommunicator,
+                   acc::Fermi.Environments.NoAccelerator,
+                   contractor::Fermi.Environments.TTGT)
     # transpose
     # transpose
     # GEMM
@@ -30,19 +30,19 @@ end
 function contract!(C,A,B, #tensors
                    sC,sA,sB, #scaling factors
                    iC,iA,iB, #indices
-                   ic::I where I <: Fermi.Environment.AbstractInterconnect,
-                   comm::Fermi.Environment.NoCommunicator,
-                   acc::Fermi.Environment.NoAccelerator,
-                   contractor::Fermi.Environment.TBLIS)
-    # TBLIS.mul!
+                   ic::I where I <: Fermi.Environments.AbstractInterconnect,
+                   comm::Fermi.Environments.NoCommunicator,
+                   acc::Fermi.Environments.NoAccelerator,
+                   contractor::Fermi.Environments.TBLIS)
+    mul!(C,A,B,iA,iB,iC)
 end
 
 function contract!(C,A,B, #tensors
                    sC,sA,sB, #scaling factors
                    iC,iA,iB, #indices
-                   ic::Fermi.Environment.MPI_IC,
-                   comm::Fermi.Environment.MPI_World,
-                   acc::Fermi.Environment.AMD_GPU,
-                   contractor::Fermi.Environment.TTGT)
+                   ic::Fermi.Environments.MPI_IC,
+                   comm::Fermi.Environments.MPI_World,
+                   acc::Fermi.Environments.AMD_GPU,
+                   contractor::Fermi.Environments.TTGT)
     # Super special MPI aware GPU code specialized for AMD products
 end
