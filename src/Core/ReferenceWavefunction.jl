@@ -31,11 +31,13 @@ function ReferenceWavefunction(basis,molecule,nocca,noccb,
                                interconnect::Fermi.Environments.No_IC,
                                communicator::Fermi.Environments.NoCommunicator,
                                accelerator::Fermi.Environments.NoAccelerator)
-    sz = Lints.getsize(S_engine,basis)
+    nprim = Lints.max_nprim(basis)
+    l = Lints.max_l(basis)
     S_engine = Lints.OverlapEngine(nprim,l)
     T_engine = Lints.KineticEngine(nprim,l)
     V_engine = Lints.NuclearEngine(nprim,l,molecule)
     I_engines = []
+    sz = Lints.getsize(S_engine,basis)
     for i in 1:Threads.nthreads()
         push!(I_engines,Lints.ERIEngine(nprim,l))
     end
@@ -49,6 +51,7 @@ function ReferenceWavefunction(basis,molecule,nocca,noccb,
     Lints.make_2D(T,T_engine,basis)
     Lints.make_2D(V,V_engine,basis)
     Lints.make_ERI(I,I_engines,basis)
+    I = Fermi.MemTensor(I)
     ReferenceWavefunction{Float64}(
                                    0.0,
                                    0.0,
@@ -64,9 +67,25 @@ function ReferenceWavefunction(basis,molecule,nocca,noccb,
                                    T,
                                    V,
                                    zeros(Float64,sz),
-                                   zeros(Float64,sz)
+                                   zeros(Float64,sz),
                                    I
                                   )
 
+end
+
+function nmo(wfn::ReferenceWavefunction)
+    return wfn.nocca + wfn.nvira
+end
+function Cao(wfn::ReferenceWavefunction)
+    return wfn.Ca[:,1:wfn.nocca]
+end
+function Cav(wfn::ReferenceWavefunction)
+    return wfn.Ca[:,wfn.nocca+1:wfn.nocca+wfn.nvira]
+end
+function Cbo(wfn::ReferenceWavefunction)
+    return wfn.Cb[:,1:wfn.noccb]
+end
+function Cbv(wfn::ReferenceWavefunction)
+    return wfn.Cb[:,wfn.noccb+1:wfn.noccb+wfn.nvirb]
 end
 

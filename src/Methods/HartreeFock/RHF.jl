@@ -5,45 +5,6 @@ using LinearAlgebra
 
 export do_RHF
 
-function RHFWfn(basis,molecule,nelec;debug=false,grad=false,hess=false)
-    dummy2 = Array{Float64}(undef,0,0)
-    dummy4 = Array{Float64}(undef,0,0,0,0)
-    vnuc = 0
-    get_nuclear_repulsion()
-    nprim = Lints.max_nprim(basis)
-    l = Lints.max_l(basis)
-    E = zeros(Float64,1)
-    S_engine = Lints.OverlapEngine(nprim,l)
-    T_engine = Lints.KineticEngine(nprim,l)
-    V_engine = Lints.NuclearEngine(nprim,l,molecule)
-    I_engine = Lints.ERIEngine(nprim,l)
-    sz = Lints.getsize(S_engine,basis)
-    S = zeros(sz,sz)
-    T = zeros(sz,sz)
-    V = zeros(sz,sz)
-    I = zeros(sz,sz,sz,sz)
-    Lints.make_2D(S,S_engine,basis)
-    Lints.make_2D(T,T_engine,basis)
-    Lints.make_2D(V,V_engine,basis)
-    A = S^(-1/2)
-    H = T+V
-    C = zeros(sz,sz)
-    D = zeros(sz,sz)
-    if ! grad
-        GradN = dummy2
-        GradS = dummy2
-        GradSp = dummy2
-        GradV = dummy2
-        GradT = dummy2
-        GradJ = dummy2
-        GradK = dummy2
-        Grad = dummy2
-    end
-    RHFWfn(E,molecule,basis,nelec,C,zeros(sz),H,S,A,D,I,vnuc,nelec/2,grad,hess,GradN,GradS,
-          GradSp,GradV,GradT,GradJ,GradK,Grad)
-end
-
-
 function do_RHF(wfn::Fermi.ReferenceWavefunction; doprint=false,maxit=50,Etol=1E-7,Dtol=1E-7)
     Fermi.HartreeFock.print_header()
     @output "    executing RHF\n"
@@ -52,12 +13,14 @@ function do_RHF(wfn::Fermi.ReferenceWavefunction; doprint=false,maxit=50,Etol=1E
     t = @elapsed begin
         Ft = transpose(A)*(wfn.T+wfn.V)*A
         e,Ct = eigen(Ft)
-        C = wfn.A*Ct
-        Co = C[:,1:wfn.ndocc]
+        C = A*Ct
+        Co = C[:,1:wfn.nocca]
     end
     @output "done in {:>5.2f}s\n" t
+    #G = 2*wfn.ERI.data - permutedims(wfn.ERI.data,(1,3,2,4))
     D = Fermi.contract(Co,Co,"um","vm")
-    F = Fermi.contract(D,G,"rs","mnrs")
+    F = Fermi.contract(D,wfn.ERI,1.0,2.0,"rs","mnrs")
+    Fermi.contract!(F,D,wfn.ERI,1.0,1.0,-1.0,"mn","rs","mrns")
     F += wfn.T
     F += wfn.V
     E = 0
@@ -69,7 +32,8 @@ function do_RHF(wfn::Fermi.ReferenceWavefunction; doprint=false,maxit=50,Etol=1E
             F .= 0
             F += wfn.T
             F += wfn.V
-            Fermi.contract!(F,D,G,"mn","rs","mnrs")
+            Fermi.contract!(F,D,wfn.ERI,1.0,1.0,2.0,"mn","rs","mnrs")
+            Fermi.contract!(F,D,wfn.ERI,1.0,1.0,-1.0,"mn","rs","mrns")
             Eelec = RHFEnergy(D,wfn.T+wfn.V,F)
             Enew = Eelec + wfn.vnuc
             Ft = transpose(A)*F*A

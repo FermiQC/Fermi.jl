@@ -8,13 +8,10 @@ module for running MP2 energies on restricted and unrestricted HF references.
 """
 module MollerPlesset
 
-using Fermi.Wavefunction
-using Fermi.DiskTensors
+using Fermi
 #using Fermi.Direct
 using Fermi.IntegralTransformation
-using Fermi.DF
 using Fermi.Output
-using Fermi
 using TensorOperations
 
 export do_rmp2
@@ -30,8 +27,8 @@ function print_header()
 end
 
 include("RMP2.jl")
-include("UMP2.jl")
+#include("UMP2.jl")
 #include("DirectRMP2.jl")
-include("DF-RMP2.jl")
+#include("DF-RMP2.jl")
 
 end #module

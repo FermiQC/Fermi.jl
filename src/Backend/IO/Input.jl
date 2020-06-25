@@ -60,11 +60,11 @@ function exec(cont)
                        :frozen => 1,
                        :active => 8
                       )
-    rhfwfn = ReferenceWavefunction(bas,mol,)
-    JuWfn = Fermi.Wavefunction.Wfn(rhfwfn)
+    rhfwfn = Fermi.ReferenceWavefunction(bas,mol,5,5)
+    do_RHF(rhfwfn)
     com = cont["command"]
-    E = com(JuWfn; Fermi_options...)
-    Lints.libint2_finalize()
+    E = com(rhfwfn; Fermi_options...)
+    #Lints.libint2_finalize()
     return E
 end
 

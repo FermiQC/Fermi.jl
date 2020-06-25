@@ -6,6 +6,12 @@ git-tree-sha1 = "051c95d6836228d120f5f4b984dd5aba1624f716"
 uuid = "621f4979-c628-5d54-868e-fcf4e3e8185c"
 version = "0.5.0"
 
+[[AbstractTrees]]
+deps = ["Markdown"]
+git-tree-sha1 = "33e450545eaf7699da1a6e755f9ea65f14077a45"
+uuid = "1520ce14-60c1-5f80-bbc7-55ef81b5835c"
+version = "0.3.3"
+
 [[Adapt]]
 deps = ["LinearAlgebra"]
 git-tree-sha1 = "fd04049c7dd78cfef0b06cdc1f0f181467655712"
@@ -70,9 +76,9 @@ version = "3.1.0"
 
 [[CodeTracking]]
 deps = ["InteractiveUtils", "UUIDs"]
-git-tree-sha1 = "cab4da992adc0a64f63fa30d2db2fd8bec40cab4"
+git-tree-sha1 = "9c173f62af93cce8af2bd3527d160b6ddd6eaf81"
 uuid = "da1fd8a2-8d9e-5ec2-8556-3022fb5608a2"
-version = "0.5.11"
+version = "1.0.0"
 
 [[Combinatorics]]
 git-tree-sha1 = "08c8b6831dc00bfea825826be0bc8336fc369860"
@@ -92,10 +98,10 @@ uuid = "8f4d0f93-b110-5947-807f-2305c1781a2d"
 version = "1.4.1"
 
 [[Cthulhu]]
-deps = ["CodeTracking", "InteractiveUtils", "REPL", "UUIDs", "Unicode"]
-git-tree-sha1 = "f3643e78353199d3097821e806348bd83f364155"
+deps = ["CodeTracking", "FoldingTrees", "InteractiveUtils", "REPL", "UUIDs", "Unicode"]
+git-tree-sha1 = "34bf82a46f0600727673e3cbed9a5908efff3c0c"
 uuid = "f68482b8-f384-11e8-15f7-abe071a5a75f"
-version = "1.1.1"
+version = "1.2.0"
 
 [[CuArrays]]
 deps = ["AbstractFFTs", "Adapt", "CEnum", "CUDAapi", "CUDAdrv", "CUDAnative", "DataStructures", "GPUArrays", "Libdl", "LinearAlgebra", "MacroTools", "NNlib", "Pkg", "Printf", "Random", "Reexport", "Requires", "SparseArrays", "Statistics", "TimerOutputs"]
@@ -105,15 +111,15 @@ version = "2.2.0"
 
 [[CxxWrap]]
 deps = ["Libdl", "MacroTools", "libcxxwrap_julia_jll"]
-git-tree-sha1 = "8c3ab907e1cdf3b3e5fa4e83a768db41034f8d2b"
+git-tree-sha1 = "762359626941f45b21238eb373a0bcedf6b61dd7"
 uuid = "1f15a43c-97ca-5a2a-ae31-89f07a497df4"
-version = "0.10.1"
+version = "0.11.0"
 
 [[DataStructures]]
 deps = ["InteractiveUtils", "OrderedCollections"]
-git-tree-sha1 = "af6d9c86e191c917c2276fbede1137e8ea20157f"
+git-tree-sha1 = "be680f1ad03c0a03796aa3fda5a2180df7f83b46"
 uuid = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
-version = "0.17.17"
+version = "0.17.18"
 
 [[Dates]]
 deps = ["Printf"]
@@ -133,6 +139,12 @@ version = "3.3.7+1"
 git-tree-sha1 = "6f0517056812fd6aa3af23d4b70d5325a2ae4e95"
 uuid = "e2ba6199-217a-4e67-a87a-7c52f15ade04"
 version = "0.1.1"
+
+[[FoldingTrees]]
+deps = ["AbstractTrees", "REPL"]
+git-tree-sha1 = "9a1e497cba7c33e5951aaffd9a421fa713acba0b"
+uuid = "1eca21be-9b9b-4ed8-839a-6d8ae26b1781"
+version = "1.0.0"
 
 [[Formatting]]
 deps = ["Printf"]
@@ -164,6 +176,12 @@ git-tree-sha1 = "85bd2e586a10ae0eab856125bf5245e0d36384a7"
 uuid = "0234f1f7-429e-5d53-9886-15a909be8d59"
 version = "1.10.5+5"
 
+[[Hwloc_jll]]
+deps = ["Libdl", "Pkg"]
+git-tree-sha1 = "d9de29482e0a9efb0639328e208d02e01554fa9b"
+uuid = "e33a78d0-f292-5ffc-b300-72abe9b543c8"
+version = "2.2.0+0"
+
 [[InteractiveUtils]]
 deps = ["Markdown"]
 uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
@@ -182,9 +200,9 @@ version = "0.21.0"
 
 [[LLVM]]
 deps = ["CEnum", "Libdl", "Printf", "Unicode"]
-git-tree-sha1 = "dd3f584c3dbefe39b2a8fbafa1a3b77e31e21255"
+git-tree-sha1 = "0efb86dc7db298459186546bab008f3b53157582"
 uuid = "929cbde3-209d-540e-8aea-75f648917ca0"
-version = "1.5.1"
+version = "1.6.0"
 
 [[LRUCache]]
 git-tree-sha1 = "788ab2f8a434a63f065ad962368a8cd0f8660a21"
@@ -201,6 +219,14 @@ uuid = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
 [[LinearAlgebra]]
 deps = ["Libdl"]
 uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+
+[[Lints]]
+deps = ["CxxWrap", "Eigen_jll", "Libdl", "Pkg", "Test", "boost_jll", "libint_jll"]
+git-tree-sha1 = "7340088daef8f3d0ec1cd605fdde8a12fb7f8214"
+repo-rev = "master"
+repo-url = "https://github.com/FermiQC/Lints.git"
+uuid = "969b4477-8239-4824-a7ce-fb2a72cbc115"
+version = "0.1.0"
 
 [[Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
@@ -243,9 +269,9 @@ version = "1.2.0"
 
 [[Parsers]]
 deps = ["Dates", "Test"]
-git-tree-sha1 = "f0abb338b4d00306500056a3fd44c221b8473ef2"
+git-tree-sha1 = "20ef902ea02f7000756a4bc19f7b9c24867c6211"
 uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
-version = "1.0.4"
+version = "1.0.6"
 
 [[Pkg]]
 deps = ["Dates", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "UUIDs"]
@@ -309,9 +335,17 @@ uuid = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [[Strided]]
 deps = ["LinearAlgebra", "TupleTools"]
-git-tree-sha1 = "ecc80f871e2fd29aa13b93dc7763565cf420bdc9"
+git-tree-sha1 = "3db8266fc732c8f997e75cf7a4027d4008f846c8"
 uuid = "5e0ebb24-38b0-5f93-81fe-25c709ecae67"
-version = "0.3.5"
+version = "1.0.1"
+
+[[TBLIS]]
+deps = ["Hwloc_jll", "Libdl", "LinearAlgebra", "Test", "tblis_jll"]
+git-tree-sha1 = "92a4e780d7ffdf3d9a9782afdc2d7b88b92e01d9"
+repo-rev = "master"
+repo-url = "https://github.com/FermiQC/TBLIS.jl.git"
+uuid = "48530278-0828-4a49-9772-0f3830dfa1e9"
+version = "0.1.0"
 
 [[TensorOperations]]
 deps = ["CuArrays", "LRUCache", "LinearAlgebra", "Requires", "Strided", "TupleTools"]
@@ -325,9 +359,9 @@ uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [[TimerOutputs]]
 deps = ["Printf"]
-git-tree-sha1 = "0cc8db57cb537191b02948d4fabdc09eb7f31f98"
+git-tree-sha1 = "f458ca23ff80e46a630922c555d838303e4b9603"
 uuid = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
-version = "0.5.5"
+version = "0.5.6"
 
 [[TupleTools]]
 git-tree-sha1 = "62a7a6cd5a608ff71cecfdb612e67a0897836069"
@@ -348,9 +382,9 @@ version = "1.2.0"
 
 [[Zlib_jll]]
 deps = ["Libdl", "Pkg"]
-git-tree-sha1 = "4838361eb3ba796a57457bdc183e1a128639d0ec"
+git-tree-sha1 = "33d31d2b2a24d2fdbc60633b68229ee462811c8b"
 uuid = "83775a58-1f1d-513f-b197-d71354ab007a"
-version = "1.2.11+12"
+version = "1.2.11+13"
 
 [[Zstd_jll]]
 deps = ["Libdl", "Pkg"]
@@ -366,12 +400,18 @@ version = "1.71.0+2"
 
 [[libcxxwrap_julia_jll]]
 deps = ["Libdl", "Pkg"]
-git-tree-sha1 = "b7594ea3040804e12eddebd977ec856ec0a17f19"
+git-tree-sha1 = "1b2520ea0c1d5cbc12e8a97c15427133d726f743"
 uuid = "3eaa8342-bff7-56a5-9981-c04077f7cee7"
-version = "0.7.1+1"
+version = "0.8.0+0"
 
 [[libint_jll]]
 deps = ["Libdl", "Pkg"]
 git-tree-sha1 = "24f11873f724aa571e61a588fd57007f7512c7c7"
 uuid = "5fdff7f3-485e-5122-bc58-379aa217adcc"
 version = "2.7.0+0"
+
+[[tblis_jll]]
+deps = ["CompilerSupportLibraries_jll", "Hwloc_jll", "Libdl", "Pkg"]
+git-tree-sha1 = "da48c2a3bf5ed8a144706daaa9fae26ae5e46833"
+uuid = "9c7f617c-f299-5d18-afb6-044c7798b3d0"
+version = "1.2.0+0"

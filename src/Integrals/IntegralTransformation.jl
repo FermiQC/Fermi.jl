@@ -51,18 +51,18 @@ function get_eri(wfn::Fermi.ReferenceWavefunction, eri_string::String; notation:
     # Get C1, C2, C3, C4 for the integral transformation
     for s in eri_string
         if s == 'o'
-            o = 1+fcn:size(wfn.Cbo)[2]
+            o = 1+fcn:size(Fermi.Cbo(wfn))[2]
             push!(C, wfn.Cbo[:,o])
-            push!(S, wfn.nbeta)
+            push!(S, wfn.noccb)
         elseif s == 'O'
-            o = 1+fcn:size(wfn.Cao)[2]
-            push!(C, wfn.Cao[:,o])
-            push!(S, wfn.nalpha)
+            o = 1+fcn:size(Fermi.Cao(wfn))[2]
+            push!(C, Fermi.Cao(wfn)[:,o])
+            push!(S, wfn.nocca)
         elseif s == 'v'
-            push!(C, wfn.Cbv)
+            push!(C, Fermi.Cbv(wfn))
             push!(S, wfn.nvirb)
         elseif s == 'V'
-            push!(C, wfn.Cav)
+            push!(C, Fermi.Cav(wfn))
             push!(S, wfn.nvira)
         end
     end
@@ -90,14 +90,27 @@ function get_eri(wfn::Fermi.ReferenceWavefunction, eri_string::String; notation:
     #c4 = TBLIS.TTensor{eltype(wfn.ao_eri)}(C4)
     #TBLIS.mul!(v2,c4,v,"sb","iajs","iajb")
     #Vnew = V2
-    gao = wfn.ao_eri
-    @tensoropt Vnew[i,a,j,b] := C4[σ,b]*C3[λ,j]*C2[ν,a]*C1[μ,i]*gao[μ,ν,λ,σ]
+    gao = wfn.ERI
+    T = typeof(gao)
+    ## TODO: make intermediate tensors of same tensor type as gao
+    nmo = Fermi.nmo(wfn)
+    Q1 = zeros(S[1],nmo,nmo,nmo)
+    Fermi.contract!(Q1,C1,gao,"ivls","ui","uvls")
+    Q2 = zeros(S[1],S[2],nmo,nmo)
+    Fermi.contract!(Q2,C2,Q1,"ials","va","ivls")
+    Q1 = nothing
+    Q3 = zeros(S[1],S[2],S[3],nmo)
+    Fermi.contract!(Q3,C3,Q2,"iajs","lj","ials")
+    Q2 = nothing
+    Q4 = zeros(S[1],S[2],S[3],S[4])
+    Fermi.contract!(Q4,C4,Q3,"iajb","sb","iajs")
+    #@tensoropt Vnew[i,a,j,b] := C4[σ,b]*C3[λ,j]*C2[ν,a]*C1[μ,i]*gao[μ,ν,λ,σ]
 
     if notation == "phys"
-        @tensor Vnew[i,j,a,b] := Vnew[i,a,j,b]
+        Q4 = permutedims(Q4,(1,3,2,4))
+        #@tensor Vnew[i,j,a,b] := Vnew[i,a,j,b]
     end
-
-    return Vnew
+    return T(Q4)
 end
 
 """
