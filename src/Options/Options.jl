@@ -1,3 +1,3 @@
 module Options
-optdict = Dict("printstyle" => "stdout")
+    optdict = Dict("printstyle" => "stdout")
 end

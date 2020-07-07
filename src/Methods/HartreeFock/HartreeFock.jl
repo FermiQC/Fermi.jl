@@ -1,7 +1,6 @@
 module HartreeFock
 using Fermi
 using Lints
-#using PyCall
 using TensorOperations
 using LinearAlgebra
 using Fermi.Output
