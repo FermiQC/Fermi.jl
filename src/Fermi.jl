@@ -4,6 +4,7 @@ import TBLIS
 import DistributedArrays
 
 include("Backend/Tensors.jl")                             # Top level scope
+include("Options/Options.jl")                             # Top level scope
 
 include("Backend/Environment.jl")
 include("Backend/ComputeEnvironment.jl")
@@ -14,10 +15,10 @@ include("Core/Atom.jl")                                   # Top level scope
 include("Core/Molecule.jl")                               # Top level scope
 include("Core/Basis.jl")                                  # Top level scope
 include("Methods/HartreeFock/HartreeFock.jl")
-include("Backend/IO/Input.jl")
 include("Integrals/IntegralTransformation.jl")
-#include("Methods/ConfigurationInteraction/ConfigurationInteraction.jl")
 include("Methods/MollerPlesset/MollerPlesset.jl")
+include("Backend/IO/Input.jl")
+#include("Methods/ConfigurationInteraction/ConfigurationInteraction.jl")
 #include("Methods/CoupledCluster/CoupledCluster.jl")
 
 end # module

@@ -1,6 +1,6 @@
-function RMP2{T}(refWfn::Wfn,alg::Fermi.MollerPlesset.DF) where T <: AbstractFloat
+function RMP2{T}(refWfn::Fermi.HartreeFock.RHF.RHFWavefunction,alg::Fermi.MollerPlesset.DF) where T <: AbstractFloat
     #build DF-basis
-    T = eltype(refWfn.uvsr)
+    #T = eltype(refWfn.uvsr)
     nocc    = refWfn.nalpha
     nvir    = refWfn.nvira
     C       = refWfn.Ca

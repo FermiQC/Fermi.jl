@@ -1,4 +1,4 @@
-function RMP2{T}(refWfn::Fermi.ReferenceWavefunction,alg::Fermi.MollerPlesset.Conventional) where T <: AbstractFloat
+function RMP2{T}(refWfn::Fermi.HartreeFock.RHF.RHFWavefunction,alg::Fermi.MollerPlesset.Conventional) where T <: AbstractFloat
     print_header()
     dmp2 = 0.0
     nocc = refWfn.nocca
@@ -7,8 +7,8 @@ function RMP2{T}(refWfn::Fermi.ReferenceWavefunction,alg::Fermi.MollerPlesset.Co
     @output "   nvir: {:>3}\n" refWfn.nvira
     rocc = 1:1:nocc
     rvir = nocc+1:1:nocc+refWfn.nvira
-    Cao = Fermi.Cao(refWfn)
-    Cav = Fermi.Cav(refWfn)
+    Cao = Fermi.HartreeFock.RHF.Cao(refWfn)
+    Cav = Fermi.HartreeFock.RHF.Cav(refWfn)
     epsa = refWfn.epsa
     @output "*  performing AO->MO integral transformation ... "
     t = @elapsed moeri = get_eri(refWfn,"OOVV")

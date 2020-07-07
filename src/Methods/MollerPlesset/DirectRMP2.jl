@@ -1,4 +1,4 @@
-function RMP2{T}(refWfn::Wfn,alg::Fermi.MollerPlesset.Direct) where T <: AbstractFloat
+function RMP2{T}(refWfn::Fermi.HartreeFock.RHF.RHFWavefunction,alg::Fermi.MollerPlesset.Direct) where T <: AbstractFloat
     dmp2 = 0.0
     nocc = refWfn.nalpha
     rocc = 1:1:refWfn.nalpha

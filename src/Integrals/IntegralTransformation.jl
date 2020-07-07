@@ -35,7 +35,7 @@ From a Wavefunction object, return a specified ERI array.
                 Default: "phys".
 
 """
-function get_eri(wfn::Fermi.ReferenceWavefunction, eri_string::String; notation::String = "phys", fcn::Int = 0)
+function get_eri(wfn::wfT, eri_string::String; notation::String = "phys", fcn::Int = 0) where wfT <: Fermi.AbstractReferenceWavefunction
 
     # Size of eri_string must be 4.
     if sizeof(eri_string) != 4
@@ -51,49 +51,28 @@ function get_eri(wfn::Fermi.ReferenceWavefunction, eri_string::String; notation:
     # Get C1, C2, C3, C4 for the integral transformation
     for s in eri_string
         if s == 'o'
-            o = 1+fcn:size(Fermi.Cbo(wfn))[2]
+            o = 1+fcn:size(Fermi.HartreeFock.RHF.Cbo(wfn))[2]
             push!(C, wfn.Cbo[:,o])
             push!(S, wfn.noccb)
         elseif s == 'O'
-            o = 1+fcn:size(Fermi.Cao(wfn))[2]
-            push!(C, Fermi.Cao(wfn)[:,o])
+            o = 1+fcn:size(Fermi.HartreeFock.RHF.Cao(wfn))[2]
+            push!(C, Fermi.HartreeFock.RHF.Cao(wfn)[:,o])
             push!(S, wfn.nocca)
         elseif s == 'v'
             push!(C, Fermi.Cbv(wfn))
             push!(S, wfn.nvirb)
         elseif s == 'V'
-            push!(C, Fermi.Cav(wfn))
+            push!(C, Fermi.HartreeFock.RHF.Cav(wfn))
             push!(S, wfn.nvira)
         end
     end
 
     C1, C2, C3, C4 = C
 
-    #gao = TBLIS.TTensor{eltype(wfn.ao_eri)}(wfn.ao_eri)
-    #V = zeros(S[1],wfn.nmo,wfn.nmo,wfn.nmo)
-    #v = TBLIS.TTensor{eltype(wfn.ao_eri)}(V)
-    #c1 = TBLIS.TTensor{eltype(wfn.ao_eri)}(C1)
-    #TBLIS.mul!(v,c1,gao,"ui","uvls","ivls")
-
-    #V2 = zeros(S[1],S[2],wfn.nmo,wfn.nmo)
-    #v2 = TBLIS.TTensor{eltype(wfn.ao_eri)}(V2)
-    #c2 = TBLIS.TTensor{eltype(wfn.ao_eri)}(C2)
-    #TBLIS.mul!(v2,c2,v,"va","ivls","ials")
-
-    #V = zeros(S[1],S[2],S[3],wfn.nmo)
-    #v = TBLIS.TTensor{eltype(wfn.ao_eri)}(V)
-    #c3 = TBLIS.TTensor{eltype(wfn.ao_eri)}(C3)
-    #TBLIS.mul!(v,c3,v2,"lj","ials","iajs")
-
-    #V2 = zeros(S[1],S[2],S[3],S[4])
-    #v2 = TBLIS.TTensor{eltype(wfn.ao_eri)}(V2)
-    #c4 = TBLIS.TTensor{eltype(wfn.ao_eri)}(C4)
-    #TBLIS.mul!(v2,c4,v,"sb","iajs","iajb")
-    #Vnew = V2
     gao = wfn.ERI
     T = typeof(gao)
     ## TODO: make intermediate tensors of same tensor type as gao
-    nmo = Fermi.nmo(wfn)
+    nmo = Fermi.HartreeFock.RHF.nmo(wfn)
     Q1 = zeros(S[1],nmo,nmo,nmo)
     Fermi.contract!(Q1,C1,gao,"ivls","ui","uvls")
     Q2 = zeros(S[1],S[2],nmo,nmo)
@@ -104,11 +83,9 @@ function get_eri(wfn::Fermi.ReferenceWavefunction, eri_string::String; notation:
     Q2 = nothing
     Q4 = zeros(S[1],S[2],S[3],S[4])
     Fermi.contract!(Q4,C4,Q3,"iajb","sb","iajs")
-    #@tensoropt Vnew[i,a,j,b] := C4[σ,b]*C3[λ,j]*C2[ν,a]*C1[μ,i]*gao[μ,ν,λ,σ]
 
     if notation == "phys"
         Q4 = permutedims(Q4,(1,3,2,4))
-        #@tensor Vnew[i,j,a,b] := Vnew[i,a,j,b]
     end
     return T(Q4)
 end
@@ -129,7 +106,7 @@ From a Wavefunction object, return the Fock matrix.
             Case insensitive. 
 
 """
-function get_fock(wfn::Fermi.ReferenceWavefunction; spin = "alpha")
+function get_fock(wfn::wfT; spin = "alpha") where wfT <: Fermi.AbstractReferenceWavefunction
 
     if lowercase(spin) in ["alpha", "up", "a"]
         C  = wfn.Ca

@@ -46,25 +46,17 @@ cont is composed of:
 """
 function exec(cont)
     open("/tmp/molfile.xyz","w") do molfile
-        write(molfile,"3\n\n")
+        natom = length(split(strip(cont["molecule"]),"\n"))
+        write(molfile,"$natom\n\n")
         write(molfile,cont["molecule"])
     end
     Lints.libint2_init()
     mol = Lints.Molecule("/tmp/molfile.xyz")
     bas = Lints.BasisSet(cont["options"]["basis"],mol)
-    Fermi_options = Dict{Any,Any}(
-                       :doprint=>false,
-                       :maxit=>40,
-                       :return_T=>false,
-                       :quiet=>true,
-                       :frozen => 1,
-                       :active => 8
-                      )
-    rhfwfn = Fermi.ReferenceWavefunction(bas,mol,5,5)
-    do_RHF(rhfwfn)
+    rhfwfn = Fermi.HartreeFock.RHF.RHFWavefunction(bas,mol,5,5)
     com = cont["command"]
-    E = com(rhfwfn; Fermi_options...)
-    #Lints.libint2_finalize()
+    E = com(rhfwfn)
+    Lints.libint2_finalize()
     return E
 end
 
