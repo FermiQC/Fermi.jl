@@ -31,15 +31,15 @@ raw"""
     @output "\n{}\n" banner
 end
 
-defaults = Dict{Any,Any}(
-                :frozen => 0,
-                :active => -1,
-                :nroot => 1,
-                :min_matrix_elem => 1e-9
-)
-
-include("DetOperations.jl")
-include("MatrixElement.jl")
-include("FCI.jl")
+#defaults = Dict{Any,Any}(
+#                :frozen => 0,
+#                :active => -1,
+#                :nroot => 1,
+#                :min_matrix_elem => 1e-9
+#)
+#
+#include("DetOperations.jl")
+#include("MatrixElement.jl")
+#include("FCI.jl")
 
 end #module CI
