@@ -1,24 +1,4 @@
-"""
-    do_direct_rmp2
-
-Algorithm
---
-for each occ <ij|-->, compute partially transformed
-integrals <ij|λσ>, store in memory
-
-for each vir <--|ab> contract <ij|λσ> ⋅ C[a,λ] ⋅ C[b,σ]
-and its transpose <--|ba>
-
-compute contribution of <ij|ab> to δE(MP2)
-
-   12 34      12 34     12 34        
-= <ij|ab> ( 2<ij|ab> - <ij|ba> ) / Δ[ijab]
-= <ij|ab> ( 2<ij|ab> - <ij|ba> ) / Δ[ijab]
-------------------------------------------
-   13 24      13 24     13 24        
-= [ia|jb] ( 2[ia|jb] - [ib|ja] ) / Δ[ijab]
-"""
-function do_direct_rmp2(refWfn::Wfn)
+function RMP2{T}(refWfn::Wfn,alg::Fermi.MollerPlesset.Direct) where T <: AbstractFloat
     dmp2 = 0.0
     nocc = refWfn.nalpha
     rocc = 1:1:refWfn.nalpha
@@ -60,7 +40,6 @@ function do_direct_rmp2(refWfn::Wfn)
         out = temp4 .* (2*temp4 - permutedims(temp4,[3,2,1])) .* D
         dmp2 += reduce(+,out)
     end
-    return dmp2
-
+    RMP2{T}(dmp2,Fermi.MemTensor{T}(zeros(T,0,0,0,0)),Fermi.MemTensor{T}(zeros(T,0,0,0,0)))
 end
 
