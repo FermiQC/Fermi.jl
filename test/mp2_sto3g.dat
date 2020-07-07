@@ -6,4 +6,4 @@ H 0.0 1.0 0.0
 --
 options = Dict("basis"=>"sto-3g")
 --
-command = Fermi.MollerPlesset.do_rmp2
+command = Fermi.MollerPlesset.RMP2

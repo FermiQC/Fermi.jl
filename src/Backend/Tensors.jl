@@ -64,3 +64,4 @@ end
 function getindex(A::MemTensor,I...)
     return A.data[I...]
 end
+## End MemTensor ## 

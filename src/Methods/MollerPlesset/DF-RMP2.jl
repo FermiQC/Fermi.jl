@@ -1,6 +1,6 @@
-function do_df_rmp2(refWfn::Wfn)
+function RMP2{T}(refWfn::Fermi.HartreeFock.RHF.RHFWavefunction,alg::Fermi.MollerPlesset.DF) where T <: AbstractFloat
     #build DF-basis
-    T = eltype(refWfn.uvsr)
+    #T = eltype(refWfn.uvsr)
     nocc    = refWfn.nalpha
     nvir    = refWfn.nvira
     C       = refWfn.Ca
@@ -42,7 +42,7 @@ function do_df_rmp2(refWfn::Wfn)
             end
         end
     end
-    return dmp2
+    RMP2{T}(dmp2,Fermi.MemTensor{T}(zeros(T,0,0,0,0)),Fermi.MemTensor{T}(zeros(T,0,0,0,0)))
 end
 
 function squeeze(A::AbstractArray)

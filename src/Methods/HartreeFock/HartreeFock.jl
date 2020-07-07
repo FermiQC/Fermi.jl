@@ -6,6 +6,7 @@ using LinearAlgebra
 using Fermi.Output
 
 include("RHF.jl")
+
 function print_header()
     @output repeat("=",80)*"\n"
     @output "|    {:<74}|\n" "Hartree Fock"
