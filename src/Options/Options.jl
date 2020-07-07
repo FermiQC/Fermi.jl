@@ -4,6 +4,7 @@ CurrentOptions = Dict{String,Any}(
                                   "reference" => "rhf",
                                   "quiet" => "true",
                                   "mp2_type" => "conv",
+                                  "precision" => "double",
                                   "cc_type" => "conv",
                                   "e_conv" => 10,
                                   "d_conv" => 8,
