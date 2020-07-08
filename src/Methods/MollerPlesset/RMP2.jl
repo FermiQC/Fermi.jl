@@ -13,7 +13,10 @@ struct Direct       <: MP2Algorithm end
 
 
 function RMP2(ref::Fermi.HartreeFock.RHF.RHFWavefunction)
-    RMP2{Float64}(ref)
+    precision_selector = Dict{Any,Any}("single" => Float32,
+                                       "double" => Float64)
+    prec = precision_selector[Fermi.CurrentOptions["precision"]]
+    RMP2{prec}(ref)
 end
 
 function RMP2{T}(ref::Fermi.HartreeFock.RHF.RHFWavefunction) where T <: AbstractFloat

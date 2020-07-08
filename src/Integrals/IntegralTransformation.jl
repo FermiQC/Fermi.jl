@@ -12,6 +12,7 @@ Module to handle integral transformations from AO to MO.
 module IntegralTransformation
 using TensorOperations
 using Fermi
+using Fermi.HartreeFock.RHF
 
 export get_eri
 export get_fock
@@ -51,8 +52,8 @@ function get_eri(wfn::wfT, eri_string::String; notation::String = "phys", fcn::I
     # Get C1, C2, C3, C4 for the integral transformation
     for s in eri_string
         if s == 'o'
-            o = 1+fcn:size(Fermi.HartreeFock.RHF.Cbo(wfn))[2]
-            push!(C, wfn.Cbo[:,o])
+            o = 1+fcn:size(Cbo(wfn))[2]
+            push!(C, Cbo(wfn)[:,o])
             push!(S, wfn.noccb)
         elseif s == 'O'
             o = 1+fcn:size(Fermi.HartreeFock.RHF.Cao(wfn))[2]

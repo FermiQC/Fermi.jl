@@ -20,7 +20,7 @@ export do_direct_rmp2
 export do_df_rmp2
 export RMP2
 
-abstract type AbstractMPWavefunction end
+abstract type AbstractMPWavefunction <: Fermi.AbstractCorrelatedWavefunction end
 
 function print_header()
     @output "================================================================================\n" 
