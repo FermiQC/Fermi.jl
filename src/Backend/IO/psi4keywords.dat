@@ -1,1 +1,0 @@
-psi4_opt_list = ["reference","basis","e_convergence", "scf_type"]

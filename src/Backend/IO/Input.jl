@@ -8,8 +8,6 @@ export run #shorthand for read->exec
 export read
 export exec
 
-include("psi4keywords.dat")
-
 """
     run(fname::String)
 
