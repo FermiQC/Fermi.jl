@@ -5,14 +5,8 @@ Implemented --> RCCD, RCCSD, DF-RCCD
 """
 module CoupledCluster
 
-using Fermi.Wavefunction
-using Fermi.Transformation
-using Fermi.Output
-using Printf
-using Base.Threads
 using TensorOperations
 using LinearAlgebra
-using Dates
 
 function print_header()
     banner = 
@@ -33,6 +27,17 @@ raw"""
     @output "\n{}\n" banner
 end
 
+abstract type AbstractCCWavefunction <: Fermi.AbstractCorrelatedWavefunction end
+
+abstract type          CCIntegrals end
+struct DF           <: CCIntegrals end
+struct Conventional <: CCIntegrals end
+struct CD           <: CCIntegrals end
+
+abstract type CCAlgorithm end
+struct DPD <: CCAlgorithm end
+struct CTF <: CCAlgorithm end
+
 #defaults = Dict(
 #                :cc_max_iter => 50,
 #                :cc_max_rms => 10^-10,
@@ -43,7 +48,7 @@ end
 #               )
 #
 #include("PerturbativeTriples.jl")
-#include("RCCD.jl")
+include("RCCD/RCCD.jl")
 #include("DF-RCCD.jl")
 #include("ROCCD.jl")
 #include("RCCSD.jl")
