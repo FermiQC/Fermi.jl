@@ -4,7 +4,7 @@ using Fermi
 using Fermi.Output
 using LinearAlgebra
 
-mutable struct RHFWavefunction{T} <: Fermi.AbstractReferenceWavefunction where T <: AbstractFloat
+mutable struct RHFWavefunction{T} <: Fermi.AbstractHFWavefunction where T <: AbstractFloat
     refEnergy::T
     vnuc::T
     nocca::Int
