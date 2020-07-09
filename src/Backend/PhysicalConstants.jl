@@ -14,7 +14,21 @@ export atomic_number
 
 # Convertion factors
 
-bohr_to_angstrom = 0.529177249
+"""
+    Fermi.PhysicalConstants.bohr_to_angstrom
+
+Float64 object with the convertion factor from Bohr to Angstrom.
+Source: [NIST](https://physics.nist.gov/cgi-bin/cuu/Value?bohrrada0)
+"""
+bohr_to_angstrom = 0.529177210903
+
+"""
+    Fermi.PhysicalConstants.angstrom_to_bohr
+
+Float64 object with the convertion factor from Angstrom to Bohr.
+Computed as 1/Fermi.PhysicalConstants.bohr_to_angstrom
+"""
+angstrom_to_bohr = 1/bohr_to_angstrom
 
 """
     Fermi.PhysicalConstants.atomic_number(atom::String)

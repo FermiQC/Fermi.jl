@@ -9,6 +9,7 @@ CurrentOptions = Dict{String,Any}(
                                   "basis" => "sto-3g",
                                   "charge" => 0,
                                   "multiplicity" => 1,
+                                  "units" => "angstrom",
                                   "reference" => "rhf",
                                   "quiet" => "true",
                                   "mp2_type" => "conv",
@@ -26,3 +27,10 @@ CurrentOptions = Dict{String,Any}(
                                   "cas_nroot" => 1,
                                   "min_matrix_elem" => 10^-9
                                  )
+
+
+struct InvalidFermiOption <: Exception
+    msg::String
+end
+
+Base.showerror(io::IO, e::InvalidFermiOption) = print(io, "InvalidFermiOption: ", e.msg)
