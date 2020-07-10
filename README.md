@@ -29,7 +29,7 @@ If an error like
 ```
 ERROR: expected package `Lints [...]` to exist at path `...`
 ```
-is raise, moving the package into `dev` may solve the problem
+is raised, moving the package into `dev` may solve the problem
 ```
 julia> ]
 (@v1.4) pkg> dev Lints

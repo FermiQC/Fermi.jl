@@ -3,7 +3,7 @@
 
 Module for storing physical constants and convertion factors used in computations.
 
-**Functions:**
+# Functions:
 
     atomic_number   Given an element symbol, return the atomic number.
 """
@@ -11,16 +11,15 @@ module PhysicalConstants
 
 export atomic_number
 
-
-# Convertion factors
-
 """
     Fermi.PhysicalConstants.bohr_to_angstrom
 
 Float64 object with the convertion factor from Bohr to Angstrom.
 Source: [NIST](https://physics.nist.gov/cgi-bin/cuu/Value?bohrrada0)
 """
-bohr_to_angstrom = 0.529177210903
+#bohr_to_angstrom = 0.529177210903
+#psi4s
+bohr_to_angstrom = 0.529177210670000
 
 """
     Fermi.PhysicalConstants.angstrom_to_bohr
@@ -35,7 +34,7 @@ angstrom_to_bohr = 1/bohr_to_angstrom
 
 Given a string with the element symbol, return its atomic number
 
-**Arguments**
+# Arguments:
 
     atom   String representing an element
 
