@@ -1,25 +1,16 @@
 using Lints
 using Fermi
+using Fermi.Integrals
 using Fermi.Output
 using LinearAlgebra
 
 mutable struct RHFWavefunction{T} <: AbstractHFWavefunction where T <: AbstractFloat
-    refEnergy::T
+    energy::T
     vnuc::T
-    nocca::Int
-    noccb::Int
-    nvira::Int
-    nvirb::Int
-    basis::B where B <: Lints.BasisSet
-    molecule::M where M <: Lints.Molecule
-    Ca::Array{T,2} #AO->MO coefficients a
-    Cb::Array{T,2} #AO->MO coefficients b
-    S::Array{T,2}
-    T::Array{T,2}
-    V::Array{T,2}
-    epsa::Array{T,1} #orbital eigenvalues a
-    epsb::Array{T,1} #orbital eigenvalues b
-    ERI::I where I <: Fermi.AbstractTensor#AO basis electron repulsion integrals
+    nocc::Int
+    nvir::Int
+    C::Array{T,2} 
+    eps::Array{T,1} 
 end
 
 function RHFWavefunction(basis,molecule,nocca,noccb)
@@ -29,54 +20,7 @@ function RHFWavefunction(basis,molecule,nocca,noccb)
                           Fermi.ComputeEnvironment.accelerator)
 end
 
-function RHFWavefunction(basis,molecule,nocca,noccb,
-                               interconnect::Fermi.Environments.No_IC,
-                               communicator::Fermi.Environments.NoCommunicator,
-                               accelerator::Fermi.Environments.NoAccelerator)
-    nprim = Lints.max_nprim(basis)
-    l = Lints.max_l(basis)
-    S_engine = Lints.OverlapEngine(nprim,l)
-    T_engine = Lints.KineticEngine(nprim,l)
-    V_engine = Lints.NuclearEngine(nprim,l,molecule)
-    I_engines = []
-    sz = Lints.getsize(S_engine,basis)
-    for i in 1:Threads.nthreads()
-        push!(I_engines,Lints.ERIEngine(nprim,l))
-    end
-    S = zeros(sz,sz)
-    Ca = zeros(size(S))
-    Cb = zeros(size(S))
-    T = zeros(sz,sz)
-    V = zeros(sz,sz)
-    I = zeros(sz,sz,sz,sz)
-    Lints.make_2D(S,S_engine,basis)
-    Lints.make_2D(T,T_engine,basis)
-    Lints.make_2D(V,V_engine,basis)
-    Lints.make_ERI(I,I_engines,basis)
-    I = Fermi.MemTensor(I)
-    ref = RHFWavefunction{Float64}(
-                                   0.0,
-                                   0.0,
-                                   nocca,
-                                   noccb,
-                                   sz-nocca,
-                                   sz-noccb,
-                                   basis,
-                                   molecule,
-                                   Ca,
-                                   Cb,
-                                   S,
-                                   T,
-                                   V,
-                                   zeros(Float64,sz),
-                                   zeros(Float64,sz),
-                                   I
-                                  )
-    RHFWavefunction(ref)
-
-end
-
-function RHFWavefunction(wfn::RHFWavefunction; doprint=false,maxit=50,Etol=1E-7,Dtol=1E-7)
+function RHFWavefunction(integrals::)
     Fermi.HartreeFock.print_header()
     @output "    executing RHF\n"
     @output "    Forming initial Fock matrix ... "

@@ -1,60 +1,57 @@
+"""
+    Fermi.Integrals
+
+Module to compute integrals using Lints.jl
+"""
 module Integrals
 
 using Fermi
+using Fermi.MolHelper: Molecule
 using Lints
 using LinearAlgebra
+
+export AbstractIntegrals
+export AOIntegrals
 
 abstract type AbstractIntegrals end
 
 struct AOIntegrals{T} <: AbstractIntegrals where T <: AbstractFloat
-    Vnuc::T
     S::Array{T,2}
     T::Array{T,2}
     V::Array{T,2}
     ERI:: I where I <: Fermi.AbstractTensor
 end
 
-
 function AOIntegrals()
-
-    mol = Fermi.CurrentOptions["molstring"]
     basis = Fermi.CurrentOptions["basis"]
-    AOIntegrals(mol, basis)
+    AOIntegrals(Molecule(), basis)
 end
 
-function AOIntegrals(mol::String, basis::String)
-
-    charge = Fermi.CurrentOptions["charge"]
-    multiplicity = Fermi.CurrentOptions["multiplicity"]
-    noccα, noccβ = get_num_electrons(mol, charge, multiplicity)
-    AOIntegrals(mol, basis, noccα, noccβ)
+function AOIntegrals(molecule::Molecule)
+    basis = Fermi.CurrentOptions["basis"]
+    AOIntegrals(molecule, basis)
 end
 
-function AOIntegrals(mol::String, basis::String, noccα::Int, noccβ::Int)
+function AOIntegrals(basis::String)
 
-    AOIntegrals(basis, mol, noccα, noccβ,
-                          Fermi.ComputeEnvironment.interconnect,
-                          Fermi.ComputeEnvironment.communicator,
-                          Fermi.ComputeEnvironment.accelerator)
+    AOIntegrals(Molecule(), basis)
 end
 
-function AOIntegrals(mol::String, basis::String, noccα::Int, noccβ::Int, unit::String,
-                               interconnect::Fermi.Environments.No_IC,
-                               communicator::Fermi.Environments.NoCommunicator,
-                               accelerator::Fermi.Environments.NoAccelerator)
+function AOIntegrals(molecule::Molecule, basis::String)
 
-    Vnuc = nuclear_repulsion(mol, unit)
+    AOIntegrals(molecule, basis, Fermi.ComputeEnvironment.interconnect,
+                                 Fermi.ComputeEnvironment.communicator,
+                                 Fermi.ComputeEnvironment.accelerator)
+end
 
-    if unit == "bohr"
-        molecule = convert_xyz_unit(mol, from="bohr", to="angstrom")
-    else
-        molecule = mol
-    end
+function AOIntegrals(molecule::Molecule, basis::String, interconnect::Fermi.Environments.No_IC,
+                                                        communicator::Fermi.Environments.NoCommunicator,
+                                                        accelerator::Fermi.Environments.NoAccelerator)
 
     open("/tmp/molfile.xyz","w") do molfile
-        natom = length(split(strip(molecule),"\n"))
+        natom = length(molecule.atoms)
         write(molfile,"$natom\n\n")
-        write(molfile,molecule)
+        write(molfile,Fermi.MolHelper.get_xyz(molecule))
     end
 
     Lints.libint2_init()
@@ -82,7 +79,7 @@ function AOIntegrals(mol::String, basis::String, noccα::Int, noccβ::Int, unit:
     I = Fermi.MemTensor(I)
     Lints.libint2_finalize()
 
-    return AOIntegrals{Float64}(Vnuc, S, T, V, I)
+    return AOIntegrals{Float64}(S, T, V, I)
 end
 
 end #module
