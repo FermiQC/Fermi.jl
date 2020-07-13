@@ -1,5 +1,5 @@
 """
-    Fermi.MolHelper
+    Fermi.Geometry
 
 Module handling molecule and atoms data
 
@@ -8,7 +8,7 @@ Module handling molecule and atoms data
     Atom      Object storing information about an atom
     Molecule  Object storing information about a molecule (group of atoms)
 """
-module MolHelper
+module Geometry
 
 export Molecule
 export Atom
@@ -132,7 +132,7 @@ function Molecule(atoms::Array{Atom,1}, charge::Int, multiplicity::Int)
 end
 
 """
-    Fermi.MolHelper.nuclear_repulsion(A::Atom, B::Atom)
+    Fermi.Geometry.nuclear_repulsion(A::Atom, B::Atom)
 
 Returns the repulsion energy between the two given atoms.
 """

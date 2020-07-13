@@ -6,7 +6,7 @@ Module to compute integrals using Lints.jl
 module Integrals
 
 using Fermi
-using Fermi.MolHelper: Molecule
+using Fermi.Geometry: Molecule
 using Lints
 using LinearAlgebra
 
@@ -14,44 +14,47 @@ export AbstractIntegrals
 export AOIntegrals
 
 abstract type AbstractIntegrals end
+abstract type AbstractAOIntegrals  <: AbstractIntegrals end
+abstract type AbstractMOIntegrals  <: AbstractIntegrals end
+abstract type AbstractRMOIntegrals <: AbstractIntegrals end
 
-struct AOIntegrals{T} <: AbstractIntegrals where T <: AbstractFloat
+struct ConventionalAOIntegrals{T} <: AbstractAOIntegrals where T <: AbstractFloat
     S::Array{T,2}
     T::Array{T,2}
     V::Array{T,2}
     ERI:: I where I <: Fermi.AbstractTensor
 end
 
-function AOIntegrals()
+function ConventionalAOIntegrals()
     basis = Fermi.CurrentOptions["basis"]
-    AOIntegrals(Molecule(), basis)
+    ConventionalAOIntegrals(Molecule(), basis)
 end
 
-function AOIntegrals(molecule::Molecule)
+function ConventionalAOIntegrals(molecule::Molecule)
     basis = Fermi.CurrentOptions["basis"]
-    AOIntegrals(molecule, basis)
+    ConventionalAOIntegrals(molecule, basis)
 end
 
-function AOIntegrals(basis::String)
+function ConventionalAOIntegrals(basis::String)
 
-    AOIntegrals(Molecule(), basis)
+    ConventionalAOIntegrals(Molecule(), basis)
 end
 
-function AOIntegrals(molecule::Molecule, basis::String)
+function ConventionalAOIntegrals(molecule::Molecule, basis::String)
 
-    AOIntegrals(molecule, basis, Fermi.ComputeEnvironment.interconnect,
+    ConventionalAOIntegrals(molecule, basis, Fermi.ComputeEnvironment.interconnect,
                                  Fermi.ComputeEnvironment.communicator,
                                  Fermi.ComputeEnvironment.accelerator)
 end
 
-function AOIntegrals(molecule::Molecule, basis::String, interconnect::Fermi.Environments.No_IC,
+function ConventionalAOIntegrals(molecule::Molecule, basis::String, interconnect::Fermi.Environments.No_IC,
                                                         communicator::Fermi.Environments.NoCommunicator,
                                                         accelerator::Fermi.Environments.NoAccelerator)
 
     open("/tmp/molfile.xyz","w") do molfile
         natom = length(molecule.atoms)
         write(molfile,"$natom\n\n")
-        write(molfile,Fermi.MolHelper.get_xyz(molecule))
+        write(molfile,Fermi.Geometry.get_xyz(molecule))
     end
 
     Lints.libint2_init()
@@ -79,7 +82,19 @@ function AOIntegrals(molecule::Molecule, basis::String, interconnect::Fermi.Envi
     I = Fermi.MemTensor(I)
     Lints.libint2_finalize()
 
-    return AOIntegrals{Float64}(S, T, V, I)
+    return ConventionalAOIntegrals{Float64}(S, T, V, I)
+end
+
+struct PhysMOIntegrals{T} <: AbstractRMOIntegrals where T <: AbstractFloat
+   oooo::Array{T,4}
+   ooov::Array{T,4}
+   oovv::Array{T,4}
+   ovov::Array{T,4}
+   ovvv::Array{T,4}
+   vvvv::Array{T,4}
+   oo::Array{T,2}
+   ov::Array{T,2}
+   vv::Array{T,2}
 end
 
 end #module
