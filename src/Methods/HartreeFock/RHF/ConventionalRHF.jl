@@ -45,7 +45,8 @@ function RHFWavefunction(molecule::Molecule, aoint::ConventionalAOIntegrals, A::
     nvir = size(aoint.S)[1] - ndocc
 
     @output "    executing RHF\n"
-    @output "    Forming initial Fock matrix ... "
+    @output "    Forming initial Fock matrix ... \n"
+    @output "    Nuclear Repulsion:     {:5.10f}\n" molecule.Vnuc
 
     A = aoint.S^(-1/2)
     t = @elapsed begin

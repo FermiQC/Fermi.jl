@@ -1,10 +1,3 @@
-using Lints
-using Fermi
-using Fermi.Integrals: ConventionalAOIntegrals
-using Fermi.Geometry: Molecule
-using Fermi.Output
-using LinearAlgebra
-
 abstract type RHFAlgorithm end
 struct ConventionalRHF <: RHFAlgorithm end
 
