@@ -1,12 +1,11 @@
 """
-Module for running CC computations in Julia.
+Module for running CoupledCluster computations in Fermi.
 
-Implemented --> RCCD, RCCSD, DF-RCCD
 """
 module CoupledCluster
 
-using TensorOperations
-using LinearAlgebra
+using Fermi
+using Fermi.Output
 
 function print_header()
     banner = 
@@ -27,34 +26,28 @@ raw"""
     @output "\n{}\n" banner
 end
 
+"""
+    Fermi.CoupledCluster.AbstractCCWavefunction
+
+Fermi abstract type common to all Coupled Cluster wavefunctions
+
+_struct tree:_
+
+**AbstractCCWavefunction** <: AbstractCorrelatedWavefunction <: AbstractWavefunction
+"""
 abstract type AbstractCCWavefunction <: Fermi.AbstractCorrelatedWavefunction end
 
+# Structures symbolizing the integral type used in the CC computation
 abstract type          CCIntegrals end
 struct DF           <: CCIntegrals end
 struct Conventional <: CCIntegrals end
 struct CD           <: CCIntegrals end
 
+# Structures symbolizing the type of implementation for each CC method
 abstract type CCAlgorithm end
 struct DPD <: CCAlgorithm end
 struct CTF <: CCAlgorithm end
 
-#defaults = Dict(
-#                :cc_max_iter => 50,
-#                :cc_max_rms => 10^-10,
-#                :cc_e_conv => 10^-10,
-#                :diis => false,
-#                :do_pT => false,
-#                :fcn => 0
-#               )
-#
-#include("PerturbativeTriples.jl")
 include("RCCD/RCCD.jl")
-#include("DF-RCCD.jl")
-#include("ROCCD.jl")
-#include("RCCSD.jl")
-#include("UCCSD.jl")
-#include("mRCCD.jl")
-#include("AutoRCCSD.jl")
-#include("ecRCCSD.jl")
 
 end #module CC

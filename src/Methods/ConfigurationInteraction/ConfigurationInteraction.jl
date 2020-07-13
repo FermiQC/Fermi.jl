@@ -1,13 +1,7 @@
 module ConfigurationInteraction
 
-using Fermi.Wavefunction
-using Fermi.Transformation
+using Fermi
 using Fermi.Output
-using Printf
-using Base.Threads
-using TensorOperations
-using LinearAlgebra
-using Dates
 
 function print_header()
     banner = 
@@ -31,15 +25,13 @@ raw"""
     @output "\n{}\n" banner
 end
 
-#defaults = Dict{Any,Any}(
-#                :frozen => 0,
-#                :active => -1,
-#                :nroot => 1,
-#                :min_matrix_elem => 1e-9
-#)
-#
-#include("DetOperations.jl")
-#include("MatrixElement.jl")
-#include("FCI.jl")
+abstract type AbstractCIWavefunction <: Fermi.AbstractCorrelatedWavefunction end
+
+# Struct symbolizing the type of implementation for different CI methods
+abstract type CIAlgorithm end
+struct SparseHamiltonian <: CIAlgorithm end
+
+
+include("DetOperations.jl")
 
 end #module CI

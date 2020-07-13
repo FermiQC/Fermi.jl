@@ -7,8 +7,11 @@ using Formatting
 if !isdefined(Fermi.Output,:printstyle)
     printstyle = ["stdout"]
 end
+
 export output
+
 export @output
+
 function set_print(pstyle)
     if pstyle in ["none","file","stdout","both"]
         Fermi.Output.printstyle[1] = pstyle

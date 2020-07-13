@@ -14,7 +14,6 @@ Make a directory where you will be placing Fermi. I'll use `<DEVDIR>` to represe
 
 ### TBLIS and Lints
 Currently, Fermi depends on two unregistered packages TBLIS and Lints. Those can be added using their github address
-
 ```
 julia> ]
 (@v1.4) pkg> add https://github.com/FermiQC/Lints
@@ -26,7 +25,15 @@ julia> ]
 (@v1.4) pkg> test Lints
 (@v1.4) pkg> test TBLIS
 ```
-
+If an error like
+```
+ERROR: expected package `Lints [...]` to exist at path `...`
+```
+is raised, moving the package into `dev` may solve the problem
+```
+julia> ]
+(@v1.4) pkg> dev Lints
+```
 ### Making Julia aware of Fermi
 First, clone Fermi
 ```
