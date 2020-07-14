@@ -1,5 +1,11 @@
 # default options go here
 # if user specifies option they will be overwritten
+"""
+    Fermi.CurrentOptions
+
+Dictionary containing options for Fermi. Any information not given
+explicitly to Methods is obtained from here.
+"""
 CurrentOptions = Dict{String,Any}(
                                   "molstring" => """
                                   O        1.2091536548      1.7664118189     -0.0171613972
@@ -35,5 +41,4 @@ CurrentOptions = Dict{String,Any}(
 struct InvalidFermiOption <: Exception
     msg::String
 end
-
 Base.showerror(io::IO, e::InvalidFermiOption) = print(io, "InvalidFermiOption: ", e.msg)

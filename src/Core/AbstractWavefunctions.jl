@@ -1,7 +1,7 @@
 """
     Fermi.AbstractWavefunction
 
-Fermi abstract type common to all wave functions.
+Abstract type common to all wave functions.
 
 _struct tree:_
 
@@ -12,7 +12,7 @@ abstract type AbstractWavefunction end
 """
     Fermi.AbstractReferenceWavefunction
 
-Fermi abstract type common to all reference wave functions.
+Abstract type common to all reference wave functions.
 
 _struct tree:_
 
@@ -23,7 +23,7 @@ abstract type AbstractReferenceWavefunction <: AbstractWavefunction end
 """
     Fermi.AbstractCorrelatedWavefunction
 
-Fermi abstract type common to all correlated wave functions.
+Abstract type common to all correlated wave functions.
 
 _struct tree:_
 

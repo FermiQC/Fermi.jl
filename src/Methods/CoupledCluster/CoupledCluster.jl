@@ -37,12 +37,6 @@ _struct tree:_
 """
 abstract type AbstractCCWavefunction <: Fermi.AbstractCorrelatedWavefunction end
 
-# Structures symbolizing the integral type used in the CC computation
-abstract type          CCIntegrals end
-struct DF           <: CCIntegrals end
-struct Conventional <: CCIntegrals end
-struct CD           <: CCIntegrals end
-
 # Structures symbolizing the type of implementation for each CC method
 abstract type CCAlgorithm end
 struct DPD <: CCAlgorithm end

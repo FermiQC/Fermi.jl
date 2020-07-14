@@ -129,6 +129,12 @@ git-tree-sha1 = "ab2f313a5ef4db9d127b8fae4d922e268db1552f"
 uuid = "aaf54ef3-cdf8-58ed-94cc-d582ad619b94"
 version = "0.6.5"
 
+[[DocStringExtensions]]
+deps = ["LibGit2", "Markdown", "Pkg", "Test"]
+git-tree-sha1 = "c5714d9bcdba66389612dc4c47ed827c64112997"
+uuid = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
+version = "0.8.2"
+
 [[Eigen_jll]]
 deps = ["Libdl", "Pkg"]
 git-tree-sha1 = "247e7ea0ee68ab990e3ad500e3f2d512a743df16"
@@ -216,7 +222,7 @@ uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 
 [[Lints]]
 deps = ["CxxWrap", "Eigen_jll", "Libdl", "Pkg", "Test", "boost_jll", "libint_jll"]
-path = "/Users/aroeira/.julia/dev/Lints"
+git-tree-sha1 = "754464bf309dc9841662f7ee6ca6ceaec848689e"
 uuid = "969b4477-8239-4824-a7ce-fb2a72cbc115"
 version = "0.1.0"
 
@@ -229,6 +235,18 @@ git-tree-sha1 = "e1a93171a400d4578193eaa39edd2d3f5db08fb6"
 uuid = "5ced341a-0733-55b8-9ab6-a4889d929147"
 version = "1.9.2+0"
 
+[[MPI]]
+deps = ["Distributed", "DocStringExtensions", "Libdl", "MPICH_jll", "MicrosoftMPI_jll", "OpenMPI_jll", "Pkg", "Random", "Requires", "Serialization", "Sockets"]
+git-tree-sha1 = "925f4e00b51d7a68ecb88c1b60d3b7aefb8c8fcb"
+uuid = "da04e1cc-30fd-572f-bb4f-1f8673147195"
+version = "0.15.0"
+
+[[MPICH_jll]]
+deps = ["CompilerSupportLibraries_jll", "Libdl", "Pkg"]
+git-tree-sha1 = "4d37f1e07b4e2a74462eebf9ee48c626d15ffdac"
+uuid = "7cb0a576-ebde-5e09-9194-50597f1243b4"
+version = "3.3.2+10"
+
 [[MacroTools]]
 deps = ["Markdown", "Random"]
 git-tree-sha1 = "f7d2e3f654af75f01ec49be82c231c382214223a"
@@ -238,6 +256,12 @@ version = "0.5.5"
 [[Markdown]]
 deps = ["Base64"]
 uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
+
+[[MicrosoftMPI_jll]]
+deps = ["Libdl", "Pkg"]
+git-tree-sha1 = "720de13004e416f2864c92593d3839e062703985"
+uuid = "9237b28f-5490-5468-be7b-bb81f5f5e6cf"
+version = "10.1.2+3"
 
 [[Mmap]]
 uuid = "a63ad114-7e13-5084-954f-fe012c677804"
@@ -253,6 +277,12 @@ deps = ["CompilerSupportLibraries_jll", "Libdl", "Pkg"]
 git-tree-sha1 = "0c922fd9634e358622e333fc58de61f05a048492"
 uuid = "4536629a-c528-5b80-bd46-f80d51c5b363"
 version = "0.3.9+5"
+
+[[OpenMPI_jll]]
+deps = ["Libdl", "Pkg"]
+git-tree-sha1 = "41b983e26a7ab8c9bf05f7d70c274b817d541b46"
+uuid = "fe0851c0-eecd-5654-98d4-656369965a5c"
+version = "4.0.2+2"
 
 [[OrderedCollections]]
 git-tree-sha1 = "12ce190210d278e12644bcadf5b21cbdcf225cd3"
@@ -327,9 +357,7 @@ version = "1.0.1"
 
 [[TBLIS]]
 deps = ["Hwloc_jll", "Libdl", "LinearAlgebra", "Test", "tblis_jll"]
-git-tree-sha1 = "92a4e780d7ffdf3d9a9782afdc2d7b88b92e01d9"
-repo-rev = "master"
-repo-url = "https://github.com/FermiQC/TBLIS.jl.git"
+path = "/home/aroeira/.julia/dev/TBLIS"
 uuid = "48530278-0828-4a49-9772-0f3830dfa1e9"
 version = "0.1.0"
 
