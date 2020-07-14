@@ -78,14 +78,15 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, Cguess::Array{F
 
     nvir = size(aoint.S)[1] - ndocc
 
+    @output " Number of Doubly Occupied Orbitals:   {:5.0d}\n" ndocc
+    @output " Number of Virtual Spatial Orbitals:   {:5.0d}\n" nvir
+    @output " Nuclear Repulsion Energy:     {:5.10f}\n" molecule.Vnuc
+
+
     # Read in initial guess for orbitals
     x,y = size(Cguess)
     C = zeros(ndocc+nvir, ndocc+nvir)
     C[1:x, 1:y] .= Cguess
-
-
-    @output "    executing RHF\n"
-    @output "    Nuclear Repulsion:     {:5.10f}\n" molecule.Vnuc
 
     # Form the orthogonalizer 
     A = aoint.S^(-1/2)
@@ -128,7 +129,7 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, Cguess::Array{F
 
             # Compute Energy Change
             ΔE = Enew - E
-            D = Dnew
+            D .= Dnew
             E = Enew
         end
         @output "    {:<3} {:>20.17f} {:>11.3e} {:>11.3e} {:>8.2f}\n" i E ΔE Drms t_iter

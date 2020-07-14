@@ -43,5 +43,6 @@ struct DPD <: CCAlgorithm end
 struct CTF <: CCAlgorithm end
 
 include("RCCD/RCCD.jl")
+include("RCCSD/RCCSD.jl")
 
 end #module CC
