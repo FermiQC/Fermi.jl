@@ -37,7 +37,6 @@ CurrentOptions = Dict{String,Any}(
                                   "min_matrix_elem" => 10^-9
                                  )
 
-
 struct InvalidFermiOption <: Exception
     msg::String
 end

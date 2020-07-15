@@ -46,19 +46,24 @@ end
 
 # General dispatches
 """
-    Fermi.HartreeFock.RHF(molecule::Molecule = Molecule(), aoint::AbstractAOIntegrals = ConventionalAOIntegrals(), Alg::RHFAlgorithm = select_algorithm(Fermi.CurrentOptions["scf_algorithm"]))
+    Fermi.HartreeFock.RHF()
 
-Compute RHF wave function given a Molecule, Integrals and Algorithm objects. By default data on Fermi.CurrentOptions is used.
+Compute RHF wave function using dara from Fermi.CurrentOptions
 """
-function RHF(molecule::Molecule = Molecule(), aoint::AbstractAOIntegrals = ConventionalAOIntegrals(), Alg::RHFAlgorithm = select_algorithm(Fermi.CurrentOptions["scf_algorithm"]))
+function RHF()
+    molecule = Molecule()
+    aoint = ConventionalAOIntegrals() # To be changed once new HF methods such as direct is implemented
+    Alg = select_algorithm(Fermi.CurrentOptions["scf_algorithm"])
     RHF(molecule, aoint, Alg)
 end
 
 """
-    Fermi.HartreeFock.RHF(wfn::RHF, Alg::RHFAlgorithm = select_algorithm(Fermi.CurrentOptions["scf_algorithm"]))
+    Fermi.HartreeFock.RHF(wfn::RHF)
 
-Compute RHF wave function given a RHF and Algorithim objects. The RHF wavefunction will be used to generate an initial guess of orbitals. Integrals are generated using the molecule from wfn and basis set from Fermi.CurrentOptions
+    Compute RHF wave function using the input RHF wave function (wfn) to generate a guess for orbitals.
 """
-function RHF(wfn::RHF, Alg::RHFAlgorithm = select_algorithm(Fermi.CurrentOptions["scf_algorithm"]))
+function RHF(wfn::RHF)
+
+    Alg = select_algorithm(Fermi.CurrentOptions["scf_algorithm"])
     RHF(wfn, Alg)
 end

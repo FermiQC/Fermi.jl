@@ -1,7 +1,7 @@
 """
     Fermi.HartreeFock.RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, Alg::ConventionalRHF)
 
-Compute RHF wave function given Molecule, Integrals using conventional algorithm.
+Conventional algorithm for to compute RHF wave function given Molecule, Integrals objects.
 """
 function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, Alg::ConventionalRHF)
 
@@ -16,8 +16,7 @@ end
 """
     Fermi.HartreeFock.RHF(wfn::RHF, Alg::ConventionalRHF)
 
-Compute RHF wave function through conventional algorithm. The input RHF wave function (wfn) is used to produce an initial guess for orbitals. 
-Integrals are computed using the molecule from wfn and basis set from Fermi.CurrentOptions.
+Conventional algorithm for to compute RHF wave function. Inital guess for orbitals is built from given RHF wfn.
 """
 function RHF(wfn::RHF, Alg::ConventionalRHF)
 
@@ -25,6 +24,12 @@ function RHF(wfn::RHF, Alg::ConventionalRHF)
     RHF(wfn, aoint, Alg)
 end
 
+"""
+    Fermi.HartreeFock.RHF(wfn::RHF, aoint::ConventionalAOIntegrals, Alg::ConventionalRHF)
+
+Conventional algorithm for to compute RHF wave function. Inital guess for orbitals is built from given RHF wfn. Integrals
+are taken from the aoint input.
+"""
 function RHF(wfn::RHF, aoint::ConventionalAOIntegrals, Alg::ConventionalRHF)
 
     RHF(wfn.molecule, aoint, wfn.C, Alg)
@@ -123,6 +128,7 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, Cguess::Array{F
     @output "    RHF done in {:>5.2f}s\n" t
     @output "    @E[RHF] = {:>20.10f}\n" E
 
+    @output "\n   • Orbitals Summary\n"
     @output "\n {:>10}   {:>15}   {:>10}\n" "Orbital" "Energy" "Occupancy"
     for i in eachindex(eps)
             @output " {:>10}   {:> 15.10f}   {:>6}\n" i eps[i] (i ≤ ndocc ? "↿⇂" : "")
