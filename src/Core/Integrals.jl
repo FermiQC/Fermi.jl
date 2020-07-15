@@ -49,6 +49,13 @@ abstract type AbstractMOIntegrals  <: AbstractIntegrals end
 
 Object holding AO integrals in memory.
 
+# Fields:
+
+    S    Overlap AO matrix
+    T    Kinetic energy AO matrix
+    V    Nuclear attraction matrix
+    ERI  Tensor with electron repulsion integrals
+
 _struct tree:_
 
 **ConventionalAOIntegrals** <: AbstractAOIntegrals <: AbstractIntegrals
@@ -160,7 +167,7 @@ _struct tree:_
 
 **PhysRMOIntegrals** <: AbstractMOIntegrals <: AbstractIntegrals
 """
-struct PhysRMOIntegrals{T} <: AbstractMOIntegrals where T <: AbstractFloat
+struct PhysRestrictedMOIntegrals{T} <: AbstractMOIntegrals where T <: AbstractFloat
    oooo::Array{T,4}
    ooov::Array{T,4}
    oovv::Array{T,4}
@@ -170,6 +177,89 @@ struct PhysRMOIntegrals{T} <: AbstractMOIntegrals where T <: AbstractFloat
    oo::Array{T,2}
    ov::Array{T,2}
    vv::Array{T,2}
+end
+
+function PhysRestrictedMOIntegrals{T}(ndocc::Int, nvir::Int, drop_occ::Int, drop_vir::Int, C::Array{AbstractFloat,2}, aoint::ConventionalAOIntegrals) where T <: AbstractFloat
+
+    nmo = ndocc + nvir
+    Co = C[:, (1:drop_occ):ndocc]
+    Cv = C[:, (1+ndocc):(nmo-drop_vir)]
+
+    # Get MO ERIs
+
+    oooo = transform_eri(aoint.ERI, Co, Co, Co, Co)
+    oooo = T.(permutedims(oooo, (1,3,2,4)))
+
+    ooov = transform_eri(aoint.ERI, Co, Co, Co, Cv)
+    ooov = T.(permutedims(ooov, (1,3,2,4)))
+
+    oovv = transform_eri(aoint.ERI, Co, Cv, Co, Cv)
+    oovv = T.(permutedims(oovv, (1,3,2,4)))
+
+    ovov = transform_eri(aoint.ERI, Co, Co, Cv, Cv)
+    ovov = T.(permutedims(ovov, (1,3,2,4)))
+
+    ovvv = transform_eri(aoint.ERI, Co, Cv, Cv, Cv)
+    ovvv = T.(permutedims(ovvv, (1,3,2,4)))
+
+    vvvv = transform_eri(aoint.ERI, Cv, Cv, Cv, Cv)
+    vvvv = T.(permutedims(vvvv, (1,3,2,4)))
+
+    # Get density matrix
+
+    D = Fermi.contract(C[1:ndocc], C[1:ndocc], "um", "vm")
+    
+    # Get AO Fock Matrix
+
+    F = aoint.T + aoint.V
+    Fermi.contract!(F,D,aoint.ERI,1.0,1.0,2.0,"mn","rs","mnrs")
+    Fermi.contract!(F,D,aoint.ERI,1.0,1.0,-1.0,"mn","rs","mrns")
+
+    # Get MO Fock Matrices
+
+    oo = T.(transform_fock(F, Co, Co))
+    ov = T.(transform_fock(F, Co, Cv))
+    vv = T.(transform_fock(F, Cv, Cv))
+
+    return PhysRestrictedMOIntegrals{T}(oooo, ooov, oovv, ovov, ovvv, vvvv, oo, ov, vv)
+end
+
+function transform_fock(F::Array{Float64,2}, C1::Array{Float64,2}, C2::Array{Float64,2})
+
+    nmo,p = size(C1)
+    _,q   = size(C2)
+
+    Q1 = zeros(p,nmo)
+    Fermi.contract!(Q1,C1,F,"uv","up","pv")
+
+    Q2 = zeros(p,q)
+    Fermi.contract!(Q2,C2,Q1,"pv","vq","pq")
+
+    return Q2
+end
+
+function transform_eri(ERI::Fermi.MemTensor, C1::Array{Float64,2}, C2::Array{Float64,2}, C3::Array{Float64,2}, C4::Array{Float64,2})
+
+    nmo,p = size(C1)
+    _,q   = size(C2)
+    _,r   = size(C3)
+    _,s   = size(C4)
+
+    Q1 = zeros(p,nmo,nmo,nmo)
+    Fermi.contract!(Q1,C1,ERI,"ivls","ui","uvls")
+
+    Q2 = zeros(p,q,nmo,nmo)
+    Fermi.contract!(Q2,C2,Q1,"ials","va","ivls")
+    Q1 = nothing
+
+    Q3 = zeros(p,q,r,nmo)
+    Fermi.contract!(Q3,C3,Q2,"iajs","lj","ials")
+    Q2 = nothing
+
+    Q4 = zeros(p,q,r,s)
+    Fermi.contract!(Q4,C4,Q3,"iajb","sb","iajs")
+
+    return Q4
 end
 
 end #module

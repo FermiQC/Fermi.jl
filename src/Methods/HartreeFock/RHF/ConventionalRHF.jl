@@ -1,34 +1,8 @@
-function RHF()
-    molecule = Molecule()
-    RHF(molecule)
-end
+"""
+    Fermi.HartreeFock.RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, Alg::ConventionalRHF)
 
-function RHF(Alg::ConventionalRHF)
-    molecule = Molecule()
-    aoint = ConventionalAOIntegrals(molecule)
-    RHF(molecule, aoint, Alg)
-end
-
-function RHF(aoint::ConventionalAOIntegrals)
-    molecule = Molecule()
-    RHF(molecule, aoint)
-end
-
-function RHF(molecule::Molecule)
-    aoint = ConventionalAOIntegrals(molecule)
-    RHF(molecule, aoint)
-end
-
-function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals)
-    if Fermi.CurrentOptions["scf_algorithm"] == "conventional"
-        Alg = ConventionalRHF()
-    else
-        throw(Fermi.InvalidFermiOptions("Invalid RHF algorithm: $(Fermi.CurrentOptions["scf_algorithm"])"))
-    end
-
-    RHF(molecule, aoint, Alg)
-end
-
+Compute RHF wave function given Molecule, Integrals using conventional algorithm.
+"""
 function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, Alg::ConventionalRHF)
 
     A = aoint.S^(-1/2)
@@ -39,17 +13,12 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, Alg::Convention
     RHF(molecule, aoint, C, Alg)
 end
 
-function RHF(wfn::RHF)
+"""
+    Fermi.HartreeFock.RHF(wfn::RHF, Alg::ConventionalRHF)
 
-    if Fermi.CurrentOptions["scf_algorithm"] == "conventional"
-        Alg = ConventionalRHF()
-    else
-        throw(Fermi.InvalidFermiOptions("Invalid RHF algorithm: $(Fermi.CurrentOptions["scf_algorithm"])"))
-    end
-
-    RHF(wfn, Alg)
-end
-
+Compute RHF wave function through conventional algorithm. The input RHF wave function (wfn) is used to produce an initial guess for orbitals. 
+Integrals are computed using the molecule from wfn and basis set from Fermi.CurrentOptions.
+"""
 function RHF(wfn::RHF, Alg::ConventionalRHF)
 
     aoint = ConventionalAOIntegrals(wfn.molecule)
@@ -61,6 +30,11 @@ function RHF(wfn::RHF, aoint::ConventionalAOIntegrals, Alg::ConventionalRHF)
     RHF(wfn.molecule, aoint, wfn.C, Alg)
 end
 
+"""
+    Fermi.HartreeFock.RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, Cguess::Array{Float64,2}, Alg::ConventionalRHF)
+
+Basic function for conventional RHF using conventional integrals.
+"""
 function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, Cguess::Array{Float64,2}, Alg::ConventionalRHF)
     # Print header
     Fermi.HartreeFock.print_header()
@@ -97,10 +71,14 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, Cguess::Array{F
     F = Array{Float64,2}(undef, ndocc+nvir, ndocc+nvir)
     build_fock!(F, aoint.T+aoint.V, D, aoint.ERI)
     E = RHFEnergy(D, aoint.T+aoint.V, F) + molecule.Vnuc
-    @output "\n"
-    @output " Iter.   {:<20} {:>11} {:>11} {:>8}\n" "E[RHF]" "ΔE" "√|ΔD|²" "t"
+    eps = Array{Float64, 1}(undef, ndocc+nvir)
+    ite = 1
+    converged = false
+
+    @output "\n Iter.   {:<20} {:>11} {:>11} {:>8}\n" "E[RHF]" "ΔE" "√|ΔD|²" "t"
     @output repeat("~",80)*"\n"
-    t = @elapsed for i in 1:maxit
+
+    t = @elapsed while ite ≤ maxit
         t_iter = @elapsed begin
 
             # Build the Fock Matrix
@@ -110,7 +88,7 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, Cguess::Array{F
             Ft = transpose(A)*F*A
 
             # Get orbital energies and transformed coefficients
-            e,Ct = eigen(Symmetric(Ft))
+            eps,Ct = eigen(Symmetric(Ft))
 
             # Reverse transformation to get MO coefficients
             C = A*Ct
@@ -132,26 +110,35 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, Cguess::Array{F
             D .= Dnew
             E = Enew
         end
-        @output "    {:<3} {:>20.17f} {:>11.3e} {:>11.3e} {:>8.2f}\n" i E ΔE Drms t_iter
+        @output "    {:<3} {:>20.17f} {:>11.3e} {:>11.3e} {:>8.2f}\n" ite E ΔE Drms t_iter
+        ite += 1
 
         if (ΔE < Etol) & (Drms < Dtol)
-            build_fock!(F, aoint.T+aoint.V, D, aoint.ERI)
+            converged = true
             break
         end
     end
+
     @output repeat("~",80)*"\n"
     @output "    RHF done in {:>5.2f}s\n" t
     @output "    @E[RHF] = {:>20.10f}\n" E
 
-    return RHF{Float64}(molecule, E, ndocc, nvir, C, F)
+    @output "\n {:>10}   {:>15}   {:>10}\n" "Orbital" "Energy" "Occupancy"
+    for i in eachindex(eps)
+            @output " {:>10}   {:> 15.10f}   {:>6}\n" i eps[i] (i ≤ ndocc ? "↿⇂" : "")
+    end
+    
+    if !converged
+        @output "\n !! SCF Equations did not converge in {:>5} iterations !!\n" maxit
+    end
+
+    return RHF(molecule, E, ndocc, nvir, C, eps)
 end
 
-#function RHFEnergy(D::Array{Float64,2}, H::Array{Float64,2},F::Symmetric{Float64, Array{Float64,2}})
 function RHFEnergy(D::Array{Float64,2}, H::Array{Float64,2},F::Array{Float64,2})
     return sum(D .* (H .+ F))
 end
 
-#function build_fock!(F::Symmetric{Float64, Array{Float64,2}}, H::Array{Float64,2}, D::Array{Float64,2}, ERI::Fermi.MemTensor)
 function build_fock!(F::Array{Float64,2}, H::Array{Float64,2}, D::Array{Float64,2}, ERI::Fermi.MemTensor)
     F .= H
     Fermi.contract!(F,D,ERI,1.0,1.0,2.0,"mn","rs","mnrs")
