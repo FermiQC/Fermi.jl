@@ -23,7 +23,7 @@ _struct tree:_
 struct RHF <: AbstractHFWavefunction
     molecule::Molecule
     energy::Float64
-    nocc::Int
+    ndocc::Int
     nvir::Int
     C::Array{Float64,2} 
     eps::Array{Float64,1}
@@ -38,7 +38,7 @@ function select_algorithm(A::String)
        )
 
     try
-        return implemented["conventional"]
+        return implemented[A]
     catch KeyError
         throw(Fermi.InvalidFermiOptions("Invalid RHF algorithm: $(A)"))
     end
@@ -48,12 +48,21 @@ end
 """
     Fermi.HartreeFock.RHF()
 
-Compute RHF wave function using dara from Fermi.CurrentOptions
+Compute RHF wave function using data from Fermi.CurrentOptions
 """
 function RHF()
     molecule = Molecule()
     aoint = ConventionalAOIntegrals() # To be changed once new HF methods such as direct is implemented
-    Alg = select_algorithm(Fermi.CurrentOptions["scf_algorithm"])
+    Alg = select_algorithm(Fermi.CurrentOptions["scf_alg"])
+    RHF(molecule, aoint, Alg)
+end
+"""
+Fermi.HartreeFock.RHF(molecule::Molecule, aoint::ConventionalAOIntegrals)
+
+Compute RHF wave function using the given Molecule and Integral objects.
+"""
+function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals)
+    Alg = select_algorithm(Fermi.CurrentOptions["scf_alg"])
     RHF(molecule, aoint, Alg)
 end
 
@@ -64,6 +73,6 @@ end
 """
 function RHF(wfn::RHF)
 
-    Alg = select_algorithm(Fermi.CurrentOptions["scf_algorithm"])
+    Alg = select_algorithm(Fermi.CurrentOptions["scf_alg"])
     RHF(wfn, Alg)
 end

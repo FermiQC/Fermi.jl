@@ -20,9 +20,13 @@ function print_header()
 end
 
 """
-    Fermi.HartreeFock.AbstractWavefunction
+    Fermi.HartreeFock.AbstractHFWavefunction
 
 Abstract type common to all Hartree-Fock wave functions.
+
+_struct tree:_
+
+**AbstractHFWavefunction** <: AbstractReferenceWavefunction <: AbstractWavefunction
 """
 abstract type AbstractHFWavefunction <: Fermi.AbstractReferenceWavefunction end
 

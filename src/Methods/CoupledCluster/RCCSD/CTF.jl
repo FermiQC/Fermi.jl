@@ -1,86 +1,58 @@
 using TensorOperations
 using LinearAlgebra
 
-"""
-    Fermi.CoupledCluster.AutoRCCSD.do_rccsd(wfn::Wfn; kwargs...)
+function RCCSD{T}(Alg::CTF) where T <: AbstractFloat
+    println("Generating Molecule...")
+    molecule = Fermi.Geometry.Molecule()
+    println("Computing Integrals...")
+    aoint = Fermi.Integrals.ConventionalAOIntegrals()
+    println("Calling Hartree-Fock module...")
+    refwfn = Fermi.HartreeFock.RHF(molecule, aoint)
 
-Perform the RCCSD computation.
+    drop_occ = Fermi.CurrentOptions["drop_occ"]
+    drop_vir = Fermi.CurrentOptions["drop_vir"]
 
-**Arguments**
+    println("Transforming Integrals...")
+    moint = Fermi.Integrals.PhysRestrictedMOIntegrals{T}(refwfn.ndocc, refwfn.nvir, drop_occ, drop_vir, refwfn.C, aoint)
 
-    wfn     Wavefunction object.
+    RCCSD{T}(refwfn, moint, Alg) 
+end
 
-**Kwargs**
+function RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, Alg::CTF) where T <: AbstractFloat
+    d = [i - a for i = diag(moint.oo), a = diag(moint.vv)]
+    D = [i + j - a - b for i = diag(moint.oo), j = diag(moint.oo), a = diag(moint.vv), b = diag(moint.vv)]
+    newT1 = moint.ov./d
+    newT2 = moint.oovv./D
 
-    kwargs...   Options from Fermi.
-"""
-function RCCSD{T}(wfn::RHFWavefunction, moint::PhysRMOIntegrals, T1::Array{T, 2}, T2::Array{T,4}, Alg::CTF)
+    RCCSD{T}(refwfn, moint, newT1, newT2, d, D, Alg)
+end
+
+function RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, newT1::Array{T, 2}, newT2::Array{T,4}, d::Array{T,2}, D::Array{T,4}, Alg::CTF) where T <: AbstractFloat
 
     # Print intro
     Fermi.CoupledCluster.print_header()
     @output "\n    • Computing CCSD with the AutoRCCSD module.\n\n"
-    
-    # Process options
-    for arg in keys(Fermi.CoupledCluster.defaults)
-        if arg in keys(kwargs)
-            @eval $arg = $(kwargs[arg])
-        else
-            @eval $arg = $(Fermi.CoupledCluster.defaults[arg])
-        end
-    end
 
-    # Check if the number of electrons is even
-    nelec = wfn.nalpha + wfn.nbeta
-    nelec % 2 == 0 ? nothing : error("Number of electrons must be even for RHF. Given $nelec")
-    nmo = wfn.nmo
-    ndocc = Int(nelec/2)
-    nvir = nmo - ndocc
-    
-    # Slices
-    o = 1+fcn:ndocc
-    v = ndocc+1:nmo
+    # Process Fock matrix, important for non HF cases
+    foo = similar(moint.oo)
+    foo .= moint.oo - Diagonal(moint.oo)
+    fvv = similar(moint.vv)
+    fvv .= moint.vv - Diagonal(moint.vv)
+    fov = moint.ov
 
-    # Get fock matrix
-    f = get_fock(wfn; spin="alpha")
+    println(typeof(newT2))
 
-    # Save diagonal terms
-    fock_Od = diag(f)[o]
-    fock_Vd = diag(f)[v]
-    fd = (fock_Od, fock_Vd)
-
-    # Erase diagonal elements from original matrix
-    f = f - Diagonal(f)
-
-    # Save useful slices
-    fock_OO = f[o,o]
-    fock_VV = f[v,v]
-    fock_OV = f[o,v]
-    f = (fock_OO, fock_OV, fock_VV)
-
-    # Get Necessary ERIs
-    #V = (get_eri(wfn, "OOOO")[o,o,o,o], get_eri(wfn, "OOOV")[o,o,o,:], get_eri(wfn, "OOVV")[o,o,:,:], 
-    #     get_eri(wfn, "OVOV")[o,:,o,:], get_eri(wfn, "OVVV")[o,:,:,:], get_eri(wfn, "VVVV"))
-    V = (get_eri(wfn, "OOOO", fcn=fcn), get_eri(wfn, "OOOV", fcn=fcn), get_eri(wfn, "OOVV", fcn=fcn), 
-         get_eri(wfn, "OVOV", fcn=fcn), get_eri(wfn, "OVVV", fcn=fcn), get_eri(wfn, "VVVV", fcn=fcn))
-    
-    # Auxiliar D matrix
-    fock_Od, fock_Vd = fd
-    d = [i - a for i = fock_Od, a = fock_Vd]
-    
-    D = [i + j - a - b for i = fock_Od, j = fock_Od, a = fock_Vd, b = fock_Vd]
-    
-    # Initial Amplitude. Note that f[2] = fock_OV and V[3] = Voovv.
-    newT1 = f[2]./d
-    newT2 = V[3]./D
-    
-    # Get MP2 energy. Note that f[2] = fock_OV and V[3] = Voovv.
-    Ecc = update_energy(newT1, newT2, f[2], V[3])
+    # Compute Guess Energy
+    Ecc = update_energy(newT1, newT2, fov, moint.oovv)
     
     @output "Initial Amplitudes Guess: MP2\n"
-    @output "MP2 Energy:   {:15.10f}\n\n" Ecc
-    
+    @output "MP2 Energy:   {:15.10f}\n\n" Ecc+refwfn.energy
     
     # Start CC iterations
+    
+    cc_max_iter = Fermi.CurrentOptions["cc_max_iter"]
+    cc_e_conv = Fermi.CurrentOptions["cc_e_conv"]
+    cc_max_rms = Fermi.CurrentOptions["cc_max_rms"]
 
     @output "    Starting CC Iterations\n\n"
     @output "Iteration Options:\n"
@@ -96,6 +68,7 @@ function RCCSD{T}(wfn::RHFWavefunction, moint::PhysRMOIntegrals, T1::Array{T, 2}
     ite = 1
     T1 = similar(newT1)
     T2 = similar(newT2)
+    println(typeof(T2))
 
     while abs(dE) > cc_e_conv || rms > cc_max_rms
         if ite > cc_max_iter
@@ -106,7 +79,7 @@ function RCCSD{T}(wfn::RHFWavefunction, moint::PhysRMOIntegrals, T1::Array{T, 2}
 
             T1 .= newT1
             T2 .= newT2
-            update_amp(T1, T2, newT1, newT2, f, V)
+            update_amp(T1, T2, newT1, newT2, foo, fov, fvv, moint)
 
             # Apply resolvent
             newT1 ./= d
@@ -118,7 +91,7 @@ function RCCSD{T}(wfn::RHFWavefunction, moint::PhysRMOIntegrals, T1::Array{T, 2}
         end
         rms = max(r1,r2)
         oldE = Ecc
-        Ecc = update_energy(newT1, newT2, f[2], V[3])
+        Ecc = update_energy(newT1, newT2, fov, moint.oovv)
         dE = Ecc - oldE
         @output "    {:<5.0d}    {:<15.10f}    {:<12.10f}    {:<12.10f}    {:<10.5f}\n" ite Ecc dE rms t
         ite += 1
@@ -128,15 +101,8 @@ function RCCSD{T}(wfn::RHFWavefunction, moint::PhysRMOIntegrals, T1::Array{T, 2}
     if abs(dE) < cc_e_conv && rms < cc_max_rms
         @output "\n 🍾 Equations Converged!\n"
     end
-    @output "\n⇒ Final CCSD Energy:     {:15.10f}\n" Ecc+wfn.energy
+    @output "\n⇒ Final CCSD Energy:     {:15.10f}\n" Ecc+refwfn.energy
 
-    if do_pT
-        Vvvvo = permutedims(V[5], [4,2,3,1])
-        Vvooo = permutedims(V[2], [4,2,1,3])
-        Vvovo = permutedims(V[3], [3,1,4,2])
-        Ept = compute_pT(T1=T1, T2=T2, Vvvvo=Vvvvo, Vvooo=Vvooo, Vvovo=Vvovo, fo=fock_Od, fv=fock_Vd)
-        @output "\n⇒ Final CCSD(T) Energy:  {:15.10f}\n" Ecc+wfn.energy+Ept
-    end
 end
 
 """
@@ -151,7 +117,7 @@ Compute CC energy from amplitudes arrays.
     f      Fock matrix f(i,a).
     Voovv  ERI tensor V(i,j,a,b).
 """
-function update_energy(T1::Array{Float64, 2}, T2::Array{Float64, 4}, f::Array{Float64,2}, Voovv::Array{Float64, 4})
+function update_energy(T1::Array{T, 2}, T2::Array{T, 4}, f::Array{T,2}, Voovv::Array{T, 4}) where T <: AbstractFloat
 
     @tensoropt (k=>x, l=>x, c=>100x, d=>100x)  begin
         CC_energy = 2.0*f[k,c]*T1[k,c]
@@ -176,25 +142,22 @@ Compute new set of T1 and T2 amplitudes from old ones.
     T2     T2 CC amplitudes array.
     f      Tuple containing slices of the full Fock matrix.
     V      Tuple containing slices of the full ERI tensor.
-    d      Resolvent tensor D(i,a)
-    D      Resolvent tensor D(i,j,a,b)
 """
-function update_amp(T1::Array{Float64, 2}, T2::Array{Float64, 4}, newT1::Array{Float64,2}, newT2::Array{Float64,4}, f::Tuple, V::Tuple)
+function update_amp(T1::Array{T, 2}, T2::Array{T, 4}, newT1::Array{T,2}, newT2::Array{T,4}, foo::Array{T,2}, fov::Array{T,2}, fvv::Array{T,2}, moint::PhysRestrictedMOIntegrals) where T <: AbstractFloat
 
-    Voooo, Vooov, Voovv, Vovov, Vovvv, Vvvvv = V
-    fock_OO, fock_OV, fock_VV = f
+    Voooo, Vooov, Voovv, Vovov, Vovvv, Vvvvv = moint.oooo, moint.ooov, moint.oovv, moint.ovov, moint.ovvv, moint.vvvv
 
     fill!(newT1, 0.0)
     fill!(newT2, 0.0)
 
     # Get new amplitudes
     @tensoropt (i=>x, j=>x, k=>x, l=>x, a=>100x, b=>100x, c=>100x, d=>100x) begin
-        newT1[i,a] += fock_OV[i,a]
-        newT1[i,a] -= fock_OO[i,k]*T1[k,a]
-        newT1[i,a] += fock_VV[c,a]*T1[i,c]
-        newT1[i,a] -= fock_OV[k,c]*T1[i,c]*T1[k,a]
-        newT1[i,a] += 2.0*fock_OV[k,c]*T2[i,k,a,c]
-        newT1[i,a] -= fock_OV[k,c]*T2[k,i,a,c]
+        newT1[i,a] += fov[i,a]
+        newT1[i,a] -= foo[i,k]*T1[k,a]
+        newT1[i,a] += fvv[c,a]*T1[i,c]
+        newT1[i,a] -= fov[k,c]*T1[i,c]*T1[k,a]
+        newT1[i,a] += 2.0*fov[k,c]*T2[i,k,a,c]
+        newT1[i,a] -= fov[k,c]*T2[k,i,a,c]
         newT1[i,a] -= T1[k,c]*Vovov[i,c,k,a]
         newT1[i,a] += 2.0*T1[k,c]*Voovv[k,i,c,a]
         newT1[i,a] -= T2[k,i,c,d]*Vovvv[k,a,d,c]
@@ -241,12 +204,12 @@ function update_amp(T1::Array{Float64, 2}, T2::Array{Float64, 4}, newT1::Array{F
         newT2[i,j,a,b] += T1[i,c]*T1[j,d]*T1[k,a]*T1[l,b]*Voovv[k,l,c,d]
         newT2[i,j,a,b] += T1[i,c]*T1[j,d]*T2[l,k,a,b]*Voovv[l,k,c,d]
         newT2[i,j,a,b] += T1[k,a]*T1[l,b]*T2[i,j,d,c]*Voovv[l,k,c,d]
-        P_OoVv[i,j,a,b] := -1.0*fock_OO[i,k]*T2[k,j,a,b]
-        P_OoVv[i,j,a,b] += fock_VV[c,a]*T2[i,j,c,b]
+        P_OoVv[i,j,a,b] := -1.0*foo[i,k]*T2[k,j,a,b]
+        P_OoVv[i,j,a,b] += fvv[c,a]*T2[i,j,c,b]
         P_OoVv[i,j,a,b] += -1.0*T1[k,b]*Vooov[j,i,k,a]
         P_OoVv[i,j,a,b] += T1[j,c]*Vovvv[i,c,a,b]
-        P_OoVv[i,j,a,b] += -1.0*fock_OV[k,c]*T1[i,c]*T2[k,j,a,b]
-        P_OoVv[i,j,a,b] += -1.0*fock_OV[k,c]*T1[k,a]*T2[i,j,c,b]
+        P_OoVv[i,j,a,b] += -1.0*fov[k,c]*T1[i,c]*T2[k,j,a,b]
+        P_OoVv[i,j,a,b] += -1.0*fov[k,c]*T1[k,a]*T2[i,j,c,b]
         P_OoVv[i,j,a,b] += -1.0*T2[k,i,a,c]*Voovv[k,j,c,b]
         P_OoVv[i,j,a,b] += -1.0*T1[i,c]*T1[k,a]*Voovv[k,j,c,b]
         P_OoVv[i,j,a,b] += -1.0*T1[i,c]*T1[k,b]*Vovov[j,c,k,a]

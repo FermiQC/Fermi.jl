@@ -179,10 +179,13 @@ struct PhysRestrictedMOIntegrals{T} <: AbstractMOIntegrals where T <: AbstractFl
    vv::Array{T,2}
 end
 
-function PhysRestrictedMOIntegrals{T}(ndocc::Int, nvir::Int, drop_occ::Int, drop_vir::Int, C::Array{AbstractFloat,2}, aoint::ConventionalAOIntegrals) where T <: AbstractFloat
+"""
+test
+"""
+function PhysRestrictedMOIntegrals{T}(ndocc::Int, nvir::Int, drop_occ::Int, drop_vir::Int, C::Array{Float64,2}, aoint::ConventionalAOIntegrals) where T <: AbstractFloat
 
     nmo = ndocc + nvir
-    Co = C[:, (1:drop_occ):ndocc]
+    Co = C[:, (1+drop_occ):ndocc]
     Cv = C[:, (1+ndocc):(nmo-drop_vir)]
 
     # Get MO ERIs
@@ -207,7 +210,7 @@ function PhysRestrictedMOIntegrals{T}(ndocc::Int, nvir::Int, drop_occ::Int, drop
 
     # Get density matrix
 
-    D = Fermi.contract(C[1:ndocc], C[1:ndocc], "um", "vm")
+    D = Fermi.contract(C[:,1:ndocc], C[:,1:ndocc], "um", "vm")
     
     # Get AO Fock Matrix
 
@@ -230,33 +233,33 @@ function transform_fock(F::Array{Float64,2}, C1::Array{Float64,2}, C2::Array{Flo
     _,q   = size(C2)
 
     Q1 = zeros(p,nmo)
-    Fermi.contract!(Q1,C1,F,"uv","up","pv")
+    Fermi.contract!(Q1,C1,F,"pv","up","uv")
 
     Q2 = zeros(p,q)
-    Fermi.contract!(Q2,C2,Q1,"pv","vq","pq")
+    Fermi.contract!(Q2,C2,Q1,"pq","vq","pv")
 
     return Q2
 end
 
 function transform_eri(ERI::Fermi.MemTensor, C1::Array{Float64,2}, C2::Array{Float64,2}, C3::Array{Float64,2}, C4::Array{Float64,2})
 
-    nmo,p = size(C1)
-    _,q   = size(C2)
-    _,r   = size(C3)
-    _,s   = size(C4)
+    nmo,i = size(C1)
+    _,a   = size(C2)
+    _,j   = size(C3)
+    _,b   = size(C4)
 
-    Q1 = zeros(p,nmo,nmo,nmo)
+    Q1 = zeros(i,nmo,nmo,nmo)
     Fermi.contract!(Q1,C1,ERI,"ivls","ui","uvls")
 
-    Q2 = zeros(p,q,nmo,nmo)
+    Q2 = zeros(i,a,nmo,nmo)
     Fermi.contract!(Q2,C2,Q1,"ials","va","ivls")
     Q1 = nothing
 
-    Q3 = zeros(p,q,r,nmo)
+    Q3 = zeros(i,a,j,nmo)
     Fermi.contract!(Q3,C3,Q2,"iajs","lj","ials")
     Q2 = nothing
 
-    Q4 = zeros(p,q,r,s)
+    Q4 = zeros(i,a,j,b)
     Fermi.contract!(Q4,C4,Q3,"iajb","sb","iajs")
 
     return Q4

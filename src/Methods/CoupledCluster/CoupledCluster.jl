@@ -5,6 +5,8 @@ Module for running CoupledCluster computations in Fermi.
 module CoupledCluster
 
 using Fermi
+using Fermi.Integrals: ConventionalAOIntegrals, PhysRestrictedMOIntegrals
+using Fermi.HartreeFock: RHF
 using Fermi.Output
 
 function print_header()
@@ -42,7 +44,7 @@ abstract type CCAlgorithm end
 struct DPD <: CCAlgorithm end
 struct CTF <: CCAlgorithm end
 
-include("RCCD/RCCD.jl")
+#include("RCCD/RCCD.jl")
 include("RCCSD/RCCSD.jl")
 
 end #module CC

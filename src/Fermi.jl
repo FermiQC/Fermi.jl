@@ -18,6 +18,6 @@ include("Methods/HartreeFock/HartreeFock.jl")
 #include("Methods/MollerPlesset/MollerPlesset.jl")
 #include("Backend/IO/Input.jl")
 #include("Methods/ConfigurationInteraction/ConfigurationInteraction.jl")
-#include("Methods/CoupledCluster/CoupledCluster.jl")
+include("Methods/CoupledCluster/CoupledCluster.jl")
 
 end # module
