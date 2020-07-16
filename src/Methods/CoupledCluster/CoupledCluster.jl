@@ -8,6 +8,8 @@ using Fermi
 using Fermi.Integrals: ConventionalAOIntegrals, PhysRestrictedMOIntegrals
 using Fermi.HartreeFock: RHF
 using Fermi.Output
+using TensorOperations
+using LinearAlgebra
 
 function print_header()
     banner = 
@@ -46,5 +48,6 @@ struct CTF <: CCAlgorithm end
 
 #include("RCCD/RCCD.jl")
 include("RCCSD/RCCSD.jl")
+include("pT/PerturbativeTriples.jl")
 
 end #module CC

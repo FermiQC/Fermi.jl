@@ -1,6 +1,10 @@
-using TensorOperations
 using LinearAlgebra
 
+"""
+    Fermi.CoupledCluster.RCCSD{T}(Alg::CTF)
+
+Compute a RCCSD wave function using the Compiled time factorization algorithm (CTF)
+"""
 function RCCSD{T}(Alg::CTF) where T <: AbstractFloat
     println("Generating Molecule...")
     molecule = Fermi.Geometry.Molecule()
@@ -18,6 +22,12 @@ function RCCSD{T}(Alg::CTF) where T <: AbstractFloat
     RCCSD{T}(refwfn, moint, Alg) 
 end
 
+"""
+    Fermi.CoupledCluster.RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, Alg::CTF)
+
+Compute a RCCSD wave function using the Compiled time factorization algorithm (CTF). Precision (T), reference wavefunction (refwfn)
+and molecular orbital integrals (moint) must be passed.
+"""
 function RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, Alg::CTF) where T <: AbstractFloat
     d = [i - a for i = diag(moint.oo), a = diag(moint.vv)]
     D = [i + j - a - b for i = diag(moint.oo), j = diag(moint.oo), a = diag(moint.vv), b = diag(moint.vv)]
@@ -27,11 +37,16 @@ function RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, Alg::CTF) where
     RCCSD{T}(refwfn, moint, newT1, newT2, d, D, Alg)
 end
 
+"""
+    Fermi.CoupledCluster.RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, Alg::CTF)
+
+Base function for CTF RCCSD.
+"""
 function RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, newT1::Array{T, 2}, newT2::Array{T,4}, d::Array{T,2}, D::Array{T,4}, Alg::CTF) where T <: AbstractFloat
 
     # Print intro
     Fermi.CoupledCluster.print_header()
-    @output "\n    • Computing CCSD with the AutoRCCSD module.\n\n"
+    @output "\n    • Computing CCSD with the CFT algorithm .\n\n"
 
     # Process Fock matrix, important for non HF cases
     foo = similar(moint.oo)
@@ -39,8 +54,6 @@ function RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, newT1::Array{T,
     fvv = similar(moint.vv)
     fvv .= moint.vv - Diagonal(moint.vv)
     fov = moint.ov
-
-    println(typeof(newT2))
 
     # Compute Guess Energy
     Ecc = update_energy(newT1, newT2, fov, moint.oovv)
@@ -68,7 +81,6 @@ function RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, newT1::Array{T,
     ite = 1
     T1 = similar(newT1)
     T2 = similar(newT2)
-    println(typeof(T2))
 
     while abs(dE) > cc_e_conv || rms > cc_max_rms
         if ite > cc_max_iter
@@ -103,19 +115,13 @@ function RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, newT1::Array{T,
     end
     @output "\n⇒ Final CCSD Energy:     {:15.10f}\n" Ecc+refwfn.energy
 
+    return RCCSD{T}(Ecc+refwfn.energy, Fermi.MemTensor(newT1), Fermi.MemTensor(newT2))
 end
 
 """
-    Fermi.CoupledCluster.AutoRCCSD.update_energy(T1::Array{Float64, 2}, T2::Array{Float64, 4}, f::Array{Float64,2}, Voovv::Array{Float64, 4})
+    Fermi.Coupled Cluster.update_energy(T1::Array{T, 2}, T2::Array{T, 4}, f::Array{T,2}, Voovv::Array{T, 4}) where T <: AbstractFloat
 
-Compute CC energy from amplitudes arrays.
-
-**Arguments**
-
-    T1     T1 CC amplitudes array.
-    T2     T2 CC amplitudes array.
-    f      Fock matrix f(i,a).
-    Voovv  ERI tensor V(i,j,a,b).
+Compute CC energy from amplitudes and integrals.
 """
 function update_energy(T1::Array{T, 2}, T2::Array{T, 4}, f::Array{T,2}, Voovv::Array{T, 4}) where T <: AbstractFloat
 
@@ -132,16 +138,9 @@ function update_energy(T1::Array{T, 2}, T2::Array{T, 4}, f::Array{T,2}, Voovv::A
 end
 
 """
-    Fermi.CoupledCluster.AutoRCCSD.update_amp(T1::Array{Float64, 2}, T2::Array{Float64, 4}, f::Tuple, V::Tuple, d::Array{Float64, 2}, D::Array{Float64, 4})
+    Fermi.CoupledCluster.RCCSD.update_amp(T1::Array{T, 2}, T2::Array{T, 4}, newT1::Array{T,2}, newT2::Array{T,4}, foo::Array{T,2}, fov::Array{T,2}, fvv::Array{T,2}, moint::PhysRestrictedMOIntegrals) where T <: AbstractFloat
 
-Compute new set of T1 and T2 amplitudes from old ones.
-
-**Arguments**
-
-    T1     T1 CC amplitudes array.
-    T2     T2 CC amplitudes array.
-    f      Tuple containing slices of the full Fock matrix.
-    V      Tuple containing slices of the full ERI tensor.
+Update amplitudes (T1, T2) to newT1 and newT2 using CTF CCSD equations.
 """
 function update_amp(T1::Array{T, 2}, T2::Array{T, 4}, newT1::Array{T,2}, newT2::Array{T,4}, foo::Array{T,2}, fov::Array{T,2}, fvv::Array{T,2}, moint::PhysRestrictedMOIntegrals) where T <: AbstractFloat
 
