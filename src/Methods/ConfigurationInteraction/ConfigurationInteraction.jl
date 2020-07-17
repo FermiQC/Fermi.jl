@@ -1,7 +1,11 @@
 module ConfigurationInteraction
 
 using Fermi
+using Fermi.Geometry: Molecule
+using Fermi.Integrals: ConventionalAOIntegrals
 using Fermi.Output
+using TensorOperations
+using LinearAlgebra
 
 function print_header()
     banner = 
@@ -32,6 +36,6 @@ abstract type CIAlgorithm end
 struct SparseHamiltonian <: CIAlgorithm end
 
 
-include("DetOperations.jl")
+include("CASCI/CASCI.jl")
 
 end #module CI

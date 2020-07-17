@@ -24,6 +24,7 @@ CurrentOptions = Dict{String,Any}(
                                   "mp2_type" => "conv",
                                   "precision" => "double",
                                   "cc_alg" => "CTF",
+                                  "ci_alg" => "sparse",
                                   "e_conv" => 10,
                                   "d_conv" => 8,
                                   "cc_max_iter" => 50,
@@ -34,7 +35,8 @@ CurrentOptions = Dict{String,Any}(
                                   "diis" => false,
                                   "num_frozen" => 0,
                                   "cas_frozen" => 0,
-                                  "cas_active" => "all",
+                                  "cas_active" => -1,
+                                  "cas_cutoff" => 10^-9,
                                   "cas_nroot" => 1,
                                   "min_matrix_elem" => 10^-9
                                  )

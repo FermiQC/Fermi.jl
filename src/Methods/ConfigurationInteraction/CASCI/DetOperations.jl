@@ -1,78 +1,7 @@
 """
-    Fermi.ConfigurationInteraction.DetOperations
-
-Module containing Determinant objects and associated operations.
-
-## Structures
-
-    Determinant -> Holds alpha and beta strings for a determinant as integers
-
-## Functions
-
-    αlist -> Return the alpha string of a Determinant as a list
-    βlist -> Return the beta string of a Determinant as a list
-    αindex! -> Return the indexes of the occupied alpha electrons in a Determinant
-    βindex! -> Return the indexes of the occupied beta electrons in a Determinant
-    αexcitation_level -> Compare two determinants to return the excitation level of the alpha electrons
-    βexcitation_level -> Compare two determinants to return the excitation level of the beta electrons
-    excitation_level ->  Compare two determinants to return the excitation level
-    αexclusive -> Compare two determinants to return the indexes of the alpha electrons present in 
-    the first, but not in the second
-    βexclusive -> Compare two determinants to return the indexes of the beta electrons present in 
-    the first, but not in the second
-    exclusive -> Returns a list with tuples (orbital index, spin) of orbitals populated in the first, but
-    not in the second
-    annihilate -> Creates a copy of the determinat where the specified electrons was deleted. Returns the 
-    phase factor along with the new determinant
-    create -> Creates a copy of the determinat where the an electron was added to a specified orbital. 
-    Returns the phase factor along with the new determinant
-    phase -> Returns the phase (+1 or -1) associated with the transformation of one determinant
-    into the other through second quantization operators
-    showdet -> Prints alpha and beta strings of a Determinant
-
-"""
-module DetOperations
-
-export Determinant
-export αlist
-export βlist
-export αindex!
-export βindex! 
-export αexcitation_level
-export βexcitation_level
-export excitation_level
-export αexclusive
-export βexclusive
-export exclusive
-export annihilate
-export create
-export phase
-export showdet
-
-"""
-    Fermi.ConfigurationInteraction.DetOperations.Determinant
-
-    struct -> holding alpha and beta strings for a determinant as integers.
-
-## Fields
-
-    α::Int -> integer representing an alpha string
-    β::Int -> integer representing an beta string
-"""
-struct Determinant
-    α::Int
-    β::Int
-end
-
-"""
     Fermi.ConfigurationInteraction.DetOperations.Determinant(α::String, β::String)
 
-    Constructor function for Determinant object using strings.
-
-## Arguments
-
-    α::String -> Alpha string ordered from left to right   
-    β::String -> Beta string ordered from left to right
+Constructor function for Determinant object using strings.
 """
 function Determinant(α::String, β::String)
     
@@ -85,11 +14,7 @@ end
 """
     Fermi.ConfigurationInteraction.DetOperations.αlist(D::Determinant)
 
-    Return the alpha string of a Determinant as a list
-
-## Arguments
-
-    D::Determinant -> Determinant which the alpha list is to be extracted
+Return the alpha string of a Determinant as a list
 """
 function αlist(D::Determinant)
 
@@ -99,11 +24,7 @@ end
 """
     Fermi.ConfigurationInteraction.DetOperations.βlist(D::Determinant)
 
-    Return the beta string of a Determinant as a list
-
-## Arguments
-
-    D::Determinant -> Determinant which the beta list is to be extracted
+Return the beta string of a Determinant as a list
 """
 function βlist(D::Determinant)
 
@@ -111,19 +32,13 @@ function βlist(D::Determinant)
 end
 
 """
-    Fermi.ConfigurationInteraction.DetOperations.αindex!(D::Determinant)
+    Fermi.ConfigurationInteraction.DetOperations.αindex(D::Determinant)
 
-    Return the indexes of the occupied alpha electrons in a Determinant
-
-## Arguments
-
-    D::Determinant -> Determinant which the indexes are to be extracted
-    N::Int -> Number of alpha electrons
-    A::Array{Int64,1} -> Array where output is saved. Length must match N
-
+Return the indexes of the occupied alpha electrons in a Determinant
 """
-function αindex!(D::Determinant, N::Int, A::Array{Int64,1})
+function αindex(D::Determinant, N::Int)
 
+    out = Array{Int64,1}(undef,N)
     i = 1
     e = 1
 
@@ -131,27 +46,24 @@ function αindex!(D::Determinant, N::Int, A::Array{Int64,1})
     # the number of electrons you will get stuck!
     while e ≤ N
         if 1<<(i-1) & D.α ≠ 0
-            A[e] = i
+            out[e] = i
             e += 1
         end
         i += 1
     end
 
+    return out
+
 end
 
 """
-    Fermi.ConfigurationInteraction.DetOperations.βindex!(D::Determinant)
+    Fermi.ConfigurationInteraction.DetOperations.βindex(D::Determinant)
 
-    Return the indexes of the occupied beta electrons in a Determinant
-
-## Arguments
-
-    D::Determinant -> Determinant which the indexes are to be extracted
-    N::Int -> Number of beta electrons
-    A::Array{Int64,1} -> Array where output is saved. Length must match N
+Return the indexes of the occupied beta electrons in a Determinant
 """
-function βindex!(D::Determinant, N::Int, A::Array{Int64,1})
+function βindex(D::Determinant, N::Int)
 
+    out = Array{Int64,1}(undef,N)
     i = 1
     e = 1
 
@@ -159,23 +71,20 @@ function βindex!(D::Determinant, N::Int, A::Array{Int64,1})
     # the number of electrons you will get stuck!
     while e ≤ N
         if 1<<(i-1) & D.β ≠ 0
-            A[e] = i
+            out[e] = i
             e += 1
         end
         i += 1
     end
+
+    return out
 
 end
 
 """
     Fermi.ConfigurationInteraction.DetOperations.αexcitation_level(D1::Determinant, D2::Determinant)
 
-    Compare two determinants to return the excitation level of the alpha electrons
-
-## Arguments
-
-    D1::Determinant -> Determinant to be compared
-    D2::Determinant -> Determinant to be compared
+Compare two determinants to return the excitation level of the alpha electrons
 """
 function αexcitation_level(D1::Determinant, D2::Determinant)
 
@@ -196,12 +105,7 @@ end
 """
     Fermi.ConfigurationInteraction.DetOperations.βexcitation_level(D1::Determinant, D2::Determinant)
 
-    Compare two determinants to return the excitation level of the beta electrons
-
-## Arguments
-
-    D1::Determinant -> Determinant to be compared
-    D2::Determinant -> Determinant to be compared
+Compare two determinants to return the excitation level of the beta electrons
 """
 function βexcitation_level(D1::Determinant, D2::Determinant)
 
@@ -222,12 +126,7 @@ end
 """
     Fermi.ConfigurationInteraction.DetOperations.excitation_level(D1::Determinant, D2::Determinant)
 
-    Compare two determinants to return the excitation level
-
-## Arguments
-
-    D1::Determinant -> Determinant to be compared
-    D2::Determinant -> Determinant to be compared
+Compare two determinants to return the excitation level between them
 """
 function excitation_level(D1::Determinant, D2::Determinant)
 
@@ -237,13 +136,8 @@ end
 """
     Fermi.ConfigurationInteraction.DetOperations.αexclusive(D1::Determinant, D2::Determinant)
 
-    Compare two determinants to return the indexes of the alpha electrons present in the first, but
-    not in the second
-
-## Arguments
-
-    D1::Determinant -> Determinant where the alpha electrons must be
-    D2::Determinant -> Determinant where the alpha electrons must not be
+Compare two determinants to return the indexes of the alpha electrons present in the first, but
+not in the second
 """
 function αexclusive(D1::Determinant, D2::Determinant)
 
@@ -265,13 +159,8 @@ end
 """
     Fermi.ConfigurationInteraction.DetOperations.βexclusive(D1::Determinant, D2::Determinant)
 
-    Compare two determinants to return the indexes of the beta electrons present in the first, but
-    not in the second
-
-## Arguments
-
-    D1::Determinant -> Determinant where the beta electrons must be
-    D2::Determinant -> Determinant where the beta electrons must not be
+Compare two determinants to return the indexes of the beta electrons present in the first, but
+not in the second
 """
 function βexclusive(D1::Determinant, D2::Determinant)
 
@@ -294,13 +183,8 @@ end
 """
     Fermi.ConfigurationInteraction.DetOperations.exclusive(D1::Determinant, D2::Determinant)
 
-    Returns a list with tuples (orbital index, spin) of orbitals populated in the first, but
-    not in the second
-
-## Arguments
-
-    D1::Determinant -> Determinant where the electrons must be
-    D2::Determinant -> Determinant where the electrons must not be
+Returns a list with tuples (orbital index, spin) of orbitals populated in the first, but
+not in the second Determinant.
 """
 function exclusive(D1::Determinant, D2::Determinant)
 
@@ -330,14 +214,8 @@ end
 """
     Fermi.ConfigurationInteraction.DetOperations.annihilate(D::Determinant, orb::Int, spin::Char)
 
-    Creates a copy of the determinat where the specified electrons was deleted. Returns the phase
-    factor along with the new determinant
-
-## Arguments
-
-    D::Determinant -> Determinant where the electron will be annihilate
-    orb::Int -> Index of the orbital where the electron will be annihilated
-    spin::Char -> Spin of the electron, must be 'α' or 'β'
+Creates a copy of the determinat where an electron from a specified orbital (orb) and spin (spin) was deleted. Returns the phase
+factor along with the new determinant
 """
 function annihilate(D::Determinant, orb::Int, spin::Char)
 
@@ -380,14 +258,8 @@ end
 """
     Fermi.ConfigurationInteraction.DetOperations.create(D::Determinant, orb::Int, spin::Char)
 
-    Creates a copy of the determinat where the an electron was added to a specified orbital. 
-    Returns the phase factor along with the new determinant
-
-## Arguments
-
-    D::Determinant -> Determinant where the electron will be created
-    orb::Int -> Index of the orbital where the electron will be created
-    spin::Char -> Spin of the electron, must be 'α' or 'β'
+Creates a copy of the determinat where an electron was added to a specified orbital (orb) with a given spin (spin).
+Returns the phase factor along with the new determinant
 """
 function create(D::Determinant, orb::Int, spin::Char)
 
@@ -432,13 +304,8 @@ end
 """
     Fermi.ConfigurationInteraction.DetOperations.phase(D1::Determinant, D2::Determinant)
 
-    Returns the phase (+1 or -1) associated with the transformation of one determinant
-    into the other through second quantization operators
-
-## Arguments
-
-    D1::Determinant -> Starting determinant
-    D2::Determinant -> Final determinant
+Returns the phase (+1 or -1) associated with the transformation of one determinant
+into the other through second quantization operators
 """
 function phase(D1::Determinant, D2::Determinant)
 
@@ -463,12 +330,7 @@ end
 """
     Fermi.ConfigurationInteraction.DetOperations.phase(D::Determinant, l::Int=0)
 
-    Prints alpha and beta strings of a Determinant
-
-## Arguments
-
-    D::Determinant -> Determinant to be print
-    l::Int -> Length of the strings to be print. If zero, prints max length
+Prints alpha and beta strings of a Determinant with a given length(l)
 """
 function showdet(D::Determinant, l::Int = 0)
 
@@ -479,5 +341,3 @@ function showdet(D::Determinant, l::Int = 0)
     println("β: "*reverse(bitstring(D.β))[1:l])
 
 end
-
-end #Module
