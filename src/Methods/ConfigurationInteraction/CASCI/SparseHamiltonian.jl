@@ -20,7 +20,7 @@ function CASCI{T}(Alg::SparseHamiltonian) where T <: AbstractFloat
 
     act_elec = 2*(refwfn.ndocc - frozen)
 
-    if act_elec ≤ 0
+    if act_elec < 0
         error("Invalid number of frozen orbitals ($frozen) for $(2*refwfn.ndocc) electrons.")
     end
 
@@ -39,6 +39,7 @@ function CASCI{T}(Alg::SparseHamiltonian) where T <: AbstractFloat
     h = T.(Fermi.Integrals.transform_fock(aoint.T+aoint.V, refwfn.C[:,s], refwfn.C[:,s]))
     V = T.(Fermi.Integrals.transform_eri(aoint.ERI, refwfn.C[:,s], refwfn.C[:,s], refwfn.C[:,s], refwfn.C[:,s]))
 
+    aoint = nothing
     CASCI{T}(refwfn, h, V, frozen, act_elec, active, Alg)
 end
 
@@ -69,12 +70,12 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
 
     @output "Diagonalizing Hamiltonian for {:3d} eigenvalues...\n" nroot
     @time begin
-        decomp, history = partialschur(H, nev=nroot, tol=10^-9, which=LM())
+        decomp, history = partialschur(H, nev=nroot, tol=10^-12, which=LM())
         λ, ϕ = partialeigen(decomp)
     end
     @output "\n Final FCI Energy: {:15.10f}\n" λ[1]+refwfn.molecule.Vnuc
 
-    return CASCI{T}(λ[1]+T(refwfn.molecule.Vnuc), dets, ϕ[:,1])
+    return CASCI{T}(refwfn, λ[1]+T(refwfn.molecule.Vnuc), dets, ϕ[:,1])
 
 end
 

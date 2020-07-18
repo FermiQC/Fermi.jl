@@ -49,5 +49,6 @@ struct CTF <: CCAlgorithm end
 #include("RCCD/RCCD.jl")
 include("RCCSD/RCCSD.jl")
 include("pT/PerturbativeTriples.jl")
+include("ecRCCSD/ecRCCSD.jl")
 
 end #module CC

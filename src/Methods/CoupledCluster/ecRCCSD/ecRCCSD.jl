@@ -1,3 +1,5 @@
+using Fermi.ConfigurationInteraction: Determinant, excitation_level, αexcitation_level, βexcitation_level, αexclusive, βexclusive, phase, create, annihilate
+
 """
     Fermi.CoupledCluster.ecRCCSD
 
@@ -64,4 +66,3 @@ function ecRCCSD{T}() where T <: AbstractFloat
     alg = select_algorithm(Fermi.CurrentOptions["cc_alg"])
     ecRCCSD{T}(alg)
 end
-

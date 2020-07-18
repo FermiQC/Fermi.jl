@@ -14,9 +14,10 @@ struct Determinant
 end
 
 struct CASCI{T} <: AbstractCIWavefunction
+    ref::Fermi.HartreeFock.RHF
     energy::T
     dets::Array{Determinant,1}
-    coeff::Array{T,1}
+    coef::Array{T,1}
 end
 
 function select_precision(A::String)
