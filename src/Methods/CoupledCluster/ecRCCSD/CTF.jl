@@ -4,7 +4,7 @@
 Compute a RCCSD wave function using the Compiled time factorization algorithm (CTF)
 """
 function ecRCCSD{T}(Alg::CTF) where T <: AbstractFloat
-    println("Calling CASCI module...")
+    @output "Calling CASCI module...\n"
     # Call CASCI
     cas = Fermi.ConfigurationInteraction.CASCI{T}()
 
@@ -27,8 +27,16 @@ function ecRCCSD{T}(Alg::CTF) where T <: AbstractFloat
     active = Fermi.CurrentOptions["cas_active"] ≢ -1 ? Fermi.CurrentOptions["cas_active"] : refwfn.nvir+refwfn.ndocc-frozen
     fcn = Fermi.CurrentOptions["drop_occ"]
 
+    if drop_occ > frozen
+        error("\nFrozen orbitals in the CC step ($drop_occ) cannot be greater than the number of frozen orbitals in the CAS ($frozen).")
+    end
+
+    if drop_vir > (refwfn.ndocc+refwfn.nvir) - active - frozen
+        error("\nToo many virtual orbitals dropped ($drop_vir) for the active space.")
+    end
+
     actocc = collect((1+frozen):refwfn.ndocc)
-    actvir = collect(1:(active+frozen-refwfn.ndocc))
+    actvir = collect((1+refwfn.ndocc):(active+frozen))
     @output "Active Occupied Orbitals: {}\n" actocc
     @output "Active Virtual Orbitals:  {}\n" actvir
 
@@ -67,6 +75,8 @@ function ecRCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, newT1::Array{
     cc_max_rms = Fermi.CurrentOptions["cc_max_rms"]
 
     @output "    Starting CC Iterations\n\n"
+    @output " Dropped Occupied Orbitals →  {:3.0f}\n" Int(Fermi.CurrentOptions["drop_occ"])
+    @output " Dropped Virtual Orbitals  →  {:3.0f}\n\n" Int(Fermi.CurrentOptions["drop_vir"])
     @output "Iteration Options:\n"
     @output "   cc_max_iter →  {:3.0d}\n" Int(cc_max_iter)
     @output "   cc_e_conv   →  {:2.0e}\n" cc_e_conv
@@ -181,23 +191,26 @@ function get_casT1_casT2!(T1::Array{Float64,2}, T2::Array{Float64,4}, Ccas::Arra
 
             if βexc == 0
 
-                i, = αexclusive(ref, D) .- frozen     # i is absolute. Take out the frozen orbitals to match the T arrays.
-                a, = αexclusive(D, ref) .- ndocc      # a is abolute. Take out the occupied orbitals to get relative (virtual) index
+                i, = αexclusive(ref, D)     
+                a, = αexclusive(D, ref) 
 
                 p = phase(ref, D)
-
-                @inbounds T1[i,a] = Ccas[id]*p
+                # i is absolute. Take out the frozen orbitals to match the T arrays.
+                # a is abolute. Take out the occupied orbitals to get relative index.
+                @inbounds T1[i-frozen,a-ndocc] = Ccas[id]*p
 
             elseif βexc == 1
 
-                i, = αexclusive(ref, D) .- frozen
-                j, = βexclusive(ref, D) .- frozen
-                a, = αexclusive(D, ref) .- ndocc
-                b, = βexclusive(D, ref) .- ndocc
+                i, = αexclusive(ref, D) 
+                j, = βexclusive(ref, D)
+                a, = αexclusive(D, ref) 
+                b, = βexclusive(D, ref) 
 
                 p = phase(ref, D)
 
-                @inbounds T2[i,j,a,b] = Ccas[id]*p
+                # i and j are absolute. Take out the frozen orbitals to match the T arrays.
+                # a and b are abolute. Take out the occupied orbitals to get relative index.
+                @inbounds T2[i-frozen,j-frozen,a-ndocc,b-ndocc] = Ccas[id]*p
             end
 
         elseif (αexc + βexc) > 2
@@ -212,7 +225,6 @@ end
 function get_casT3!(T3::Array{Float64,4}, n::Int, f::Int, Ccas::Array{Float64,1}, dets::Array{Determinant,1}, ref::Determinant, frozen::Int, ndocc::Int, T1::Array{Float64,2}, T2::Array{Float64,4})
 
     # This function produces a particular slice of the full T3 array T3[:,:,n,:,:,f] for the αβα case
-    # Note that n and f are relative indices
 
     # Clean up array
     fill!(T3, 0.0)
@@ -226,15 +238,15 @@ function get_casT3!(T3::Array{Float64,4}, n::Int, f::Int, Ccas::Array{Float64,1}
         if αexc == 2 && βexc == 1
 
             # i > k, a > c
-            k,i = αexclusive(ref, D) .- frozen
-            j,  = βexclusive(ref, D) .- frozen
+            k,i = αexclusive(ref, D)
+            j,  = βexclusive(ref, D)
 
             if !(n in [k,i])
                 continue
             end
 
-            c,a = αexclusive(D, ref) .- ndocc
-            b,  = βexclusive(D, ref) .- ndocc
+            c,a = αexclusive(D, ref)
+            b,  = βexclusive(D, ref)
 
             if !(f in [c,a])
                 continue
@@ -249,24 +261,30 @@ function get_casT3!(T3::Array{Float64,4}, n::Int, f::Int, Ccas::Array{Float64,1}
             p = 1
             _det = Determinant(ref.α, ref.β)
 
-            _p, _det = annihilate(_det, o1+frozen, 'α')
+            _p, _det = annihilate(_det, o1, 'α')
             p = _p*p
-            _p, _det = annihilate(_det, j+frozen,  'β')
+            _p, _det = annihilate(_det, j,  'β')
             p = _p*p
-            _p, _det = annihilate(_det, n+frozen,  'α')
-            p = _p*p
-
-            _p, _det = create(_det, f+ndocc,  'α')
-            p = _p*p
-            _p, _det = create(_det, b+ndocc,  'β')
-            p = _p*p
-            _p, _det = create(_det, o3+ndocc, 'α')
+            _p, _det = annihilate(_det, n,  'α')
             p = _p*p
 
-            T3[o1,j,o3,b] = p*Ccas[id]
+            _p, _det = create(_det, f,  'α')
+            p = _p*p
+            _p, _det = create(_det, b,  'β')
+            p = _p*p
+            _p, _det = create(_det, o3, 'α')
+            p = _p*p
+
+            # Hole indexes are absolute. Take out the frozen orbitals to match the T arrays.
+            # Particle indexes are abolute. Take out the occupied orbitals to get relative index.
+            T3[o1-frozen,j-frozen,o3-ndocc,b-ndocc] = p*Ccas[id]
 
         end
     end
+
+    # Shift absolute index, for cleanliness
+    n = n - frozen
+    f = f - ndocc
 
     # Arrays for decomposition
     T1_1n2f = T1[n,f]
@@ -303,25 +321,25 @@ function get_casT4αβ!(T4::Array{Float64,4}, m::Int, n::Int, e::Int, f::Int, Cc
         if αexc == 2 && βexc == 2
 
             # i > k, j > l, a > c, b > d
-            k,i = αexclusive(ref, D) .- frozen
+            k,i = αexclusive(ref, D) 
 
             if !(m in [i,k])
                 continue
             end
 
-            l,j = βexclusive(ref, D) .- frozen
+            l,j = βexclusive(ref, D) 
 
             if !(n in [l,j])
                 continue
             end
 
-            c,a = αexclusive(D,ref) .- ndocc
+            c,a = αexclusive(D,ref) 
 
             if !(e in [c,a])
                 continue
             end
 
-            d,b = βexclusive(D, ref) .- ndocc
+            d,b = βexclusive(D, ref) 
 
             if !(f in [d,b])
                 continue
@@ -335,27 +353,33 @@ function get_casT4αβ!(T4::Array{Float64,4}, m::Int, n::Int, e::Int, f::Int, Cc
             p = 1
             _det = Determinant(ref.α, ref.β)
 
-            _p, _det = annihilate(_det, o1+frozen, 'α')
+            _p, _det = annihilate(_det, o1, 'α')
             p = _p*p
-            _p, _det = annihilate(_det, o2+frozen, 'β')
+            _p, _det = annihilate(_det, o2, 'β')
             p = _p*p
-            _p, _det = annihilate(_det, m+frozen,  'α')
+            _p, _det = annihilate(_det, m,  'α')
             p = _p*p
-            _p, _det = annihilate(_det, n+frozen,  'β')
-            p = _p*p
-
-            _p, _det = create(_det, f+ndocc,  'β')
-            p = _p*p
-            _p, _det = create(_det, e+ndocc,  'α')
-            p = _p*p
-            _p, _det = create(_det, o4+ndocc, 'β')
-            p = _p*p
-            _p, _det = create(_det, o3+ndocc, 'α')
+            _p, _det = annihilate(_det, n,  'β')
             p = _p*p
 
-            T4[o1,o2,o3,o4] =  p*Ccas_ex4[id]
+            _p, _det = create(_det, f,  'β')
+            p = _p*p
+            _p, _det = create(_det, e,  'α')
+            p = _p*p
+            _p, _det = create(_det, o4, 'β')
+            p = _p*p
+            _p, _det = create(_det, o3, 'α')
+            p = _p*p
+
+            T4[o1-frozen,o2-frozen,o3-ndocc,o4-ndocc] =  p*Ccas_ex4[id]
         end
     end                 
+
+    # Shift m,n,e, and f. Just for cleanliness
+    m = m - frozen
+    n = n - frozen
+    e = e - ndocc
+    f = f - ndocc
 
     T1_1m2e = T1[m,e]
     T1_1n2f = T1[n,f]
@@ -458,20 +482,20 @@ function get_casT4αα!(T4::Array{Float64,4}, m::Int, n::Int, e::Int, f::Int, Cc
         if αexc == 3 && βexc == 1
 
             # i > k > l, a > c > d
-            l,k,i = αexclusive(ref, D) .- frozen
+            l,k,i = αexclusive(ref, D) 
 
             if !(m in [k,l,i]) || !(n in [k,l,i])
                 continue
             end
 
-            j, = βexclusive(ref, D) .- frozen
-            d,c,a = αexclusive(D,ref) .- ndocc
+            j, = βexclusive(ref, D) 
+            d,c,a = αexclusive(D,ref) 
 
             if !(e in [d,c,a]) || !(f in [d,c,a])
                 continue
             end
 
-            b, = βexclusive(D, ref) .- ndocc
+            b, = βexclusive(D, ref) 
 
             o1 = filter(x-> x != m && x != n, [l,k,i])[1]
             o2 = filter(x-> x != e && x != f, [d,c,a])[1]
@@ -479,27 +503,33 @@ function get_casT4αα!(T4::Array{Float64,4}, m::Int, n::Int, e::Int, f::Int, Cc
             p = 1
             _det = Determinant(ref.α, ref.β)
 
-            _p, _det = annihilate(_det, o1+frozen, 'α')
+            _p, _det = annihilate(_det, o1, 'α')
             p = _p*p
-            _p, _det = annihilate(_det, j+frozen,  'β')
+            _p, _det = annihilate(_det, j,  'β')
             p = _p*p
-            _p, _det = annihilate(_det, m+frozen,  'α')
+            _p, _det = annihilate(_det, m,  'α')
             p = _p*p
-            _p, _det = annihilate(_det, n+frozen,  'α')
-            p = _p*p
-
-            _p, _det = create(_det, f+ndocc,  'α')
-            p = _p*p
-            _p, _det = create(_det, e+ndocc,  'α')
-            p = _p*p
-            _p, _det = create(_det, b+ndocc, 'β')
-            p = _p*p
-            _p, _det = create(_det, o2+ndocc, 'α')
+            _p, _det = annihilate(_det, n,  'α')
             p = _p*p
 
-            T4[o1,j,o2,b] = p*Ccas_ex4[id]
+            _p, _det = create(_det, f,  'α')
+            p = _p*p
+            _p, _det = create(_det, e,  'α')
+            p = _p*p
+            _p, _det = create(_det, b, 'β')
+            p = _p*p
+            _p, _det = create(_det, o2, 'α')
+            p = _p*p
+
+            T4[o1-frozen,j-frozen,o2-ndocc,b-ndocc] = p*Ccas_ex4[id]
         end
     end
+
+    # Shift m,n,e, and f. Just for cleanliness
+    m = m - frozen
+    n = n - frozen
+    e = e - ndocc
+    f = f - ndocc
 
     # Decomposition
     T1_1m2e = T1[m,e]
@@ -627,7 +657,11 @@ function get_casT4αα!(T4::Array{Float64,4}, m::Int, n::Int, e::Int, f::Int, Cc
     end
 end
 
-function get_ec_from_T3!(n::Int, f::Int, ecT1::Array{Float64,2}, ecT2::Array{Float64,4}, T1::Array{Float64,2}, T3::Array{Float64,4}, fov::Array{Float64, 2}, Voovv::Array{Float64, 4}, Vovvv::Array{Float64, 4}, Vooov::Array{Float64, 4})
+function get_ec_from_T3!(n::Int, f::Int, frozen::Int, ndocc::Int, ecT1::Array{Float64,2}, ecT2::Array{Float64,4}, T1::Array{Float64,2}, T3::Array{Float64,4}, fov::Array{Float64, 2}, Voovv::Array{Float64, 4}, Vovvv::Array{Float64, 4}, Vooov::Array{Float64, 4})
+
+    # Shift m,n,e, and f. Just for cleanliness
+    n = n - frozen
+    f = f - ndocc
 
     # Arrays for ecT1 and ecT2
     Voovv_1n4f = view(Voovv, n, :, :, f)
@@ -711,7 +745,7 @@ function cas_decomposition(Cas_data::Tuple, ndocc::Int, frozen::Int, actocc::Arr
         for f in actvir
 
             get_casT3!(T3_3n6f, n, f, Ccas_ex3, dets_ex3, ref, frozen, ndocc, T1, T2)
-            get_ec_from_T3!(n, f, ecT1, ecT2, T1, T3_3n6f, fov, Voovv, Vovvv, Vooov)
+            get_ec_from_T3!(n, f, frozen, ndocc, ecT1, ecT2, T1, T3_3n6f, fov, Voovv, Vovvv, Vooov)
 
             for m in actocc 
 
@@ -725,8 +759,12 @@ function cas_decomposition(Cas_data::Tuple, ndocc::Int, frozen::Int, actocc::Arr
                     get_casT4αβ!(T4αβ, m,n,e,f, Ccas_ex4, dets_ex4, Ccas_ex3, dets_ex3, ref, frozen, ndocc, T1, T2, T3_3n6f, T3_3m6e)
                     get_casT4αα!(T4αα, m,n,e,f, Ccas_ex4, dets_ex4, Ccas_ex3, dets_ex3, ref, frozen, ndocc, T1, T2, T3_3n6f, T3_3m6f, T3_3n6e, T3_3m6e)
 
-                    ecT2 += T4αβ.*Voovv[m,n,e,f]
-                    ecT2 += 0.25.*(T4αα + permutedims(T4αα, [2,1,4,3])).*(Voovv[m,n,e,f] - Voovv[n,m,e,f])
+                    rm = m - frozen
+                    rn = n - frozen
+                    re = e - ndocc
+                    rf = f - ndocc
+                    ecT2 += T4αβ.*Voovv[rm,rn,re,rf]
+                    ecT2 += 0.25.*(T4αα + permutedims(T4αα, [2,1,4,3])).*(Voovv[rm,rn,re,rf] - Voovv[rn,rm,re,rf])
                 end
             end
         end

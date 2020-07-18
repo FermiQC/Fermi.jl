@@ -51,7 +51,7 @@ include("SparseHamiltonian.jl")
 Compute a RCCSD wave function using Fermi.CurrentOptions data.
 """
 function CASCI()
-    println("Selecting precision...")
+    @output "Selecting CAS precision...\n"
     prec = select_precision(Fermi.CurrentOptions["precision"])
     CASCI{prec}()
 end
@@ -62,7 +62,7 @@ end
 Compute a RCCSD wave function for a given precision T (Float64 or Float32)
 """
 function CASCI{T}() where T <: AbstractFloat
-    println("Selecting Algorithm...")
+    @output "Selecting CAS Algorithm...\n"
     alg = select_algorithm(Fermi.CurrentOptions["ci_alg"])
     CASCI{T}(alg)
 end

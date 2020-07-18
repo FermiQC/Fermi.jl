@@ -9,10 +9,10 @@ function CASCI{T}(Alg::SparseHamiltonian) where T <: AbstractFloat
     @output "Computing AO Integrals...\n"
     aoint = ConventionalAOIntegrals()
 
-    @output "Calling RHF module..."
+    @output "Calling RHF module...\n"
     refwfn = Fermi.HartreeFock.RHF(molecule, aoint)
 
-    @output "Transforming Integrals..."
+    @output "Transforming Integrals for CAS computation...\n"
     # Read options
     frozen = Fermi.CurrentOptions["cas_frozen"]
 
@@ -21,7 +21,7 @@ function CASCI{T}(Alg::SparseHamiltonian) where T <: AbstractFloat
     act_elec = 2*(refwfn.ndocc - frozen)
 
     if act_elec < 0
-        error("Invalid number of frozen orbitals ($frozen) for $(2*refwfn.ndocc) electrons.")
+        error("\nInvalid number of frozen orbitals ($frozen) for $(2*refwfn.ndocc) electrons.")
     end
 
     # Active = -1 means FCI, with frozen
@@ -32,7 +32,11 @@ function CASCI{T}(Alg::SparseHamiltonian) where T <: AbstractFloat
     end
 
     if active ≤ act_elec/2
-        error("Number of active orbitals ($active) too small for $(act_elec) active electrons")
+        error("\nNumber of active orbitals ($active) too small for $(act_elec) active electrons")
+    end
+
+    if active+frozen > nmo
+        error("\nNumber of active ($active) and frozen orbitals ($frozen) greater than number of orbitals ($nmo)")
     end
 
     s = 1:(frozen+active)
