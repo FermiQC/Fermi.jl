@@ -2,19 +2,30 @@ function Hd0(αindex::Array{Int64,1}, βindex::Array{Int64,1}, h::Array{T, 2}, V
     """
     Σ [m|h|m] + 1/2 ΣΣ [mm|nn] - [mn|nm] 
     """
+    # One electron energy
+    E1 = 0.0
+    # Two electron energy
+    E2 = 0.0
+    for m in αindex
+        @inbounds E1 += h[m,m]
+        for n in αindex
+            @inbounds E2 += V[m,m,n,n] - V[m,n,n,m]
+        end
+    end
 
-    # One-electron contribution
-    E = tr(h[αindex, αindex]) + tr(h[βindex, βindex])
+    for m in βindex
+        @inbounds E1 += h[m,m]
+        for n in βindex
+            @inbounds E2 += V[m,m,n,n] - V[m,n,n,m]
+        end
+    end
 
-    # Two-electron contributions
-
-    _Vα  = V[αindex, αindex, αindex, αindex]
-    _Vβ  = V[βindex, βindex, βindex, βindex]
-    _Vαβ = V[αindex, αindex, βindex, βindex]
-
-    @tensor E += Float32(0.5)*(_Vα[m,m,n,n] + _Vβ[m,m,n,n] + 2_Vαβ[m,m,n,n] - _Vα[m,n,n,m] - _Vβ[m,n,n,m])
-    return E
-
+    for m in αindex
+        for n in βindex
+            @inbounds E2 += 2V[m,m,n,n]
+        end
+    end
+    return E1 + 0.5*E2
 end
 
 function Hd1(αindex::Array{Int64,1}, βindex::Array{Int64,1}, D1::Determinant, D2::Determinant, h::Array{T,2}, V::Array{T, 4}, αexc::Float64) where T <: AbstractFloat
@@ -25,8 +36,8 @@ function Hd1(αindex::Array{Int64,1}, βindex::Array{Int64,1}, D1::Determinant, 
 
     # if m and p are α
     if αexc == 1
-        m, = αexclusive(D1, D2)
-        p, = αexclusive(D2, D1)
+        m = first_αexclusive(D1, D2)
+        p = first_αexclusive(D2, D1)
 
         # Compute phase by counting the number of occupied orbitals between m and p
 
@@ -42,14 +53,19 @@ function Hd1(αindex::Array{Int64,1}, βindex::Array{Int64,1}, D1::Determinant, 
             i = i << 1 
         end
 
-        # αindex and βindex are use to mask the two electron integrals such that we can take the trace
-        # over the occupied electrons. The two electron terms are, respectively: Jα, Jβ, and Kα
-        @inbounds E = ph*(h[m,p] + tr(V[m, p, αindex, αindex]) + tr(V[m, p, βindex, βindex]) - tr(V[m, αindex, αindex, p]))
-        return E
+        # Compute matrix element
+        @inbounds E = h[m,p] 
+        for i in αindex
+            @inbounds E += V[m,p,i,i] - V[m,i,i,p]
+        end
+        for i in βindex
+            @inbounds E += V[m,p,i,i] 
+        end
+        return ph*E
 
     else
-        m, = βexclusive(D1, D2)
-        p, = βexclusive(D2, D1)
+        m = first_βexclusive(D1, D2)
+        p = first_βexclusive(D2, D1)
 
         # Compute phase by counting the number of occupied orbitals between m and p
 
@@ -65,9 +81,15 @@ function Hd1(αindex::Array{Int64,1}, βindex::Array{Int64,1}, D1::Determinant, 
             i = i << 1 
         end
 
-        # αindex and βindex are use to mask the two electron integrals such that we can take the trace
-        # over the occupied electrons. The two electron terms are, respectively: Jα, Jβ, and Kα
-        @inbounds E = ph*(h[m,p] + tr(V[m, p, αindex, αindex]) + tr(V[m, p, βindex, βindex]) - tr(V[m, βindex, βindex, p]))
+        # Compute matrix element
+        @inbounds E = h[m,p] 
+        for i in αindex
+            @inbounds E += V[m,p,i,i] 
+        end
+        for i in βindex
+            @inbounds E += V[m,p,i,i] - V[m,i,i,p]
+        end
+        return ph*E
         return E
     end
 end
@@ -80,10 +102,10 @@ function Hd2(D1::Determinant, D2::Determinant, V::Array{T, 4}, αexc::Float64) w
 
     # If α excitation is one, it means m and n have different spins 
     if αexc == 1
-        m, = αexclusive(D1, D2)
-        n, = βexclusive(D1, D2)
-        p, = αexclusive(D2, D1)
-        q, = βexclusive(D2, D1)
+        m = first_αexclusive(D1, D2)
+        n = first_βexclusive(D1, D2)
+        p = first_αexclusive(D2, D1)
+        q = first_βexclusive(D2, D1)
 
         # For the phase factor, there is no interference between the two cases since they have difference spin
         # Move m <-> p
@@ -114,9 +136,11 @@ function Hd2(D1::Determinant, D2::Determinant, V::Array{T, 4}, αexc::Float64) w
 
     # If α excitation is two, it means m,n,p and q are all α.
     elseif αexc == 2
-        m,n = αexclusive(D1, D2)
-        p,q = αexclusive(D2, D1)
-
+        m = first_αexclusive(D1, D2)
+        n = second_αexclusive(D1, D2)
+        p = first_αexclusive(D2, D1)
+        q = second_αexclusive(D2, D1)
+        
         #Transform D1 -> D2. First take m into p
         i = 1 << min(m,p)
         f = 1 << (max(m,p) - 1)
@@ -148,8 +172,10 @@ function Hd2(D1::Determinant, D2::Determinant, V::Array{T, 4}, αexc::Float64) w
 
     # If α excitation is zero, it means m,n,p and q are all β.
     elseif αexc == 0
-        m,n = βexclusive(D1, D2)
-        p,q = βexclusive(D2, D1)
+        m = first_βexclusive(D1, D2)
+        n = second_βexclusive(D1, D2)
+        p = first_βexclusive(D2, D1)
+        q = second_βexclusive(D2, D1)
 
         #Transform D1 -> D2. First take m into p
         i = 1 << min(m,p)

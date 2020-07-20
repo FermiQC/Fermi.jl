@@ -32,53 +32,45 @@ function βlist(D::Determinant)
 end
 
 """
-    Fermi.ConfigurationInteraction.DetOperations.αindex(D::Determinant)
+    Fermi.ConfigurationInteraction.DetOperations.αindexi!(D::Determinant, Out::Array{Int64,1})
 
-Return the indexes of the occupied alpha electrons in a Determinant
+Write the indexes of the occupid alpha electrons of the Determinant to a given list
 """
-function αindex(D::Determinant, N::Int)
+function αindex!(D::Determinant, Out::Array{Int64,1})
 
-    out = Array{Int64,1}(undef,N)
     i = 1
     e = 1
 
     # Loop until 'e' electrons are found. Be careful! If 'e' is greater than
     # the number of electrons you will get stuck!
-    while e ≤ N
+    while e ≤ length(Out)
         if 1<<(i-1) & D.α ≠ 0
-            out[e] = i
+            Out[e] = i
             e += 1
         end
         i += 1
     end
-
-    return out
-
 end
 
 """
-    Fermi.ConfigurationInteraction.DetOperations.βindex(D::Determinant)
+    Fermi.ConfigurationInteraction.DetOperations.βindex!(D::Determinant, Out::Array{Int64.1})
 
-Return the indexes of the occupied beta electrons in a Determinant
+Write the indexes of the occupid beta electrons of the Determinant to a given list
 """
-function βindex(D::Determinant, N::Int)
+function βindex!(D::Determinant, Out::Array{Int64,1})
 
-    out = Array{Int64,1}(undef,N)
     i = 1
     e = 1
 
     # Loop until 'e' electrons are found. Be careful! If 'e' is greater than
     # the number of electrons you will get stuck!
-    while e ≤ N
+    while e ≤ length(Out)
         if 1<<(i-1) & D.β ≠ 0
-            out[e] = i
+            Out[e] = i
             e += 1
         end
         i += 1
     end
-
-    return out
-
 end
 
 """
@@ -157,6 +149,54 @@ function αexclusive(D1::Determinant, D2::Determinant)
 end
 
 """
+    Fermi.ConfigurationInteraction.DetOperations.first_αexclusive(D1::Determinant, D2::Determinant)
+
+Compare two determinants to return the index of the first alpha electron present in the first, but
+not in the second
+"""
+function first_αexclusive(D1::Determinant, D2::Determinant)
+
+    αexcl = D1.α ⊻ D2.α & D1.α
+
+    i = 1
+    # Save alphas exclusives, in crescent order
+    while 1<<(i-1) ≤ αexcl
+        if 1<<(i-1) & αexcl ≠ 0
+            return i
+        end
+        i += 1
+    end
+
+    return out
+end
+
+"""
+    Fermi.ConfigurationInteraction.DetOperations.second_αexclusive(D1::Determinant, D2::Determinant)
+
+Compare two determinants to return the index of the second alpha electron present in the second, but
+not in the second
+"""
+function second_αexclusive(D1::Determinant, D2::Determinant)
+
+    αexcl = D1.α ⊻ D2.α & D1.α
+
+    i = 1
+    sec = false
+    # Save betas exclusives, in crescent order
+    while 1<<(i-1) ≤ αexcl
+        if 1<<(i-1) & αexcl ≠ 0
+            if sec
+                return i
+            else
+                sec = true
+            end
+        end
+        i += 1
+    end
+    return out
+end
+
+"""
     Fermi.ConfigurationInteraction.DetOperations.βexclusive(D1::Determinant, D2::Determinant)
 
 Compare two determinants to return the indexes of the beta electrons present in the first, but
@@ -175,9 +215,56 @@ function βexclusive(D1::Determinant, D2::Determinant)
         end
         i += 1
     end
+    return out
+end
+
+"""
+    Fermi.ConfigurationInteraction.DetOperations.first_βexclusive(D1::Determinant, D2::Determinant)
+
+Compare two determinants to return the index of the first beta electron present in the first, but
+not in the second
+"""
+function first_βexclusive(D1::Determinant, D2::Determinant)
+
+    βexcl = D1.β ⊻ D2.β & D1.β
+
+    i = 1
+    # Save betas exclusives, in crescent order
+    while 1<<(i-1) ≤ βexcl
+        if 1<<(i-1) & βexcl ≠ 0
+            return i
+        end
+        i += 1
+    end
 
     return out
 
+end
+
+"""
+    Fermi.ConfigurationInteraction.DetOperations.second_βexclusive(D1::Determinant, D2::Determinant)
+
+Compare two determinants to return the index of the second beta electron present in the second, but
+not in the second
+"""
+function second_βexclusive(D1::Determinant, D2::Determinant)
+
+    βexcl = D1.β ⊻ D2.β & D1.β
+
+    i = 1
+    sec = false
+    # Save betas exclusives, in crescent order
+    while 1<<(i-1) ≤ βexcl
+        if 1<<(i-1) & βexcl ≠ 0
+            if sec
+                return i
+            else
+                sec = true
+            end
+        end
+        i += 1
+    end
+    return out
 end
 
 """

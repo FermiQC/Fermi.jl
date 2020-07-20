@@ -63,9 +63,9 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
     
     dets = get_determinants(act_elec, active, frozen)
     Ndets = length(dets)
-    @output "Number of Determinants: {:10d}\n" Ndets
+    @output "\nNumber of Determinants: {:10d}\n" Ndets
 
-    @output "Building Sparse Hamiltonian...\n"
+    @output "\nBuilding Sparse Hamiltonian...\n"
 
     @time begin
         H = get_sparse_hamiltonian_matrix(dets, h, V, Fermi.CurrentOptions["cas_cutoff"])
@@ -119,54 +119,42 @@ function get_sparse_hamiltonian_matrix(dets::Array{Determinant,1}, h::Array{T,2}
     vals = T[]
     ivals = Int64[]
     jvals = Int64[]
-    elem = 0.0
-    tHd0 = 0
-    tHd1 = 0
-    tHd2 = 0
-    t = 0
 
     for i in 1:Ndets
         D1 = dets[i]
-        αind .= αindex(D1, Nα)
-        βind .= βindex(D1, Nβ)
+        αindex!(D1, αind)
+        βindex!(D1, βind)
         for j in i:Ndets
             D2 = dets[j]
             αexc = αexcitation_level(D1,D2)
             βexc = βexcitation_level(D1,D2)
             el = αexc + βexc
             if el > 2
-                nothing
+                continue 
             elseif el == 2
-                t = @elapsed elem = Hd2(D1, D2, V, αexc)
+                elem = Hd2(D1, D2, V, αexc)
                 if elem > tol || -elem > tol
                     push!(vals, elem)
                     push!(ivals, i)
                     push!(jvals, j)
                 end
-                tHd2 += t
             elseif el == 1
-                t = @elapsed elem = Hd1(αind, βind, D1, D2, h, V, αexc)
+                elem = Hd1(αind, βind, D1, D2, h, V, αexc)
                 if elem > tol || -elem > tol
                     push!(vals, elem)
                     push!(ivals, i)
                     push!(jvals, j)
                 end
-                tHd1 += t
             else
-                t = @elapsed elem = Hd0(αind, βind, h, V)
+                elem = Hd0(αind, βind, h, V)
                 if elem > tol || -elem > tol
                     push!(vals, elem)
                     push!(ivals, i)
                     push!(jvals, j)
                 end
-                tHd0 += t
             end
         end
     end
-
-    @output "\n Total Time spent in Hd0: {:10.5f}" tHd0
-    @output "\n Total Time spent in Hd1: {:10.5f}" tHd1
-    @output "\n Total Time spent in Hd2: {:10.5f}\n" tHd2
 
     return Symmetric(sparse(ivals, jvals, vals))
 end
