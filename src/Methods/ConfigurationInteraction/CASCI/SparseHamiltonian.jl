@@ -70,7 +70,7 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
     @time begin
         H = get_sparse_hamiltonian_matrix(dets, h, V, Fermi.CurrentOptions["cas_cutoff"])
     end
-    @output "Hamiltonian Matrix size: {:10.6f} Mb\n" Base.summarysize(H)/10^6
+    @output "Hamiltonian Matrix size: {:10.3f} Mb\n" Base.summarysize(H)/10^6
 
     @output "Diagonalizing Hamiltonian for {:3d} eigenvalues...\n" nroot
     @time begin
@@ -114,16 +114,16 @@ function get_sparse_hamiltonian_matrix(dets::Array{Determinant,1}, h::Array{T,2}
     Nα = sum(αlist(dets[1]))
     Nβ = sum(αlist(dets[1]))
 
-    αind = Array{Int64,1}(undef,Nα)
-    βind = Array{Int64,1}(undef,Nβ)
-    vals = T[]
-    ivals = Int64[]
-    jvals = Int64[]
+    αind = [Array{Int64,1}(undef,Nα) for i = 1:Threads.nthreads()]
+    βind = [Array{Int64,1}(undef,Nβ) for i = 1:Threads.nthreads()]
+    vals = [T[] for i = 1:Threads.nthreads()]
+    ivals = [Int64[] for i = 1:Threads.nthreads()]
+    jvals = [Int64[] for i = 1:Threads.nthreads()]
 
-    for i in 1:Ndets
+    Threads.@threads for i in 1:Ndets
         D1 = dets[i]
-        αindex!(D1, αind)
-        βindex!(D1, βind)
+        αindex!(D1, αind[Threads.threadid()])
+        βindex!(D1, βind[Threads.threadid()])
         for j in i:Ndets
             D2 = dets[j]
             αexc = αexcitation_level(D1,D2)
@@ -134,27 +134,30 @@ function get_sparse_hamiltonian_matrix(dets::Array{Determinant,1}, h::Array{T,2}
             elseif el == 2
                 elem = Hd2(D1, D2, V, αexc)
                 if elem > tol || -elem > tol
-                    push!(vals, elem)
-                    push!(ivals, i)
-                    push!(jvals, j)
+                    push!(vals[Threads.threadid()], elem)
+                    push!(ivals[Threads.threadid()], i)
+                    push!(jvals[Threads.threadid()], j)
                 end
             elseif el == 1
-                elem = Hd1(αind, βind, D1, D2, h, V, αexc)
+                elem = Hd1(αind[Threads.threadid()], βind[Threads.threadid()], D1, D2, h, V, αexc)
                 if elem > tol || -elem > tol
-                    push!(vals, elem)
-                    push!(ivals, i)
-                    push!(jvals, j)
+                    push!(vals[Threads.threadid()], elem)
+                    push!(ivals[Threads.threadid()], i)
+                    push!(jvals[Threads.threadid()], j)
                 end
             else
-                elem = Hd0(αind, βind, h, V)
+                elem = Hd0(αind[Threads.threadid()], βind[Threads.threadid()], h, V)
                 if elem > tol || -elem > tol
-                    push!(vals, elem)
-                    push!(ivals, i)
-                    push!(jvals, j)
+                    push!(vals[Threads.threadid()], elem)
+                    push!(ivals[Threads.threadid()], i)
+                    push!(jvals[Threads.threadid()], j)
                 end
             end
         end
     end
 
+    ivals = vcat(ivals...)
+    jvals = vcat(jvals...)
+    vals  = vcat(vals...)
     return Symmetric(sparse(ivals, jvals, vals))
 end
