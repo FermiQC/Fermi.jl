@@ -25,7 +25,6 @@ function ecRCCSD{T}(Alg::CTF) where T <: AbstractFloat
     # Process CAS data to get ecT1 and ecT2 (Cluster Decomposition step)
     frozen = Fermi.CurrentOptions["cas_frozen"]
     active = Fermi.CurrentOptions["cas_active"] ≢ -1 ? Fermi.CurrentOptions["cas_active"] : refwfn.nvir+refwfn.ndocc-frozen
-    fcn = Fermi.CurrentOptions["drop_occ"]
 
     if drop_occ > frozen
         error("\nFrozen orbitals in the CC step ($drop_occ) cannot be greater than the number of frozen orbitals in the CAS ($frozen).")
@@ -40,7 +39,8 @@ function ecRCCSD{T}(Alg::CTF) where T <: AbstractFloat
     @output "Active Occupied Orbitals: {}\n" actocc
     @output "Active Virtual Orbitals:  {}\n" actvir
 
-    T1, T2, ecT1, ecT2 = cas_decomposition(Casdata, refwfn.ndocc, fcn, actocc, actvir, moint.ov, moint.oovv, moint.ovvv, moint.ooov)
+    T1, T2, ecT1, ecT2 = cas_decomposition(Casdata, refwfn.ndocc, drop_occ, actocc, actvir, moint.ov, moint.oovv, moint.ovvv, moint.ooov)
+    Casdata = nothing
 
     d = [i - a for i = diag(moint.oo), a = diag(moint.vv)]
     D = [i + j - a - b for i = diag(moint.oo), j = diag(moint.oo), a = diag(moint.vv), b = diag(moint.vv)]
@@ -127,7 +127,7 @@ function ecRCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, newT1::Array{
         @output "\n 🍾 Equations Converged!\n"
     end
     @output "\n⇒ Final ecCCSD Energy:     {:15.10f}\n" Ecc+refwfn.energy
-
+    return ecRCCSD{T}(Ecc+refwfn.energy, Fermi.MemTensor(newT1), Fermi.MemTensor(newT2))
 end
 
 function get_cas_data(cas::Fermi.ConfigurationInteraction.CASCI)
