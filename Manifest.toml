@@ -357,7 +357,6 @@ version = "1.0.1"
 
 [[TBLIS]]
 deps = ["Hwloc_jll", "Libdl", "LinearAlgebra", "Test", "tblis_jll"]
-path = "/home/aroeira/.julia/dev/TBLIS"
 uuid = "48530278-0828-4a49-9772-0f3830dfa1e9"
 version = "0.1.0"
 
