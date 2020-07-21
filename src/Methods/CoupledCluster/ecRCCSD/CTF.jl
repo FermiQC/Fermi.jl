@@ -145,7 +145,7 @@ function get_cas_data(cas::Fermi.ConfigurationInteraction.CASCI)
     C0 = Ccas[1]
 
     # Intermediate Normalization
-    abs(C0) > 1e-8 ? nothing : error("Reference coefficient is too small ($(C0)) to performe intermediate normalization")
+    abs(C0) > 1e-8 ? nothing : error("Reference coefficient is too small ($(C0)) to perform intermediate normalization")
     Ccas = Ccas ./ C0
 
     # Split the Cas data into excitation level

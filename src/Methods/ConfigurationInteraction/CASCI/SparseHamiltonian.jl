@@ -79,8 +79,22 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
     end
     @output "\n Final FCI Energy: {:15.10f}\n" λ[1]+refwfn.molecule.Vnuc
 
-    return CASCI{T}(refwfn, λ[1]+T(refwfn.molecule.Vnuc), dets, ϕ[:,1])
+    # Sort dets by importance
+    C = ϕ[:,1]
+    sp = sortperm(abs.(ϕ[:,1]), rev=true)
+    C = ϕ[:,1][sp]
+    dets = dets[sp]
 
+    @output "\n • Most important determinants:\n\n"
+
+    @output "    Coefficient      α-String      β-String\n"
+
+    ds = d -> reverse(bitstring(d))[1:frozen+active]
+    for i in 1:10
+        @output "{:15.5f}      {}      {}\n" C[i]  ds(dets[i].α) ds(dets[i].β)
+    end
+    @output "\n"
+    return CASCI{T}(refwfn, λ[1]+T(refwfn.molecule.Vnuc), dets, C)
 end
 
 function get_determinants(Ne::Int, No::Int, nfrozen::Int)
