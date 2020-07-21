@@ -51,7 +51,7 @@ include("CTF.jl")
 Compute a RCCSD wave function using Fermi.CurrentOptions data.
 """
 function ecRCCSD()
-    println("Selecting precision...")
+    @output "Selecting precision...\n"
     prec = select_precision(Fermi.CurrentOptions["precision"])
     ecRCCSD{prec}()
 end
@@ -62,7 +62,7 @@ end
 Compute a RCCSD wave function for a given precision T (Float64 or Float32)
 """
 function ecRCCSD{T}() where T <: AbstractFloat
-    println("Selecting Algorithm...")
+    @output "Selecting Algorithm...\n"
     alg = select_algorithm(Fermi.CurrentOptions["cc_alg"])
     ecRCCSD{T}(alg)
 end

@@ -79,6 +79,12 @@ git-tree-sha1 = "08c8b6831dc00bfea825826be0bc8336fc369860"
 uuid = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
 version = "1.0.2"
 
+[[Compat]]
+deps = ["Base64", "Dates", "DelimitedFiles", "Distributed", "InteractiveUtils", "LibGit2", "Libdl", "LinearAlgebra", "Markdown", "Mmap", "Pkg", "Printf", "REPL", "Random", "SHA", "Serialization", "SharedArrays", "Sockets", "SparseArrays", "Statistics", "Test", "UUIDs", "Unicode"]
+git-tree-sha1 = "a6a8197ae253f2c1a22b2ae17c2dfaf5812c03aa"
+uuid = "34da2185-b29b-5c13-b0c7-acf172513d20"
+version = "3.13.0"
+
 [[CompilerSupportLibraries_jll]]
 deps = ["Libdl", "Pkg"]
 git-tree-sha1 = "7c4f882c41faa72118841185afc58a2eb00ef612"
@@ -219,8 +225,8 @@ deps = ["Libdl"]
 uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 
 [[Lints]]
-deps = ["CxxWrap", "Eigen_jll", "Libdl", "Pkg", "Serialization", "Test", "boost_jll", "libint_jll"]
-git-tree-sha1 = "d42bcc5eaec04d5dc018c61cedac08355eeb06b4"
+deps = ["CxxWrap", "Eigen_jll", "Libdl", "NPZ", "Pkg", "Serialization", "Test", "boost_jll", "libint_jll"]
+git-tree-sha1 = "6b2e827d03b25c09338a441516ac1a034b4f486c"
 uuid = "969b4477-8239-4824-a7ce-fb2a72cbc115"
 version = "0.1.2"
 
@@ -269,6 +275,12 @@ deps = ["BinaryProvider", "Libdl", "LinearAlgebra", "Requires", "Statistics"]
 git-tree-sha1 = "d9f196d911f55aeaff11b11f681b135980783824"
 uuid = "872c559c-99b0-510c-b3b7-b6c96a88d5cd"
 version = "0.6.6"
+
+[[NPZ]]
+deps = ["Compat", "ZipFile"]
+git-tree-sha1 = "a9837d6dc62c8a159f8e788d51c81ccee248db0e"
+uuid = "15e1cf62-19b3-5cfa-8e77-841668bca605"
+version = "0.4.0"
 
 [[OpenMPI_jll]]
 deps = ["Libdl", "Pkg"]
@@ -386,6 +398,12 @@ uuid = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 
 [[Unicode]]
 uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
+
+[[ZipFile]]
+deps = ["Libdl", "Printf", "Zlib_jll"]
+git-tree-sha1 = "254975fef2fc526583bb9b7c9420fe66ffe09f2f"
+uuid = "a5390f91-8eb1-5f08-bee0-b1d1ffed6cea"
+version = "0.9.2"
 
 [[Zlib_jll]]
 deps = ["Libdl", "Pkg"]

@@ -8,9 +8,14 @@ function ecRCCSD{T}(Alg::CTF) where T <: AbstractFloat
     # Call CASCI
     cas = Fermi.ConfigurationInteraction.CASCI{T}()
 
-    # Save reference wavefunction and process CAS data
-    refwfn = cas.ref
+    # Print intro
+    Fermi.CoupledCluster.print_header()
+    @output "\n    • Computing Externally Corrected CCSD with the ecRCCSD module.\n\n"
+
+    # Save reference wavefunction and process CAS data. Modify Ref (if not HF)
+    @output "Processing CAS data...\n"
     Casdata = get_cas_data(cas)
+    refwfn = cas.ref
     # Delete data that will not be used
     cas = nothing
 
@@ -36,10 +41,12 @@ function ecRCCSD{T}(Alg::CTF) where T <: AbstractFloat
 
     actocc = collect((1+frozen):refwfn.ndocc)
     actvir = collect((1+refwfn.ndocc):(active+frozen))
+
+    @output "\n   • CAS Decomposition started:\n"
     @output "Active Occupied Orbitals: {}\n" actocc
     @output "Active Virtual Orbitals:  {}\n" actvir
-
-    T1, T2, ecT1, ecT2 = cas_decomposition(Casdata, refwfn.ndocc, drop_occ, actocc, actvir, moint.ov, moint.oovv, moint.ovvv, moint.ooov)
+    t = @elapsed T1, T2, ecT1, ecT2 = cas_decomposition(Casdata, refwfn.ndocc, drop_occ, actocc, actvir, moint.ov, moint.oovv, moint.ovvv, moint.ooov)
+    @output "Finished in {:5.5} seconds.\n" t
     Casdata = nothing
 
     d = [i - a for i = diag(moint.oo), a = diag(moint.vv)]
@@ -51,10 +58,6 @@ end
 """
 """
 function ecRCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, newT1::Array{T, 2}, newT2::Array{T,4}, ecT1::Array{T,2}, ecT2::Array{T,4}, d::Array{T,2}, D::Array{T,4}, Alg::CTF) where T <: AbstractFloat
-
-    # Print intro
-    Fermi.CoupledCluster.print_header()
-    @output "\n    • Computing Externally Corrected CCSD with the ecRCCSD module.\n\n"
 
     # Process Fock matrix, important for non HF cases
     foo = similar(moint.oo)
@@ -140,9 +143,53 @@ function get_cas_data(cas::Fermi.ConfigurationInteraction.CASCI)
     dets = cas.dets
     Ccas = cas.coef
 
-    # REF
     ref = dets[1]
     C0 = Ccas[1]
+
+    # The reference determinant is takan as the dominant configuration
+    # If the reference is not the RHF determinant the C matrix has to be modified
+    # such that all orbitals occupied in the new reference comes first.
+    #ref = dets[2]
+    #zeroth = repeat('1', cas.ref.ndocc)*repeat('0', cas.ref.nvir)
+    #hf = Fermi.ConfigurationInteraction.Determinant(zeroth, zeroth)
+    #if ref == hf
+    #    @output "Dominant configuration is the RHF determinant.\n"
+    #else
+    #    if ref.α ≢ ref.β
+    #        error("Dominant determinant is not spin symmetric.")
+    #    end
+    #    @output "!! Dominant configuration is NOT the RHF determinant. Adapting hole-particle spaces\n"
+    #    holes = Fermi.ConfigurationInteraction.αexclusive(hf, ref)
+    #    particles = Fermi.ConfigurationInteraction.αexclusive(ref, hf)
+    #    for (h,p) in zip(holes,particles)
+    #        @inbounds for k = 1:size(cas.ref.C,1)
+    #            cas.ref.C[k,h], cas.ref.C[k,p] = cas.ref.C[k,p], cas.ref.C[k,h]
+    #        end
+
+    #        for id in eachindex(dets)
+    #            α = dets[id].α
+    #            β = dets[id].β
+    #            hbit = 1 << (h-1)
+    #            pbit = 1 << (p-1)
+    #            # If the bits are different, invert them
+    #            if (α & hbit == 0) && (α & pbit != 0) 
+    #                α = (α | hbit) ⊻ pbit
+    #            elseif (α & hbit != 0) && (α & pbit == 0) 
+    #                α = (α | pbit) ⊻ hbit
+    #            end
+
+    #            if (β & hbit == 0) && (β & pbit != 0) 
+    #                β = (β | hbit) ⊻ pbit
+    #            elseif (β & hbit != 0) && (β & pbit == 0)
+    #                β = (β | pbit) ⊻ hbit
+    #            end
+
+    #            dets[id] = Fermi.ConfigurationInteraction.Determinant(α, β)
+    #        end
+    #    end
+    #    ref = dets[2]
+    #end
+    #C0 = Ccas[2]
 
     # Intermediate Normalization
     abs(C0) > 1e-8 ? nothing : error("Reference coefficient is too small ($(C0)) to perform intermediate normalization")

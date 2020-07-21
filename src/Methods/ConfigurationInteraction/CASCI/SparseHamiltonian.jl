@@ -67,16 +67,16 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
 
     @output "\nBuilding Sparse Hamiltonian...\n"
 
-    @time begin
-        H = get_sparse_hamiltonian_matrix(dets, h, V, Fermi.CurrentOptions["cas_cutoff"])
-    end
+    t = @elapsed H = get_sparse_hamiltonian_matrix(dets, h, V, Fermi.CurrentOptions["cas_cutoff"])
+    @output "Done in {:5.5f} seconds.\n" t
     @output "Hamiltonian Matrix size: {:10.3f} Mb\n" Base.summarysize(H)/10^6
 
     @output "Diagonalizing Hamiltonian for {:3d} eigenvalues...\n" nroot
-    @time begin
+    t = @elapsed begin
         decomp, history = partialschur(H, nev=nroot, tol=10^-12, which=LM())
         λ, ϕ = partialeigen(decomp)
     end
+    @output "Done in {:5.5f} seconds.\n" t
     @output "\n Final FCI Energy: {:15.10f}\n" λ[1]+refwfn.molecule.Vnuc
 
     # Sort dets by importance
