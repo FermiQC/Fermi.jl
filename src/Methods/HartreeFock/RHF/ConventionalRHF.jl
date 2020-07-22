@@ -59,8 +59,6 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, Cguess::Array{F
 
     @output " Number of Doubly Occupied Orbitals:   {:5.0d}\n" ndocc
     @output " Number of Virtual Spatial Orbitals:   {:5.0d}\n" nvir
-    @output " Nuclear Repulsion Energy:     {:5.10f}\n" molecule.Vnuc
-
 
     # Read in initial guess for orbitals
     x,y = size(Cguess)

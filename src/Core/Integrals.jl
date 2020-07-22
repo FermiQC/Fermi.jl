@@ -6,6 +6,7 @@ Module to compute integrals using Lints.jl
 module Integrals
 
 using Fermi
+using Fermi.Output
 using Fermi.Geometry: Molecule
 using Lints
 using LinearAlgebra
@@ -132,6 +133,8 @@ function ConventionalAOIntegrals(molecule::Molecule, basis::String, interconnect
     end
 
     Lints.libint2_init()
+    @output "   • Lints started\n\n"
+    @output "   Basis set: {}\n" basis
     mol = Lints.Molecule("/tmp/molfile.xyz")
     bas = Lints.BasisSet(basis, mol)
 
@@ -155,6 +158,7 @@ function ConventionalAOIntegrals(molecule::Molecule, basis::String, interconnect
     Lints.make_ERI(I,I_engines,bas)
     I = Fermi.MemTensor(I)
     Lints.libint2_finalize()
+    @output "Exiting Lints.\n\n"
 
     return ConventionalAOIntegrals{Float64}(S, T, V, I)
 end

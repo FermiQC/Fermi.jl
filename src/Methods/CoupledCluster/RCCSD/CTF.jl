@@ -6,17 +6,14 @@ using LinearAlgebra
 Compute a RCCSD wave function using the Compiled time factorization algorithm (CTF)
 """
 function RCCSD{T}(Alg::CTF) where T <: AbstractFloat
-    println("Generating Molecule...")
     molecule = Fermi.Geometry.Molecule()
-    println("Computing Integrals...")
-    aoint = Fermi.Integrals.ConventionalAOIntegrals()
-    println("Calling Hartree-Fock module...")
+    aoint = Fermi.Integrals.ConventionalAOIntegrals(molecule)
     refwfn = Fermi.HartreeFock.RHF(molecule, aoint)
 
     drop_occ = Fermi.CurrentOptions["drop_occ"]
     drop_vir = Fermi.CurrentOptions["drop_vir"]
 
-    println("Transforming Integrals...")
+    @output "Transforming Integrals..."
     moint = Fermi.Integrals.PhysRestrictedMOIntegrals{T}(refwfn.ndocc, refwfn.nvir, drop_occ, drop_vir, refwfn.C, aoint)
 
     RCCSD{T}(refwfn, moint, Alg) 
@@ -57,6 +54,7 @@ function RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, newT1::Array{T,
 
     # Compute Guess Energy
     Ecc = update_energy(newT1, newT2, fov, moint.oovv)
+    Eguess = Ecc+refwfn.energy
     
     @output "Initial Amplitudes Guess: MP2\n"
     @output "MP2 Energy:   {:15.10f}\n\n" Ecc+refwfn.energy
@@ -115,7 +113,7 @@ function RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, newT1::Array{T,
     end
     @output "\n⇒ Final CCSD Energy:     {:15.10f}\n" Ecc+refwfn.energy
 
-    return RCCSD{T}(Ecc+refwfn.energy, Fermi.MemTensor(newT1), Fermi.MemTensor(newT2))
+    return RCCSD{T}(Eguess, Ecc+refwfn.energy, Fermi.MemTensor(newT1), Fermi.MemTensor(newT2))
 end
 
 """

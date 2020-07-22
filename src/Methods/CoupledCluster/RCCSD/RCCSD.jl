@@ -14,6 +14,7 @@ _struct tree:_
 **RCCSD** <: AbstractCCWavefunction <: AbstractCorrelatedWavefunction <: AbstractWavefunction
 """
 struct RCCSD{T} <: AbstractCCWavefunction
+    GuessEnergy::T
     CorrelationEnergy::T
     T1::_T where _T <: Fermi.AbstractTensor
     T2::_T where _T <: Fermi.AbstractTensor
@@ -49,7 +50,6 @@ include("CTF.jl")
 Compute a RCCSD wave function using Fermi.CurrentOptions data.
 """
 function RCCSD()
-    println("Selecting precision...")
     prec = select_precision(Fermi.CurrentOptions["precision"])
     RCCSD{prec}()
 end
@@ -60,7 +60,6 @@ end
 Compute a RCCSD wave function for a given precision T (Float64 or Float32)
 """
 function RCCSD{T}() where T <: AbstractFloat
-    println("Selecting Algorithm...")
     alg = select_algorithm(Fermi.CurrentOptions["cc_alg"])
     RCCSD{T}(alg)
 end

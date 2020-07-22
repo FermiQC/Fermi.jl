@@ -17,5 +17,6 @@ include("Methods/HartreeFock/HartreeFock.jl")
 #include("Methods/MollerPlesset/MollerPlesset.jl")
 include("Methods/ConfigurationInteraction/ConfigurationInteraction.jl")
 include("Methods/CoupledCluster/CoupledCluster.jl")
+include("Methods/FocalPointAnalysis/FPA.jl")
 
 end # module

@@ -4,18 +4,14 @@ function RCCSDpT()
 end
 
 function RCCSDpT{T}() where T <: AbstractFloat
-
-    println("Generating Molecule...")
     molecule = Fermi.Geometry.Molecule()
-    println("Computing Integrals...")
-    aoint = Fermi.Integrals.ConventionalAOIntegrals()
-    println("Calling Hartree-Fock module...")
+    aoint = Fermi.Integrals.ConventionalAOIntegrals(molecule)
     refwfn = Fermi.HartreeFock.RHF(molecule, aoint)
 
     drop_occ = Fermi.CurrentOptions["drop_occ"]
     drop_vir = Fermi.CurrentOptions["drop_vir"]
 
-    println("Transforming Integrals...")
+    @output "Transforming Integrals..."
     moint = Fermi.Integrals.PhysRestrictedMOIntegrals{T}(refwfn.ndocc, refwfn.nvir, drop_occ, drop_vir, refwfn.C, aoint)
 
     ccsd_wfn = RCCSD{T}(refwfn, moint, Fermi.CoupledCluster.CTF())
