@@ -10,6 +10,7 @@ using Fermi.Output
 using Fermi.Geometry: Molecule
 using Lints
 using LinearAlgebra
+using TensorOperations
 
 export AbstractIntegrals
 export AOIntegrals

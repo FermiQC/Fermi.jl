@@ -16,6 +16,7 @@ _struct tree:_
 **RCCSD** <: AbstractCCWavefunction <: AbstractCorrelatedWavefunction <: AbstractWavefunction
 """
 struct ecRCCSD{T} <: AbstractCCWavefunction
+    GuessEnergy::T
     CorrelationEnergy::T
     T1::_T where _T <: Fermi.AbstractTensor
     T2::_T where _T <: Fermi.AbstractTensor

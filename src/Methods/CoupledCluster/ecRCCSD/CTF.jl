@@ -68,8 +68,9 @@ function ecRCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, newT1::Array{
     
     # Compute Guess Energy
     Ecc = update_energy(newT1, newT2, fov, moint.oovv)
+    Eguess = Ecc+refwfn.energy
     
-    @output "Energy from the CAS Vector:   {:15.10f}\n\n" Ecc+refwfn.energy
+    @output "Energy from the CAS Vector:   {:15.10f}\n\n" Eguess
 
     # Start CC iterations
     
@@ -130,7 +131,7 @@ function ecRCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, newT1::Array{
         @output "\n 🍾 Equations Converged!\n"
     end
     @output "\n⇒ Final ecCCSD Energy:     {:15.10f}\n" Ecc+refwfn.energy
-    return ecRCCSD{T}(Ecc+refwfn.energy, Fermi.MemTensor(newT1), Fermi.MemTensor(newT2))
+    return ecRCCSD{T}(Eguess, Ecc+refwfn.energy, Fermi.MemTensor(newT1), Fermi.MemTensor(newT2))
 end
 
 function get_cas_data(cas::Fermi.ConfigurationInteraction.CASCI)

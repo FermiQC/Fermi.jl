@@ -1,3 +1,5 @@
+using TensorOperations
+
 # Define Algorithims
 abstract type RHFAlgorithm end
 struct ConventionalRHF <: RHFAlgorithm end
@@ -52,7 +54,7 @@ Compute RHF wave function using data from Fermi.CurrentOptions
 """
 function RHF()
     molecule = Molecule()
-    aoint = ConventionalAOIntegrals() # To be changed once new HF methods such as direct is implemented
+    aoint = ConventionalAOIntegrals(molecule) 
     Alg = select_algorithm(Fermi.CurrentOptions["scf_alg"])
     RHF(molecule, aoint, Alg)
 end

@@ -1,4 +1,4 @@
-function FPA(grid::Array{Tuple{String,String},1})
+function ecFPA(grid::Array{Tuple{String,String},1})
 
     if Fermi.CurrentOptions["precision"] == "single"
         prec = Float32
@@ -8,17 +8,17 @@ function FPA(grid::Array{Tuple{String,String},1})
         throw(Fermi.InvalidFermiOptions("Invalid precision: $(A)"))
     end
 
-    FPA{prec}(grid)
+    ecFPA{prec}(grid)
 end
 
-function FPA{T}(grid::Array{Tuple{String,String},1}) where T <: AbstractFloat
-    methods = ["RHF", "MP2", "CCSD", "CCSD(T)"]
+function ecFPA{T}(grid::Array{Tuple{String,String},1}) where T <: AbstractFloat
+    methods = ["RHF", "CAS", "ecCCSD", "ecCCSD(T)"]
     basis = String[] 
     data = zeros(length(grid), 4)
     molecule = Molecule()
     x = 1
     for (b,m) in grid
-        row = get_fpa_row(molecule, m, b, T)
+        row = get_ecfpa_row(molecule, m, b, T)
         push!(basis, b)
         for i in eachindex(row)
             data[x,i] = row[i]
@@ -29,18 +29,18 @@ function FPA{T}(grid::Array{Tuple{String,String},1}) where T <: AbstractFloat
     extrapolated, ext_ind = extrapolate(data, basis, methods)
     push!(basis, "CBS")
 
-    @output "\n ⇒ Final FPA (absolute):\n"
-    fpa = FPA{T}(basis, methods, extrapolated, ext_ind)
+    @output "\n ⇒ Final ecFPA (absolute):\n"
+    fpa = ecFPA{T}(basis, methods, extrapolated, ext_ind)
     print_fpa(fpa)
-    @output "⇒ Final FPA Energy:   {:15.10f}\n" fpa.data[end,end]
+    @output "⇒ Final ecFPA Energy:   {:15.10f}\n" fpa.data[end,end]
     return fpa
 end
 
-function get_fpa_row(molecule::Molecule, upmethod::String, basis::String, T::DataType)
+function get_ecfpa_row(molecule::Molecule, upmethod::String, basis::String, T::DataType)
 
     Fermi.CurrentOptions["basis"] = basis
     
-    @output "   → Starting FPA row for {}\n\n" basis
+    @output "   → Starting ecFPA row for {}\n\n" basis
     aoint = Fermi.Integrals.ConventionalAOIntegrals(molecule)
     RHFwfn = Fermi.HartreeFock.RHF(molecule, aoint)
 
