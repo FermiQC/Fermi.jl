@@ -1,4 +1,5 @@
 using TensorOperations
+using Lints
 
 # Define Algorithims
 abstract type RHFAlgorithm end
@@ -23,6 +24,8 @@ _struct tree:_
 **RHF** <: AbstractHFWavefunction <: AbstractReferenceWavefunction <: AbstractWavefunction
 """
 struct RHF <: AbstractHFWavefunction
+    basis::String
+    LintsBasis::Lints.BasisSetAllocated
     molecule::Molecule
     energy::Float64
     ndocc::Int

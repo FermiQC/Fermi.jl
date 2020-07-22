@@ -40,7 +40,7 @@ function get_fpa_row(molecule::Molecule, upmethod::String, basis::String, T::Dat
 
     Fermi.CurrentOptions["basis"] = basis
     
-    @output "   → Starting FPA row for {}\n\n" basis
+    @output "\n   → Starting FPA row for {}\n\n" basis
     aoint = Fermi.Integrals.ConventionalAOIntegrals(molecule)
     RHFwfn = Fermi.HartreeFock.RHF(molecule, aoint)
 

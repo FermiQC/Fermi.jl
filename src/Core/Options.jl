@@ -1,5 +1,9 @@
 # default options go here
 # if user specifies option they will be overwritten
+export CurrentOptions
+export InvalidFermiOption
+export @set
+
 """
     Fermi.CurrentOptions
 
@@ -45,3 +49,32 @@ struct InvalidFermiOption <: Exception
     msg::String
 end
 Base.showerror(io::IO, e::InvalidFermiOption) = print(io, "InvalidFermiOption: ", e.msg)
+
+
+"""
+    Fermi.@set
+
+Set options for Fermi computations. It saves the options into Fermi.CurrentOptions.
+
+*Usage:*  @set A B
+
+A is set to B. By default A is taken as a string. B is evaluated at parse time. If the evaluation
+is not possible, B is converted to a string.
+
+# Examples
+
+```
+@set basis cc-pVDZ
+@set cc_max_iter 100
+@set e_conv 10^-9
+```
+"""
+macro set(opt,val)
+    clean_up(s) = filter(c->!occursin(c," ():"),s)
+    A = clean_up(repr(opt))
+    try
+        CurrentOptions[A] = eval(val)
+    catch UndefVarError
+        CurrentOptions[A] = clean_up(repr(val))
+    end
+end

@@ -63,6 +63,8 @@ _struct tree:_
 **ConventionalAOIntegrals** <: AbstractAOIntegrals <: AbstractIntegrals
 """
 struct ConventionalAOIntegrals{T} <: AbstractAOIntegrals where T <: AbstractFloat
+    basis::String
+    LintsBasis::Lints.BasisSetAllocated
     S::Array{T,2}
     T::Array{T,2}
     V::Array{T,2}
@@ -158,10 +160,10 @@ function ConventionalAOIntegrals(molecule::Molecule, basis::String, interconnect
     Lints.make_2D(V,V_engine,bas)
     Lints.make_ERI(I,I_engines,bas)
     I = Fermi.MemTensor(I)
-    Lints.libint2_finalize()
+    #Lints.libint2_finalize()
     @output "Exiting Lints.\n\n"
 
-    return ConventionalAOIntegrals{Float64}(S, T, V, I)
+    return ConventionalAOIntegrals{Float64}(basis, bas, S, T, V, I)
 end
 
 """

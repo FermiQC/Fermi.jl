@@ -6,6 +6,7 @@ Conventional algorithm for to compute RHF wave function given Molecule, Integral
 """
 function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, Alg::ConventionalRHF)
 
+    @output "Using Core Guess\n"
     A = aoint.S^(-1/2)
     Ft = transpose(A)*(aoint.T+aoint.V)*A
     e,Ct = eigen(Ft)
@@ -33,7 +34,15 @@ are taken from the aoint input.
 """
 function RHF(wfn::RHF, aoint::ConventionalAOIntegrals, Alg::ConventionalRHF)
 
-    RHF(wfn.molecule, aoint, wfn.C, Alg)
+    # Projection of A→B done using equations described in Werner 2004 
+    # https://doi.org/10.1080/0026897042000274801
+    @output "Using {} wave function as initial guess\n" wfn.basis
+    Ca = wfn.C
+    Sbb = aoint.S
+    Sab = Lints.projector(wfn.LintsBasis, aoint.LintsBasis)
+    T = transpose(Ca)*Sab*(Sbb^-1)*transpose(Sab)*Ca
+    Cb = (Sbb^-1)*transpose(Sab)*Ca*T^(-1/2)
+    RHF(wfn.molecule, aoint, Cb, Alg)
 end
 
 """
@@ -41,7 +50,7 @@ end
 
 Basic function for conventional RHF using conventional integrals.
 """
-function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, Cguess::Array{Float64,2}, Alg::ConventionalRHF)
+function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, C::Array{Float64,2}, Alg::ConventionalRHF)
     # Print header
     Fermi.HartreeFock.print_header()
 
@@ -61,11 +70,6 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, Cguess::Array{F
     @output " Number of Doubly Occupied Orbitals:   {:5.0d}\n" ndocc
     @output " Number of Virtual Spatial Orbitals:   {:5.0d}\n" nvir
 
-    # Read in initial guess for orbitals
-    x,y = size(Cguess)
-    C = zeros(ndocc+nvir, ndocc+nvir)
-    C[1:x, 1:y] .= Cguess
-
     # Form the orthogonalizer 
     A = aoint.S^(-1/2)
 
@@ -80,7 +84,7 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, Cguess::Array{F
     ite = 1
     converged = false
 
-    @output "\n Iter.   {:<20} {:>11} {:>11} {:>8}\n" "E[RHF]" "ΔE" "√|ΔD|²" "t"
+    @output "\n Iter.   {:>15} {:>10} {:>10} {:>8}\n" "E[RHF]" "ΔE" "√|ΔD|²" "t"
     @output repeat("~",80)*"\n"
 
     t = @elapsed while ite ≤ maxit
@@ -116,7 +120,7 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, Cguess::Array{F
             D .= Dnew
             E = Enew
         end
-        @output "    {:<3} {:>20.17f} {:>11.3e} {:>11.3e} {:>8.2f}\n" ite E ΔE Drms t_iter
+        @output "    {:<3} {:>15.10f} {:>11.3e} {:>11.3e} {:>8.2f}\n" ite E ΔE Drms t_iter
         ite += 1
 
         if (ΔE < Etol) & (Drms < Dtol)
@@ -138,8 +142,7 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, Cguess::Array{F
     if !converged
         @output "\n !! SCF Equations did not converge in {:>5} iterations !!\n" maxit
     end
-
-    return RHF(molecule, E, ndocc, nvir, C, eps)
+    return RHF(aoint.basis, aoint.LintsBasis, molecule, E, ndocc, nvir, C, eps)
 end
 
 function RHFEnergy(D::Array{Float64,2}, H::Array{Float64,2},F::Array{Float64,2})
