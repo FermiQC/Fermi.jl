@@ -1,4 +1,5 @@
 using LinearAlgebra
+using Fermi.DIIS
 
 """
     Fermi.CoupledCluster.RCCSD{T}(Alg::CTF)
@@ -64,6 +65,9 @@ function RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, newT1::Array{T,
     cc_max_iter = Fermi.CurrentOptions["cc_max_iter"]
     cc_e_conv = Fermi.CurrentOptions["cc_e_conv"]
     cc_max_rms = Fermi.CurrentOptions["cc_max_rms"]
+    do_diis = Fermi.CurrentOptions["diis"]
+    do_diis ? DM_T1 = Fermi.DIIS.DIISManager{Float64,Float64}(size=6) : nothing
+    do_diis ? DM_T2 = Fermi.DIIS.DIISManager{Float64,Float64}(size=6) : nothing
 
     @output "    Starting CC Iterations\n\n"
     @output "Iteration Options:\n"
@@ -94,6 +98,15 @@ function RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, newT1::Array{T,
             # Apply resolvent
             newT1 ./= d
             newT2 ./= D
+
+            e1 = newT1 - T1
+            e2 = newT2 - T2
+            if do_diis 
+                push!(DM_T1,newT1,e1) 
+                push!(DM_T2,newT2,e2) 
+                newT1 = Fermi.DIIS.extrapolate(DM_T1)
+                newT2 = Fermi.DIIS.extrapolate(DM_T2)
+            end
 
             # Compute residues 
             r1 = sqrt(sum((newT1 - T1).^2))/length(T1)

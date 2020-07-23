@@ -79,8 +79,8 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, C::Array{Float6
 
     # Form the density matrix
     Co = C[:, 1:ndocc]
-    #D = Fermi.contract(Co,Co,"um","vm")
-    @tensor D[u,v] := Co[u,m]*Co[v,m]
+    D = Fermi.contract(Co,Co,"um","vm")
+    #@tensor D[u,v] := Co[u,m]*Co[v,m]
     
     F = Array{Float64,2}(undef, ndocc+nvir, ndocc+nvir)
     F .= 0
@@ -118,8 +118,8 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, C::Array{Float6
 
             # Produce new Density Matrix
             Co = C[:,1:ndocc]
-            #Dnew = Fermi.contract(Co,Co,"um","vm")
-            @tensor Dnew[u,v] := Co[u,m]*Co[v,m]
+            Dnew = Fermi.contract(Co,Co,"um","vm")
+            #@tensor Dnew[u,v] := Co[u,m]*Co[v,m]
 
             # Compute Energy
             Eelec = RHFEnergy(Dnew, aoint.T+aoint.V, F)
@@ -165,8 +165,8 @@ end
 
 function build_fock!(F::Array{Float64,2}, H::Array{Float64,2}, D::Array{Float64,2}, ERI::Fermi.MemTensor)
     F .= H
-    #Fermi.contract!(F,D,ERI,1.0,1.0,2.0,"mn","rs","mnrs")
-    @tensoropt F[m,n] += 2.0*D[r,s]*ERI.data[m,n,r,s]
-    #Fermi.contract!(F,D,ERI,1.0,1.0,-1.0,"mn","rs","mrns")
-    @tensoropt F[m,n] -= D[r,s]*ERI.data[m,r,n,s]
+    Fermi.contract!(F,D,ERI,1.0,1.0,2.0,"mn","rs","mnrs")
+    #@tensoropt F[m,n] += 2.0*D[r,s]*ERI.data[m,n,r,s]
+    Fermi.contract!(F,D,ERI,1.0,1.0,-1.0,"mn","rs","mrns")
+    #@tensoropt F[m,n] -= D[r,s]*ERI.data[m,r,n,s]
 end
