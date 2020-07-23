@@ -14,10 +14,9 @@ include("Core/AbstractWavefunctions.jl")
 include("Core/Geometry.jl")                               
 include("Core/Integrals.jl")
 include("Methods/HartreeFock/HartreeFock.jl")
-#include("Integrals/IntegralTransformation.jl")
 #include("Methods/MollerPlesset/MollerPlesset.jl")
-#include("Backend/IO/Input.jl")
-#include("Methods/ConfigurationInteraction/ConfigurationInteraction.jl")
-#include("Methods/CoupledCluster/CoupledCluster.jl")
+include("Methods/ConfigurationInteraction/ConfigurationInteraction.jl")
+include("Methods/CoupledCluster/CoupledCluster.jl")
+include("Methods/FocalPointAnalysis/FocalPointAnalysis.jl")
 
 end # module

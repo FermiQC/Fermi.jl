@@ -1,11 +1,12 @@
 """
-Module for running Hartree--Fock computations in Fermi.
+    Fermi.HartreeFock
 
+Module for running Hartree--Fock computations in Fermi.
 """
 module HartreeFock
 
 using Fermi
-using Fermi.Integrals: ConventionalAOIntegrals
+using Fermi.Integrals: AbstractAOIntegrals, ConventionalAOIntegrals
 using Fermi.Geometry: Molecule
 using Fermi.Output
 using Lints
@@ -18,6 +19,15 @@ function print_header()
     @output repeat("=",80)*"\n"
 end
 
+"""
+    Fermi.HartreeFock.AbstractHFWavefunction
+
+Abstract type common to all Hartree-Fock wave functions.
+
+_struct tree:_
+
+**AbstractHFWavefunction** <: AbstractReferenceWavefunction <: AbstractWavefunction
+"""
 abstract type AbstractHFWavefunction <: Fermi.AbstractReferenceWavefunction end
 
 include("RHF/RHF.jl")

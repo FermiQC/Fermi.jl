@@ -2,4 +2,6 @@ timer.dat
 *.swp
 *.swo
 docs/build
+output.dat
+
 

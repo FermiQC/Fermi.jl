@@ -14,6 +14,7 @@ export Molecule
 export Atom
 
 using Fermi
+using Fermi.Output
 using Fermi.PhysicalConstants: atomic_number, bohr_to_angstrom, angstrom_to_bohr
 using LinearAlgebra
 
@@ -128,7 +129,15 @@ function Molecule(atoms::Array{Atom,1}, charge::Int, multiplicity::Int)
     Nβ = (nelec - αexcess)/2
     Nα = nelec - Nβ
     
-    return Molecule(atoms, charge, multiplicity, Nα, Nβ, Vnuc)
+    out =  Molecule(atoms, charge, multiplicity, Nα, Nβ, Vnuc)
+    @output "   • Molecule:\n\n"
+    output(get_xyz(out))
+    @output "\n"
+    @output "\nCharge: {}   " out.charge 
+    @output "Multiplicity: {}   \n" out.multiplicity
+    @output "Nuclear repulsion: {:15.10f}\n\n" out.Vnuc
+
+    return out
 end
 
 """

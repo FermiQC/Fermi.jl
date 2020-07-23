@@ -1,7 +1,9 @@
-"""
-    Fermi.CoupledCluster.RCCSD
+using Fermi.ConfigurationInteraction: Determinant, excitation_level, αexcitation_level, βexcitation_level, αexclusive, βexclusive, phase, create, annihilate
 
-Fermi struct that holds information about RCCSD wavefunctions
+"""
+    Fermi.CoupledCluster.ecRCCSD
+
+Fermi struct that holds information about ecRCCSD wavefunctions
 
 # Fields
 
@@ -13,7 +15,7 @@ _struct tree:_
 
 **RCCSD** <: AbstractCCWavefunction <: AbstractCorrelatedWavefunction <: AbstractWavefunction
 """
-struct RCCSD{T} <: AbstractCCWavefunction
+struct ecRCCSD{T} <: AbstractCCWavefunction
     GuessEnergy::T
     CorrelationEnergy::T
     T1::_T where _T <: Fermi.AbstractTensor
@@ -49,9 +51,10 @@ include("CTF.jl")
 
 Compute a RCCSD wave function using Fermi.CurrentOptions data.
 """
-function RCCSD()
+function ecRCCSD()
+    @output "Selecting precision...\n"
     prec = select_precision(Fermi.CurrentOptions["precision"])
-    RCCSD{prec}()
+    ecRCCSD{prec}()
 end
 
 """
@@ -59,8 +62,8 @@ end
 
 Compute a RCCSD wave function for a given precision T (Float64 or Float32)
 """
-function RCCSD{T}() where T <: AbstractFloat
+function ecRCCSD{T}() where T <: AbstractFloat
+    @output "Selecting Algorithm...\n"
     alg = select_algorithm(Fermi.CurrentOptions["cc_alg"])
-    RCCSD{T}(alg)
+    ecRCCSD{T}(alg)
 end
-
