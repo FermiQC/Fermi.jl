@@ -7,8 +7,9 @@ Conventional algorithm for to compute RHF wave function given Molecule, Integral
 function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, Alg::ConventionalRHF)
 
     @output "Using Core Guess\n"
-    A = aoint.S^(-1/2)
-    Ft = transpose(A)*(aoint.T+aoint.V)*A
+    sS = Hermitian(aoint.S)
+    A = sS^(-1/2)
+    Ft = (A)*(aoint.T+aoint.V)*transpose(A)
     e,Ct = eigen(Ft)
     C = A*Ct
 
@@ -55,7 +56,7 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, C::Array{Float6
     do_diis = Fermi.CurrentOptions["diis"]
     Fermi.HartreeFock.print_header()
 
-    do_diis ? DM = Fermi.DIIS.DIISManager{Float64}(size=8) : nothing 
+    do_diis ? DM = Fermi.DIIS.DIISManager{Float64,Float32}(size=8) : nothing 
     # Look up iteration options
     maxit = Fermi.CurrentOptions["scf_max_iter"]
     Etol  = 10.0^(-Fermi.CurrentOptions["e_conv"])
@@ -73,7 +74,8 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, C::Array{Float6
     @output " Number of Virtual Spatial Orbitals:   {:5.0d}\n" nvir
 
     # Form the orthogonalizer 
-    A = aoint.S^(-1/2)
+    sS = Hermitian(aoint.S)
+    A = sS^(-1/2)
 
     # Form the density matrix
     Co = C[:, 1:ndocc]
@@ -81,7 +83,8 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, C::Array{Float6
     @tensor D[u,v] := Co[u,m]*Co[v,m]
     
     F = Array{Float64,2}(undef, ndocc+nvir, ndocc+nvir)
-    build_fock!(F, aoint.T+aoint.V, D, aoint.ERI)
+    F .= 0
+    #build_fock!(F, aoint.T+aoint.V, D, aoint.ERI)
     E = RHFEnergy(D, aoint.T+aoint.V, F) + molecule.Vnuc
     eps = Array{Float64, 1}(undef, ndocc+nvir)
     ite = 1
@@ -105,10 +108,10 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, C::Array{Float6
             do_diis && ite > 3 ? F = Fermi.DIIS.extrapolate(DM) : nothing
 
             # Produce Ft
-            Ft = A*F*A
+            Ft = A*F*transpose(A)
 
             # Get orbital energies and transformed coefficients
-            eps,Ct = eigen(Symmetric(Ft))
+            eps,Ct = eigen(Hermitian(Ft))
 
             # Reverse transformation to get MO coefficients
             C = A*Ct
@@ -142,7 +145,7 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, C::Array{Float6
 
     @output repeat("~",80)*"\n"
     @output "    RHF done in {:>5.2f}s\n" t
-    @output "    @E[RHF] = {:>20.10f}\n" E
+    @output "    @E[RHF] = {:>20.16f}\n" E
 
     @output "\n   • Orbitals Summary\n"
     @output "\n {:>10}   {:>15}   {:>10}\n" "Orbital" "Energy" "Occupancy"
