@@ -1,5 +1,6 @@
 using TensorOperations
 using Lints
+using Fermi.DIIS
 
 # Define Algorithims
 abstract type RHFAlgorithm end
