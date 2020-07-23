@@ -52,11 +52,13 @@ Basic function for conventional RHF using conventional integrals.
 """
 function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, C::Array{Float64,2}, Alg::ConventionalRHF)
     # Print header
+    do_diis = Fermi.CurrentOptions["diis"]
     Fermi.HartreeFock.print_header()
 
+    do_diis ? DM = Fermi.DIIS.DIISManager{Float64}(size=8) : nothing 
     # Look up iteration options
     maxit = Fermi.CurrentOptions["scf_max_iter"]
-    Etol  = Fermi.CurrentOptions["e_conv"]
+    Etol  = 10.0^(-Fermi.CurrentOptions["e_conv"])
     Dtol  = Fermi.CurrentOptions["scf_max_rms"]
 
     ndocc = try
@@ -77,6 +79,7 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, C::Array{Float6
     Co = C[:, 1:ndocc]
     #D = Fermi.contract(Co,Co,"um","vm")
     @tensor D[u,v] := Co[u,m]*Co[v,m]
+    
     F = Array{Float64,2}(undef, ndocc+nvir, ndocc+nvir)
     build_fock!(F, aoint.T+aoint.V, D, aoint.ERI)
     E = RHFEnergy(D, aoint.T+aoint.V, F) + molecule.Vnuc
@@ -84,7 +87,8 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, C::Array{Float6
     ite = 1
     converged = false
 
-    @output "\n Iter.   {:>15} {:>10} {:>10} {:>8}\n" "E[RHF]" "ΔE" "√|ΔD|²" "t"
+    display(aoint.S)
+    @output "\n Iter.   {:>15} {:>10} {:>10} {:>8} {:>8}\n" "E[RHF]" "ΔE" "√|ΔD|²" "t" "DIIS"
     @output repeat("~",80)*"\n"
 
     t = @elapsed while ite ≤ maxit
@@ -94,10 +98,14 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, C::Array{Float6
             build_fock!(F, aoint.T+aoint.V, D, aoint.ERI)
 
             # Produce Ft
-            Ft = transpose(A)*F*A
+            Ft = A*F*A
+            #display(Ft)
+            do_diis ? push!(DM, Ft) : nothing
+            do_diis && ite > 3 ? Ft = Fermi.DIIS.extrapolate(DM) : nothing
+            #display(Ft)
 
             # Get orbital energies and transformed coefficients
-            eps,Ct = eigen(Symmetric(Ft))
+            eps,Ct = eigen((Ft))
 
             # Reverse transformation to get MO coefficients
             C = A*Ct
@@ -120,10 +128,10 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, C::Array{Float6
             D .= Dnew
             E = Enew
         end
-        @output "    {:<3} {:>15.10f} {:>11.3e} {:>11.3e} {:>8.2f}\n" ite E ΔE Drms t_iter
+        @output "    {:<3} {:>15.10f} {:>11.3e} {:>11.3e} {:>8.2f} {:>8}\n" ite E ΔE Drms t_iter (do_diis && ite > 2)
         ite += 1
 
-        if (ΔE < Etol) & (Drms < Dtol)
+        if (abs(ΔE) < Etol) & (Drms < Dtol)
             converged = true
             break
         end
