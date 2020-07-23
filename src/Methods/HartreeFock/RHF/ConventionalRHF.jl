@@ -95,17 +95,21 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, C::Array{Float6
         t_iter = @elapsed begin
 
             # Build the Fock Matrix
+            F_old = deepcopy(F)
             build_fock!(F, aoint.T+aoint.V, D, aoint.ERI)
+
+
+            #two different ways of defining error vector
+            #do_diis && ite > 1 ? err = transpose(A)*(F*D*aoint.S - aoint.S*D*F)*A : nothing
+            do_diis && ite > 1 ? err = F - F_old : nothing
+            do_diis && ite > 1 ? push!(DM, F, err) : nothing
+            do_diis && ite > 3 ? F = Fermi.DIIS.extrapolate(DM) : nothing
 
             # Produce Ft
             Ft = A*F*A
-            #display(Ft)
-            do_diis ? push!(DM, Ft) : nothing
-            do_diis && ite > 3 ? Ft = Fermi.DIIS.extrapolate(DM) : nothing
-            #display(Ft)
 
             # Get orbital energies and transformed coefficients
-            eps,Ct = eigen((Ft))
+            eps,Ct = eigen(Symmetric(Ft))
 
             # Reverse transformation to get MO coefficients
             C = A*Ct

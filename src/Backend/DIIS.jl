@@ -19,26 +19,15 @@ function length(M::DIISManager{T}) where T <: AbstractFloat
     length(M.vecs)
 end
 
-function push!(M::DIISManager{T}, V::Array) where T <: AbstractFloat
-    if length(M) > 0
-        #E = reshape(convert(Array{T},V) - M.vecs[end],prod(size(V)))
-        E = convert(Array{T},V) - M.vecs[end]
-        push!(M.errs,E)
-    else
-        E = convert(Array{T},V)
-        push!(M.errs,E)
-    end
+function push!(M::DIISManager{T}, V::Array, E::Array) where T <: AbstractFloat
     push!(M.vecs,deepcopy(V))
+    push!(M.errs,deepcopy(E))
     #push!(M.errs,reshape(deepcopy(E),prod(size(V))))
-    println(length(M.vecs))
-    println(length(M.errs))
     if length(M) > M.max_vec
-        #norms = norm.(M.errs)
-        #idx = findmax(norms)[2]
-        #deleteat!(M.vecs,idx)
-        #deleteat!(M.errs,idx)
-        deleteat!(M.vecs,1)
-        deleteat!(M.errs,1)
+        norms = norm.(M.errs)
+        idx = findmax(norms)[2]
+        deleteat!(M.vecs,idx)
+        deleteat!(M.errs,idx)
     end
 end
 
@@ -52,7 +41,7 @@ function extrapolate(M::DIISManager{T}) where T <: AbstractFloat
         end
     end 
     E = size(B,1)
-    #B[1:E-1,1:E-1] ./= maximum(B[1:E-1,1:E-1])
+    B[1:E-1,1:E-1] ./= maximum(abs.(B[1:E-1,1:E-1]))
     resid = zeros(T,diis_size+1)
     resid[end] = 1
     LAPACK.gesv!(B,resid)
