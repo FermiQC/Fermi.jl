@@ -87,7 +87,6 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, C::Array{Float6
     ite = 1
     converged = false
 
-    display(aoint.S)
     @output "\n Iter.   {:>15} {:>10} {:>10} {:>8} {:>8}\n" "E[RHF]" "ΔE" "√|ΔD|²" "t" "DIIS"
     @output repeat("~",80)*"\n"
 
