@@ -3,6 +3,7 @@
 export CurrentOptions
 export InvalidFermiOption
 export @set
+export @molecule
 
 """
     Fermi.CurrentOptions
@@ -58,7 +59,7 @@ Set options for Fermi computations. It saves the options into Fermi.CurrentOptio
 
 *Usage:*  @set A B
 
-A is set to B. By default A is taken as a string. B is evaluated at parse time. If the evaluation
+A is set to B. By default A is taken as a string. B is evaluated at runtime. If the evaluation
 is not possible, B is converted to a string.
 
 # Examples
@@ -68,13 +69,69 @@ is not possible, B is converted to a string.
 @set cc_max_iter 100
 @set e_conv 10^-9
 ```
+One can also use the block syntax
+```
+@set {
+    basis cc-pVDZ
+    cc_max_iter 100
+    e_conv 10^-9
+}
+```
+Note that for the block syntax variables are not accepted because the evaluation of B is
+done at parse time.
+```
+mybasis = 6-31g
+@set {
+    basis mybasis
+}
+```
+Will set the basis to "mybasis" not "6-31g".
 """
 macro set(opt,val)
     clean_up(s) = filter(c->!occursin(c," ():"),s)
     A = clean_up(repr(opt))
-    try
-        CurrentOptions[A] = eval(val)
-    catch UndefVarError
-        CurrentOptions[A] = clean_up(repr(val))
+    B = clean_up(repr(val))
+    quote
+        try
+            CurrentOptions[$A] = $val
+        catch UndefVarError
+            CurrentOptions[$A] = $B
+        end
     end
+end
+
+macro set(block)
+    clean_up(s) = strip(filter(c->!occursin(c," {}():"),s))
+    lines = split(repr(block),";")
+    for l in lines
+        opt, val = split(strip(l), " ", limit=2)
+        opt = clean_up(opt)
+        val = clean_up(val)
+        try
+            CurrentOptions[opt] = eval(Meta.parse(val))
+        catch UndefVarError
+            CurrentOptions[opt] = val
+        end
+    end
+end
+"""
+    Fermi.@molecule
+
+Set the molecule used in computations. String is save into Fermi.CurrentOptions
+
+# Example
+```
+@molecule {
+C                 -0.00000000     0.00000000    -0.00000000
+O                  0.00000000     0.00000000    -2.19732722
+O                 -0.00000000    -0.00000000     2.19732722
+}
+```
+"""
+macro molecule(block)
+    clean_up(s) = strip(filter(c->!occursin(c,"{}():"),s))
+    mol = repr(block)
+    mol = replace(mol, ";"=>"\n")
+    mol = clean_up(mol)
+    CurrentOptions["molstring"] = mol
 end
