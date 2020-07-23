@@ -399,7 +399,6 @@ version = "1.0.1"
 
 [[TBLIS]]
 deps = ["Hwloc_jll", "Libdl", "LinearAlgebra", "Test", "tblis_jll"]
-git-tree-sha1 = "c398bdf01a0bc9dcb989d771a05700d0ecef9023"
 uuid = "48530278-0828-4a49-9772-0f3830dfa1e9"
 version = "0.1.0"
 
