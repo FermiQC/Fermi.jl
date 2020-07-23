@@ -133,5 +133,5 @@ macro molecule(block)
     mol = repr(block)
     mol = replace(mol, ";"=>"\n")
     mol = clean_up(mol)
-    CurrentOptions["molstring"] = mol
+    CurrentOptions["molstring"] = String(mol)
 end
