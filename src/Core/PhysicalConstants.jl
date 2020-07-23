@@ -29,15 +29,15 @@ Computed as 1/Fermi.PhysicalConstants.bohr_to_angstrom
 """
 angstrom_to_bohr = 1/bohr_to_angstrom
 
+hartree_to_kcalmol = 627.509474
+hartree_to_kjmol = 2625.49964
+hartree_to_cm = 219474.6313708
+hartree_to_eV = 27.21138505
+
 """
     Fermi.PhysicalConstants.atomic_number(atom::String)
 
 Given a string with the element symbol, return its atomic number
-
-# Arguments:
-
-    atom   String representing an element
-
 """
 function atomic_number(atom::String)
     
