@@ -11,7 +11,7 @@ export @molecule
 Dictionary containing options for Fermi. Any information not given
 explicitly to Methods is obtained from here.
 """
-CurrentOptions = Dict{String,Any}(
+CurrentOptions = Dict{String,Union{Float64,Int,String,Bool}}(
                                   "molstring" => """
                                   O        1.2091536548      1.7664118189     -0.0171613972
                                   H        2.1984800075      1.7977100627      0.0121161719
@@ -25,7 +25,7 @@ CurrentOptions = Dict{String,Any}(
                                   "scf_max_iter" => 50,
                                   "scf_max_rms" => 10^-10,
                                   "scf_alg" => "conventional",
-                                  "quiet" => "true",
+                                  "quiet" => true,
                                   "mp2_type" => "conv",
                                   "precision" => "double",
                                   "cc_alg" => "CTF",
@@ -88,7 +88,7 @@ mybasis = 6-31g
 Will set the basis to "mybasis" not "6-31g".
 """
 macro set(opt,val)
-    clean_up(s) = filter(c->!occursin(c," ():"),s)
+    clean_up(s) = String(filter(c->!occursin(c," ():"),s))
     A = clean_up(repr(opt))
     B = clean_up(repr(val))
     quote
@@ -101,7 +101,7 @@ macro set(opt,val)
 end
 
 macro set(block)
-    clean_up(s) = strip(filter(c->!occursin(c," {}():"),s))
+    clean_up(s) = String(strip(filter(c->!occursin(c," {}():"),s)))
     lines = split(repr(block),";")
     for l in lines
         opt, val = split(strip(l), " ", limit=2)
