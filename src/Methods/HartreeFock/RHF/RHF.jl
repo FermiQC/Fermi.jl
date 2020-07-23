@@ -62,6 +62,12 @@ function RHF()
     Alg = select_algorithm(Fermi.CurrentOptions["scf_alg"])
     RHF(molecule, aoint, Alg)
 end
+
+function RHF(molecule::Molecule)
+    aoint = ConventionalAOIntegrals(molecule) 
+    Alg = select_algorithm(Fermi.CurrentOptions["scf_alg"])
+    RHF(molecule, aoint, Alg)
+end
 """
 Fermi.HartreeFock.RHF(molecule::Molecule, aoint::ConventionalAOIntegrals)
 
@@ -81,4 +87,9 @@ function RHF(wfn::RHF)
 
     Alg = select_algorithm(Fermi.CurrentOptions["scf_alg"])
     RHF(wfn, Alg)
+end
+
+function RHF(wfn::RHF, aoint::ConventionalAOIntegrals)
+    Alg = select_algorithm(Fermi.CurrentOptions["scf_alg"])
+    RHF(wfn, aoint, Alg)
 end

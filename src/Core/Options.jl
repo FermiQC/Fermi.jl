@@ -97,7 +97,7 @@ macro set(opt,val)
         catch UndefVarError
             CurrentOptions[$A] = $B
         end
-    end
+    end |> esc
 end
 
 macro set(block)
