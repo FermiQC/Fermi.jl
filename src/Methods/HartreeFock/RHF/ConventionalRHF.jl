@@ -56,7 +56,7 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, C::Array{Float6
     do_diis = Fermi.CurrentOptions["diis"]
     Fermi.HartreeFock.print_header()
 
-    do_diis ? DM = Fermi.DIIS.DIISManager{Float64,Float32}(size=8) : nothing 
+    do_diis ? DM = Fermi.DIIS.DIISManager{Float64,Float64}(size=8) : nothing 
     # Look up iteration options
     maxit = Fermi.CurrentOptions["scf_max_iter"]
     Etol  = 10.0^(-Fermi.CurrentOptions["e_conv"])

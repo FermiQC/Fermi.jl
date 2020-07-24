@@ -197,23 +197,26 @@ function PhysRestrictedMOIntegrals{T}(ndocc::Int, nvir::Int, drop_occ::Int, drop
 
     # Get MO ERIs
 
-    oooo = transform_eri(aoint.ERI, Co, Co, Co, Co)
-    oooo = T.(permutedims(oooo, (1,3,2,4)))
+    TensorType = typeof(aoint.ERI)
+    ERI = TensorType(permutedims(aoint.ERI.data,(1,3,2,4)))
+    oooo = transform_eri(ERI, Co, Co, Co, Co)
+    oooo = T.(oooo)
 
-    ooov = transform_eri(aoint.ERI, Co, Co, Co, Cv)
-    ooov = T.(permutedims(ooov, (1,3,2,4)))
+    ooov = transform_eri(ERI, Co, Co, Co, Cv)
+    ooov = T.(ooov)
 
-    oovv = transform_eri(aoint.ERI, Co, Cv, Co, Cv)
-    oovv = T.(permutedims(oovv, (1,3,2,4)))
+    oovv = transform_eri(ERI, Co, Co, Cv, Cv)
+    oovv = T.(oovv)
 
-    ovov = transform_eri(aoint.ERI, Co, Co, Cv, Cv)
-    ovov = T.(permutedims(ovov, (1,3,2,4)))
+    ovov = transform_eri(ERI, Co, Cv, Co, Cv)
+    ovov = T.(ovov)
 
-    ovvv = transform_eri(aoint.ERI, Co, Cv, Cv, Cv)
-    ovvv = T.(permutedims(ovvv, (1,3,2,4)))
+    ovvv = transform_eri(ERI, Co, Cv, Cv, Cv)
+    ovvv = T.(ovvv)
 
-    vvvv = transform_eri(aoint.ERI, Cv, Cv, Cv, Cv)
-    vvvv = T.(permutedims(vvvv, (1,3,2,4)))
+    vvvv = transform_eri(ERI, Cv, Cv, Cv, Cv)
+    vvvv = T.(vvvv)
+
 
     # Get density matrix
 
