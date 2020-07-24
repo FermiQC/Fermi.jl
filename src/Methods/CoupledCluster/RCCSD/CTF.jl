@@ -77,8 +77,8 @@ function RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, newT1::Array{T,
     preconv_T1 = Fermi.CurrentOptions["preconv_T1"]
     dp = Fermi.CurrentOptions["cc_damp_ratio"]
     do_diis = Fermi.CurrentOptions["diis"]
-    do_diis ? DM_T1 = Fermi.DIIS.DIISManager{Float64,Float64}(size=6) : nothing
-    do_diis ? DM_T2 = Fermi.DIIS.DIISManager{Float64,Float64}(size=6) : nothing
+    do_diis ? DM_T1 = Fermi.DIIS.DIISManager{Float64,Float64}(size=8) : nothing
+    do_diis ? DM_T2 = Fermi.DIIS.DIISManager{Float64,Float64}(size=8) : nothing
 
 
     @output "    Starting CC Iterations\n\n"
@@ -108,21 +108,21 @@ function RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, newT1::Array{T,
             newT1 ./= d
             newT2 ./= D
 
-            if do_diis 
-                e1 = newT1 - T1
-    #            e2 = newT2 - T2
-                push!(DM_T1,newT1,e1) 
-    #            push!(DM_T2,newT2,e2) 
-                newT1 = Fermi.DIIS.extrapolate(DM_T1)
-    #            newT2 = Fermi.DIIS.extrapolate(DM_T2)
-            end
-
             # Compute residues 
             r1 = sqrt(sum((newT1 .- T1).^2))/length(T1)
             r2 = sqrt(sum((newT2 .- T2).^2))/length(T2)
 
-            newT1 .= (1-dp)*newT1 .+ dp*newT1
-            newT2 .= (1-dp)*newT2 .+ dp*newT2
+            if do_diis 
+                e1 = (newT1 - T1)
+                e2 = (newT2 - T2)
+                push!(DM_T1,newT1,e1) 
+                push!(DM_T2,newT2,e2) 
+                #newT1 = Fermi.DIIS.extrapolate(DM_T1)
+                #newT2 = Fermi.DIIS.extrapolate(DM_T2)
+            end
+
+            newT1 .= (1-dp)*newT1 .+ dp*T1
+            newT2 .= (1-dp)*newT2 .+ dp*T2
         end
         T1_time += t
 
@@ -139,6 +139,7 @@ function RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, newT1::Array{T,
             end
             t = @elapsed begin
                 T1 .= newT1
+                T2 .= newT2
                 update_T1(T1,T2,newT1,foo,fov,fvv,moint)
                 newT1 ./= d
                 if do_diis 
@@ -150,7 +151,7 @@ function RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, newT1::Array{T,
                 # Compute residues 
                 r1 = sqrt(sum((newT1 .- T1).^2))/length(T1)
 
-                newT1 .= (1-dp)*newT1 .+ dp*newT1
+                newT1 .= (1-dp)*newT1 .+ dp*T1
 
                 rms = r1
                 oldE = Ecc
@@ -168,7 +169,8 @@ function RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, newT1::Array{T,
     rms = 1
     ite = 1
 
-    #do_diis ? DM_T1 = Fermi.DIIS.DIISManager{Float64,Float64}(size=6) : nothing
+    do_diis ? DM_T1 = Fermi.DIIS.DIISManager{Float64,Float64}(size=6) : nothing
+    do_diis ? DM_T2 = Fermi.DIIS.DIISManager{Float64,Float64}(size=6) : nothing
     if preconv_T1
         @output "Including T2 update\n"
     end
@@ -176,7 +178,7 @@ function RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, newT1::Array{T,
     main_time = 0
     @output "{:10s}    {: 15s}    {: 12s}    {:12s}    {:10s}\n" "Iteration" "CC Energy" "ΔE" "Max RMS" "Time (s)"
 
-    while (abs(dE) > cc_e_conv || rms > cc_max_rms) || ite < 3
+    while (abs(dE) > cc_e_conv || rms > cc_max_rms) 
         if ite > cc_max_iter
             @output "\n⚠️  CC Equations did not converge in {:1.0d} iterations.\n" cc_max_iter
             break
@@ -191,21 +193,24 @@ function RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, newT1::Array{T,
             newT1 ./= d
             newT2 ./= D
 
-            if do_diis 
-                e1 = newT1 - T1
-                e2 = newT2 - T2
-                push!(DM_T1,newT1,e1) 
-                push!(DM_T2,newT2,e2) 
-                newT1 = Fermi.DIIS.extrapolate(DM_T1)
-                newT2 = Fermi.DIIS.extrapolate(DM_T2)
-            end
-
             # Compute residues 
             r1 = sqrt(sum((newT1 .- T1).^2))/length(T1)
             r2 = sqrt(sum((newT2 .- T2).^2))/length(T2)
 
-            newT1 .= (1-dp)*newT1 .+ dp*newT1
-            newT2 .= (1-dp)*newT2 .+ dp*newT2
+            if do_diis 
+                e1 = (newT1 - T1)
+                e2 = (newT2 - T2)
+                push!(DM_T1,newT1,e1) 
+                push!(DM_T2,newT2,e2) 
+                if length(DM_T2) > DM_T2.max_vec
+                    newT2 = Fermi.DIIS.extrapolate(DM_T2)
+                    newT1 = Fermi.DIIS.extrapolate(DM_T1)
+                end
+            end
+
+
+            newT1 .= (1-dp)*newT1 .+ dp*T1
+            newT2 .= (1-dp)*newT2 .+ dp*T2
         end
         rms = max(r1,r2)
         oldE = Ecc

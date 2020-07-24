@@ -24,7 +24,7 @@ end
 
 function push!(M::DIISManager{T1,T2}, V::Array, E::Array) where { T1 <: AbstractFloat,
                                                                   T2 <: AbstractFloat }
-    if length(M) > M.max_vec
+    if length(M)+1 > M.max_vec
         #M.vecs[1:end-1] .= M.vecs[2:end]
         #M.errs[1:end-1] .= M.errs[2:end]
         #M.vecs[end] .= deepcopy(V)
@@ -49,14 +49,14 @@ function extrapolate(M::DIISManager{T1,T2}) where { T1 <: AbstractFloat,
         end
     end 
     E = size(B,1)
-    #B[1:E-1,1:E-1] ./= maximum(abs.(B[1:E-1,1:E-1]))
+    B[1:E-1,1:E-1] ./= maximum(abs.(B[1:E-1,1:E-1]))
     resid = zeros(T1,diis_size+1)
     resid[end] = 1
     LAPACK.gesv!(B,resid)
     ci = resid
     out = zeros(T1,size(M.vecs[1]))
     for num in 1:diis_size
-        out .+= ci[num]*M.vecs[num]
+        out += ci[num]*M.vecs[num]
     end
     out
 end
