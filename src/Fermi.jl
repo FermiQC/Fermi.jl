@@ -20,4 +20,6 @@ include("Methods/ConfigurationInteraction/ConfigurationInteraction.jl")
 include("Methods/CoupledCluster/CoupledCluster.jl")
 include("Methods/FocalPointAnalysis/FocalPointAnalysis.jl")
 
+include("Core/SinglePointEnergy.jl")
+
 end # module

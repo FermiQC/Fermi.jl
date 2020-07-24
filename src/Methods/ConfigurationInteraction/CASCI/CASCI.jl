@@ -31,7 +31,8 @@ function select_precision(A::String)
 end
 
 function select_algorithm(A::String)
-    implemented = Dict{Any,Any}("sparse" => SparseHamiltonian())
+    implemented = Dict{Any,Any}("sparse" => SparseHamiltonian(),
+                                "aci" => ACI())
     try
         return implemented[A]
     catch KeyError
@@ -43,6 +44,7 @@ end
 include("DetOperations.jl")
 include("MatrixElement.jl")
 include("SparseHamiltonian.jl")
+include("ACI.jl")
 
 # Most general function. It defines the precision and call a precision-specific function
 """

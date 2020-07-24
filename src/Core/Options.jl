@@ -3,6 +3,7 @@
 export CurrentOptions
 export InvalidFermiOption
 export @set
+export @get
 export @molecule
 
 """
@@ -113,6 +114,18 @@ macro set(block)
             CurrentOptions[opt] = val
         end
     end
+end
+
+macro get(opt)
+    clean_up(s) = String(filter(c->!occursin(c," ():"),s))
+    A = clean_up(repr(opt))
+    quote
+        try
+            CurrentOptions[$A]
+        catch KeyError
+            throw(InvalidFermiOption($A*" not a valid option."))
+        end
+    end |> esc
 end
 """
     Fermi.@molecule
