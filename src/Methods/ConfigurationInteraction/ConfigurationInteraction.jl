@@ -34,6 +34,7 @@ abstract type AbstractCIWavefunction <: Fermi.AbstractCorrelatedWavefunction end
 # Struct symbolizing the type of implementation for different CI methods
 abstract type CIAlgorithm end
 struct SparseHamiltonian <: CIAlgorithm end
+struct ACI <: CIAlgorithm end
 
 
 include("CASCI/CASCI.jl")
