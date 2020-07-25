@@ -52,9 +52,9 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
     # Print intro
     Fermi.ConfigurationInteraction.print_header()
     @output "\n    • Computing FCI with the ACI algorithm.\n\n"
-    act_range = (frozen+1):active
-    σ = Fermi.CurrentOptions["σ"]/1000
-    γ = Fermi.CurrentOptions["γ"]/1000
+    act_range = (frozen+1):(active+frozen)
+    σ = Fermi.CurrentOptions["σ"]
+    γ = Fermi.CurrentOptions["γ"]
 
     @output "\n →  ACTIVE SPACE\n"
     @output "Frozen Orbitals:  {:3d}\n" frozen
@@ -63,33 +63,42 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
 
     # Start reference space as HF
     zeroth = repeat('1', frozen)*repeat('1', Int(act_elec/2))
-    Pdets = [Determinant(zeroth, zeroth)]
+    P = [Determinant(zeroth, zeroth)]
     Pcoef = [1.0]
-    Penergy = refwfn.energy - refwfn.molecule.Vnuc
-    ΔPenergy = 1.0
+    E = refwfn.energy - refwfn.molecule.Vnuc
+    ΔE = 1.0
     ite = 1
 
     @output repeat("=",50)*"\n"
-    while abs(ΔPenergy) > 10^-7
-        if ite > 20
+    while true
+        if ite > 20 
             break
         end
-        @output "   Iteration {}\n" ite
-        @output "Initial model space size: {}\n" length(Pdets)
-        @output "Generating First Order Interacting Space...\n"
-        F = get_fois(Pdets, Int(act_elec/2), Int(act_elec/2), act_range)
-        @output "FOIS size: {}\n" length(F)
-        Fe = ϵI(F, Pdets, Pcoef, Penergy, h, V)
-        @output "Screening FOIS for σ = {}\n" σ
+        @output " → Iteration {}\n\n" ite
+        @output "   • P\n"
+        @output "Initial model space size: {}\n\n" length(P)
 
-        # Sort F by energy contribution
+        @output "   • P ⇒ F\n"
+        @output "Generating First Order Interacting Space...\n"
+        t = @elapsed F = get_fois(P, Int(act_elec/2), Int(act_elec/2), act_range)
+        @output "FOIS size:                {}\n" length(F)
+        @output "FOIS contructed in {:5.5f} s.\n\n" t
+
+        @output "   • F ⇒ Q\n"
+        @output "Screening FOIS using 2-D Hamiltonian\n" σ
+        t = @elapsed Fe = ϵI(F, P, Pcoef, E, h, V)
+        @output "Screen complete in {:5.5} s.\n" t
+        @output "Sorting F space...\n"
+        t = @elapsed begin
         Fperm = zeros(Int, length(Fe))
         sortperm!(Fperm, Fe, by=abs)
         Fperm = reverse(Fperm)
-
         Fe = Fe[Fperm]
         F = F[Fperm]
-
+        end
+        @output "Sorted in {:5.5f} s.\n" t
+        @output "Filtering F...\n"
+        t = @elapsed begin
         ϵsum = 0.0
         while true
             ϵsum += abs(Fe[end])
@@ -101,38 +110,43 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
                 break
             end
         end
-        @output "New model space size {}\n" length(Pdets)+length(F)
+        end
+        @output "Secondary space (Q) built in {:5.5f}\n\n" t
 
-        # Now we build the total space
-        ΔPenergy = -Penergy
-        Penergy, Pcoef, Pdets = update_model_space(Pdets, F, h, V)
-        ΔPenergy += Penergy
-        @output "Model Space Energy           {:15.10f}\n" Penergy + refwfn.molecule.Vnuc
-        @output "Energy Change                {:15.10f}\n" ΔPenergy
+        @output "   • M = P ∪ Q\n"
+        ΔE = -E
+        M = vcat(P, F)
+        @output "Model space size: {}\n" length(M)
+        E, Pcoef, P = update_model_space(M, h, V)
+        ΔE += E
+        @output "Model Space Energy           {:15.10f}\n" E + refwfn.molecule.Vnuc
+        @output "Energy Change                {:15.10f}\n" ΔE
 
+        if abs(ΔE) < 10^-7
+            break
+        end
         @output "Coarse graining model space for next iteration\n"
         # Coarse grain
-        Cperm = zeros(Int, length(Pdets))
+        Cperm = zeros(Int, length(P))
         sortperm!(Cperm, Pcoef, by=i->i^2)
         Cperm = reverse(Cperm)
 
         Pcoef = Pcoef[Cperm]
-        Pdets = Pdets[Cperm]
+        P = P[Cperm]
 
-        Csum = 0.0
         while true
-            Csum += Pcoef[end]^2
-            if Csum ≤ 0.001-γ*σ
+            if sum(Pcoef.^2) > 1-γ*σ
                 pop!(Pcoef)
-                pop!(Pdets)
+                pop!(P)
             else
-                Csum -= Pcoef[end]^2
                 break
             end
         end
         @output repeat("=",50)*"\n"
         ite += 1
     end
+
+    CASCI{T}(refwfn, E, P, Pcoef)
 end
 
 function get_fois(dets::Array{Determinant,1}, Nα::Int, Nβ::Int, act_range::UnitRange{Int64})
@@ -145,15 +159,15 @@ function get_fois(dets::Array{Determinant,1}, Nα::Int, Nβ::Int, act_range::Uni
     αuno = zeros(Int,length(act_range)-Nα)
     βuno = zeros(Int,length(act_range)-Nβ)
     for d in dets
-        αindex!(d,αocc)
-        βindex!(d,βocc)
+        αocc!(d, act_range, αocc)
+        βocc!(d, act_range, βocc)
         αvir!(d, act_range, αuno)
         βvir!(d, act_range, βuno)
         # Get αα -> αα excitations
         for i in αocc
             for a in αuno
-                _, _det = annihilate(d,i,'α')
-                _, _det = create(_det, a,'α')
+                newα = (d.α ⊻ (1<<(i-1))) | (1<<(a-1)) 
+                _det = Determinant(newα, d.β)
                 _det in fois || _det in dets ? nothing : push!(fois, _det)
                 for j in αocc
                     if j ≥ i
@@ -163,10 +177,8 @@ function get_fois(dets::Array{Determinant,1}, Nα::Int, Nβ::Int, act_range::Uni
                         if b ≥ a
                             break
                         end
-                        _, _det = annihilate(d,i,'α')
-                        _, _det = annihilate(_det,j,'α')
-                        _, _det = create(_det,a,'α')
-                        _, _det = create(_det,b,'α')
+                        newestα = (newα ⊻ (1<<(j-1))) | (1<<(b-1)) 
+                        _det = Determinant(newestα, d.β)
                         _det in fois || _det in dets ? nothing : push!(fois, _det)
                     end
                 end
@@ -175,9 +187,8 @@ function get_fois(dets::Array{Determinant,1}, Nα::Int, Nβ::Int, act_range::Uni
         # Get ββ -> ββ excitations
         for i in βocc
             for a in βuno
-                _, _det = annihilate(d,i,'β')
-                _, _det = create(_det, a,'β')
-                _det in fois || _det in dets ? nothing : push!(fois, _det)
+                newβ = (d.β ⊻ (1<<(i-1))) | (1<<(a-1)) 
+                _det = Determinant(d.α, newβ)
                 for j in βocc
                     if j ≥ i
                         break
@@ -186,10 +197,8 @@ function get_fois(dets::Array{Determinant,1}, Nα::Int, Nβ::Int, act_range::Uni
                         if b ≥ a
                             break
                         end
-                        _, _det = annihilate(d,i,'β')
-                        _, _det = annihilate(_det,j,'β')
-                        _, _det = create(_det,a,'β')
-                        _, _det = create(_det,b,'β')
+                        newestβ = (newβ ⊻ (1<<(j-1))) | (1<<(b-1)) 
+                        _det = Determinant(d.α, newestβ)
                         _det in fois || _det in dets ? nothing : push!(fois, _det)
                     end
                 end
@@ -200,10 +209,14 @@ function get_fois(dets::Array{Determinant,1}, Nα::Int, Nβ::Int, act_range::Uni
             for a in αuno
                 for j in βocc
                     for b in βuno
-                        _, _det = annihilate(d,i,'α')
-                        _, _det = annihilate(_det,j,'β')
-                        _, _det = create(_det,a,'α')
-                        _, _det = create(_det,b,'β')
+                        newα = (d.α ⊻ (1<<(i-1))) | (1<<(a-1)) 
+                        newβ = (d.β ⊻ (1<<(j-1))) | (1<<(b-1)) 
+                        #if count(i->i=='1', bitstring(newα)) != 5 
+                        #    showdet(d)
+                        #    print(bitstring(newα))
+                        #    error("$i $a $j $b")
+                        #end
+                        _det = Determinant(newα, newβ)
                         _det in fois || _det in dets ? nothing : push!(fois, _det)
                     end
                 end
@@ -213,10 +226,10 @@ function get_fois(dets::Array{Determinant,1}, Nα::Int, Nβ::Int, act_range::Uni
     return fois
 end
 
-function ϵI(Fdets::Array{Determinant,1}, Pdets::Array{Determinant,1}, Pcoef::Array{Float64,1}, Ep::T, h::Array{T,2}, V::Array{T,4}) where T <: AbstractFloat
+function ϵI(Fdets::Array{Determinant,1}, P::Array{Determinant,1}, Pcoef::Array{Float64,1}, Ep::T, h::Array{T,2}, V::Array{T,4}) where T <: AbstractFloat
     # Compute energy estimates
     Fe = zeros(length(Fdets))
-    N = sum(αlist(Pdets[1]))
+    N = sum(αlist(P[1]))
     αind = Array{Int64,1}(undef,N)
     βind = Array{Int64,1}(undef,N)
     for i in eachindex(Fdets)
@@ -226,8 +239,8 @@ function ϵI(Fdets::Array{Determinant,1}, Pdets::Array{Determinant,1}, Pcoef::Ar
         Ei = Hd0(αind, βind, h, V)
         Δ = Ei - Ep
         Vint = 0.0
-        for j in eachindex(Pdets)
-            D2 = Pdets[j]
+        for j in eachindex(P)
+            D2 = P[j]
             αexc = αexcitation_level(D1,D2)
             βexc = βexcitation_level(D1,D2)
             el = αexc + βexc
@@ -247,8 +260,7 @@ function ϵI(Fdets::Array{Determinant,1}, Pdets::Array{Determinant,1}, Pcoef::Ar
     return Fe
 end
 
-function update_model_space(P::Array{Determinant,1}, Q::Array{Determinant,1}, h::Array{T,2}, V::Array{T,4}) where T <: AbstractFloat
-    M = vcat(P, Q)
+function update_model_space(M::Array{Determinant,1}, h::Array{T,2}, V::Array{T,4}) where T <: AbstractFloat
 
     H = get_sparse_hamiltonian_matrix(M, h, V, Fermi.CurrentOptions["cas_cutoff"])
 

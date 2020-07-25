@@ -209,6 +209,7 @@ function RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, newT1::Array{T,
             end
 
 
+
             newT1 .= (1-dp)*newT1 .+ dp*T1
             newT2 .= (1-dp)*newT2 .+ dp*T2
         end

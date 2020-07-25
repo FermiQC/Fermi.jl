@@ -429,6 +429,30 @@ function showdet(D::Determinant, l::Int = 0)
 
 end
 
+function αocc!(D::Determinant, R::UnitRange{Int64}, Out::Array{Int64,1})
+
+    e = 1
+    for i in R
+        if 1<<(i-1) & D.α != 0
+            Out[e] = i
+            e += 1
+        end
+    end
+
+end
+
+function βocc!(D::Determinant, R::UnitRange{Int64}, Out::Array{Int64,1})
+
+    e = 1
+    for i in R
+        if 1<<(i-1) & D.β != 0
+            Out[e] = i
+            e += 1
+        end
+    end
+
+end
+
 function αvir!(D::Determinant, R::UnitRange{Int64}, Out::Array{Int64,1})
 
     e = 1
