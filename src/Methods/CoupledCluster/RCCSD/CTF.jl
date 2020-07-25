@@ -6,7 +6,8 @@ using Fermi.DIIS
 
 Compute a RCCSD wave function using the Compiled time factorization algorithm (CTF)
 """
-function RCCSD{T}(Alg::CTF) where T <: AbstractFloat
+function RCCSD{T}(guess::RCCSD{Tb},Alg::CTF) where { T <: AbstractFloat,
+                                                    Tb <: AbstractFloat }
     molecule = Fermi.Geometry.Molecule()
     aoint = Fermi.Integrals.ConventionalAOIntegrals(molecule)
     refwfn = Fermi.HartreeFock.RHF(molecule, aoint)
@@ -15,9 +16,9 @@ function RCCSD{T}(Alg::CTF) where T <: AbstractFloat
     drop_vir = Fermi.CurrentOptions["drop_vir"]
 
     @output "Transforming Integrals..."
-    moint = Fermi.Integrals.PhysRestrictedMOIntegrals{T}(refwfn.ndocc, refwfn.nvir, drop_occ, drop_vir, refwfn.C, aoint)
-
-    RCCSD{T}(refwfn, moint, Alg) 
+    tint = @elapsed moint = Fermi.Integrals.PhysRestrictedMOIntegrals{T}(refwfn.ndocc, refwfn.nvir, drop_occ, drop_vir, refwfn.C, aoint)
+    @output " done in {} s" tint
+    RCCSD{T}(refwfn, guess, moint, Alg) 
 end
 
 """
@@ -26,13 +27,18 @@ end
 Compute a RCCSD wave function using the Compiled time factorization algorithm (CTF). Precision (T), reference wavefunction (refwfn)
 and molecular orbital integrals (moint) must be passed.
 """
-function RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, Alg::CTF) where T <: AbstractFloat
+function RCCSD{T}(refwfn::RHF, guess::RCCSD{Tb}, moint::PhysRestrictedMOIntegrals, Alg::CTF) where { T <: AbstractFloat,
+                                                                                                    Tb <: AbstractFloat }
     d = [i - a for i = diag(moint.oo), a = diag(moint.vv)]
     D = [i + j - a - b for i = diag(moint.oo), j = diag(moint.oo), a = diag(moint.vv), b = diag(moint.vv)]
     newT1 = moint.ov./d
     newT2 = moint.oovv./D
-
-    RCCSD{T}(refwfn, moint, newT1, newT2, d, D, Alg)
+    o_small,v_small = size(guess.T1)
+    o = 1:o_small
+    v = 1:v_small
+    newT1[o,v] .= Fermi.data(guess.T1)
+    newT2[o,o,v,v] .= Fermi.data(guess.T2)
+    RCCSD{T}(refwfn, moint, newT1, newT2, Alg)
 end
 
 """
@@ -40,8 +46,10 @@ end
 
 Base function for CTF RCCSD.
 """
-function RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, newT1::Array{T, 2}, newT2::Array{T,4}, d::Array{T,2}, D::Array{T,4}, Alg::CTF) where T <: AbstractFloat
+function RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, newT1::Array{T, 2}, newT2::Array{T,4}, Alg::CTF) where T <: AbstractFloat
 
+    d = [i - a for i = diag(moint.oo), a = diag(moint.vv)]
+    D = [i + j - a - b for i = diag(moint.oo), j = diag(moint.oo), a = diag(moint.vv), b = diag(moint.vv)]
     # Print intro
     Fermi.CoupledCluster.print_header()
     @output "\n    • Computing CCSD with the CFT algorithm .\n\n"
@@ -58,33 +66,119 @@ function RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, newT1::Array{T,
     Eguess = Ecc+refwfn.energy
     
     @output "Initial Amplitudes Guess: MP2\n"
-    @output "MP2 Energy:   {:15.10f}\n\n" Ecc+refwfn.energy
+    @output "MP2 Energy:   {:15.10f}\n\n" Ecc
+    @output "MP2 Total Energy:   {:15.10f}\n\n" Ecc+refwfn.energy
     
     # Start CC iterations
     
     cc_max_iter = Fermi.CurrentOptions["cc_max_iter"]
     cc_e_conv = Fermi.CurrentOptions["cc_e_conv"]
     cc_max_rms = Fermi.CurrentOptions["cc_max_rms"]
+    preconv_T1 = Fermi.CurrentOptions["preconv_T1"]
+    dp = Fermi.CurrentOptions["cc_damp_ratio"]
     do_diis = Fermi.CurrentOptions["diis"]
-    do_diis ? DM_T1 = Fermi.DIIS.DIISManager{Float64,Float64}(size=6) : nothing
-    do_diis ? DM_T2 = Fermi.DIIS.DIISManager{Float64,Float64}(size=6) : nothing
+    do_diis ? DM_T1 = Fermi.DIIS.DIISManager{Float64,Float64}(size=8) : nothing
+    do_diis ? DM_T2 = Fermi.DIIS.DIISManager{Float64,Float64}(size=8) : nothing
+
 
     @output "    Starting CC Iterations\n\n"
     @output "Iteration Options:\n"
     @output "   cc_max_iter →  {:3.0d}\n" Int(cc_max_iter)
     @output "   cc_e_conv   →  {:2.0e}\n" cc_e_conv
     @output "   cc_max_rms  →  {:2.0e}\n\n" cc_max_rms
-    @output "{:10s}    {: 15s}    {: 12s}    {:12s}    {:10s}\n" "Iteration" "CC Energy" "ΔE" "Max RMS" "Time (s)"
 
     r1 = 1
     r2 = 1
     dE = 1
     rms = 1
     ite = 1
-    T1 = similar(newT1)
-    T2 = similar(newT2)
+    T1 = deepcopy(newT1)
+    T2 = deepcopy(newT2)
 
-    while abs(dE) > cc_e_conv || rms > cc_max_rms
+
+    preconv_T1 ? T1_time = 0 : nothing
+    if preconv_T1
+        @output "Preconverging T1 amplitudes\n"
+        @output "Taking one T2 step\n"
+        @output "{:10s}    {: 15s}    {: 12s}    {:12s}    {:10s}\n" "Iteration" "CC Energy" "ΔE" "Max RMS (T1)" "Time (s)"
+        t = @elapsed begin 
+            update_amp(T1, T2, newT1, newT2, foo, fov, fvv, moint)
+
+            # Apply resolvent
+            newT1 ./= d
+            newT2 ./= D
+
+            # Compute residues 
+            r1 = sqrt(sum((newT1 .- T1).^2))/length(T1)
+            r2 = sqrt(sum((newT2 .- T2).^2))/length(T2)
+
+            if do_diis 
+                e1 = (newT1 - T1)
+                e2 = (newT2 - T2)
+                push!(DM_T1,newT1,e1) 
+                push!(DM_T2,newT2,e2) 
+                #newT1 = Fermi.DIIS.extrapolate(DM_T1)
+                #newT2 = Fermi.DIIS.extrapolate(DM_T2)
+            end
+
+            newT1 .= (1-dp)*newT1 .+ dp*T1
+            newT2 .= (1-dp)*newT2 .+ dp*T2
+        end
+        T1_time += t
+
+        rms = max(r1,r2)
+        oldE = Ecc
+        Ecc = update_energy(newT1, newT2, fov, moint.oovv)
+        dE = Ecc - oldE
+        @output "    {:<5}    {:<15.10f}    {:<12.10f}    {:<12.10f}    {:<10.5f}\n" "pre" Ecc dE rms t
+
+        while abs(dE) > cc_e_conv || rms > cc_max_rms
+            if ite > cc_max_iter
+                @output "\n⚠️  CC Equations did not converge in {:1.0d} iterations.\n" cc_max_iter
+                break
+            end
+            t = @elapsed begin
+                T1 .= newT1
+                T2 .= newT2
+                update_T1(T1,T2,newT1,foo,fov,fvv,moint)
+                newT1 ./= d
+                if do_diis 
+                    e1 = newT1 - T1
+                    push!(DM_T1,newT1,e1) 
+                    newT1 = Fermi.DIIS.extrapolate(DM_T1)
+                end
+
+                # Compute residues 
+                r1 = sqrt(sum((newT1 .- T1).^2))/length(T1)
+
+                newT1 .= (1-dp)*newT1 .+ dp*T1
+
+                rms = r1
+                oldE = Ecc
+                Ecc = update_energy(newT1, newT2, fov, moint.oovv)
+                dE = Ecc - oldE
+            end
+            T1_time += t
+            @output "    {:<5.0d}    {:<15.10f}    {:<12.10f}    {:<12.10f}    {:<10.5f}\n" ite Ecc dE rms t
+            ite += 1
+        end
+        @output "\nT1 pre-convergence took {}s\n" T1_time
+    end
+
+    dE = 1
+    rms = 1
+    ite = 1
+
+    do_diis ? DM_T1 = Fermi.DIIS.DIISManager{Float64,Float64}(size=6) : nothing
+    do_diis ? DM_T2 = Fermi.DIIS.DIISManager{Float64,Float64}(size=6) : nothing
+    if preconv_T1
+        @output "Including T2 update\n"
+    end
+
+    main_time = 0
+    @output "{:10s}    {: 15s}    {: 12s}    {:12s}    {:10s}\n" "Iteration" "CC Energy" "ΔE" "Max RMS" "Time (s)"
+
+    while (abs(dE) > cc_e_conv || rms > cc_max_rms) 
         if ite > cc_max_iter
             @output "\n⚠️  CC Equations did not converge in {:1.0d} iterations.\n" cc_max_iter
             break
@@ -99,31 +193,38 @@ function RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, newT1::Array{T,
             newT1 ./= d
             newT2 ./= D
 
-            #e1 = newT1 - T1
-            #e2 = newT2 - T2
-            #if do_diis 
-            #    push!(DM_T1,newT1,e1) 
-            #    push!(DM_T2,newT2,e2) 
-            #    if ite > 0
-            #        newT1 = Fermi.DIIS.extrapolate(DM_T1)
-            #        newT2 = Fermi.DIIS.extrapolate(DM_T2)
-            #    end
-            #end
-
             # Compute residues 
-            r1 = sqrt(sum((newT1 - T1).^2))/length(T1)
-            r2 = sqrt(sum((newT2 - T2).^2))/length(T2)
+            r1 = sqrt(sum((newT1 .- T1).^2))/length(T1)
+            r2 = sqrt(sum((newT2 .- T2).^2))/length(T2)
+
+            if do_diis 
+                e1 = (newT1 - T1)
+                e2 = (newT2 - T2)
+                push!(DM_T1,newT1,e1) 
+                push!(DM_T2,newT2,e2) 
+                if length(DM_T2) > DM_T2.max_vec
+                    newT2 = Fermi.DIIS.extrapolate(DM_T2)
+                    newT1 = Fermi.DIIS.extrapolate(DM_T1)
+                end
+            end
+
+
+
+            newT1 .= (1-dp)*newT1 .+ dp*T1
+            newT2 .= (1-dp)*newT2 .+ dp*T2
         end
         rms = max(r1,r2)
         oldE = Ecc
         Ecc = update_energy(newT1, newT2, fov, moint.oovv)
         dE = Ecc - oldE
+        main_time += t
         @output "    {:<5.0d}    {:<15.10f}    {:<12.10f}    {:<12.10f}    {:<10.5f}\n" ite Ecc dE rms t
         ite += 1
     end
+    @output "\nMain CCSD iterations done in {}s\n" main_time
 
     # Converged?
-    if abs(dE) < cc_e_conv && rms < cc_max_rms
+    if abs(dE) < cc_e_conv && rms < cc_max_rms 
         @output "\n 🍾 Equations Converged!\n"
     end
     @output "\n⇒ Final CCSD Energy:     {:15.10f}\n" Ecc+refwfn.energy
@@ -163,7 +264,13 @@ function update_amp(T1::Array{T, 2}, T2::Array{T, 4}, newT1::Array{T,2}, newT2::
     fill!(newT2, 0.0)
 
     # Get new amplitudes
-    @tensoropt (i=>x, j=>x, k=>x, l=>x, a=>100x, b=>100x, c=>100x, d=>100x) begin
+    update_T1(T1,T2,newT1,foo,fov,fvv,moint)
+    update_T2(T1,T2,newT2,foo,fov,fvv,moint)
+end
+
+function update_T1(T1::Array{T,2}, T2::Array{T,4}, newT1::Array{T,2}, foo, fov, fvv, moint::PhysRestrictedMOIntegrals) where T <: AbstractFloat
+    Voooo, Vooov, Voovv, Vovov, Vovvv, Vvvvv = moint.oooo, moint.ooov, moint.oovv, moint.ovov, moint.ovvv, moint.vvvv
+    @tensoropt (i=>x, j=>x, k=>x, l=>x, a=>10x, b=>10x, c=>10x, d=>10x) begin
         newT1[i,a] += fov[i,a]
         newT1[i,a] -= foo[i,k]*T1[k,a]
         newT1[i,a] += fvv[c,a]*T1[i,c]
@@ -190,7 +297,12 @@ function update_amp(T1::Array{T, 2}, T2::Array{T, 4}, newT1::Array{T,2}, newT2::
         newT1[i,a] += T1[k,c]*T1[i,d]*T1[l,a]*Voovv[l,k,c,d]
         newT1[i,a] += -2.0*T1[k,c]*T1[i,d]*T1[l,a]*Voovv[k,l,c,d]
         newT1[i,a] += 4.0*T1[k,c]*T2[i,l,a,d]*Voovv[k,l,c,d]
+    end
+end
 
+function update_T2(T1::Array{T,2},T2::Array{T,4},newT2::Array{T,4},foo,fov,fvv,moint::PhysRestrictedMOIntegrals) where T <: AbstractFloat
+    Voooo, Vooov, Voovv, Vovov, Vovvv, Vvvvv = moint.oooo, moint.ooov, moint.oovv, moint.ovov, moint.ovvv, moint.vvvv
+    @tensoropt (i=>x, j=>x, k=>x, l=>x, a=>10x, b=>10x, c=>10x, d=>10x) begin
         newT2[i,j,a,b] += Voovv[i,j,a,b]
         newT2[i,j,a,b] += T1[i,c]*T1[j,d]*Vvvvv[c,d,a,b]
         newT2[i,j,a,b] += T2[i,j,c,d]*Vvvvv[c,d,a,b]
@@ -255,6 +367,4 @@ function update_amp(T1::Array{T, 2}, T2::Array{T, 4}, newT1::Array{T,2}, newT2::
         
         newT2[i,j,a,b] += P_OoVv[i,j,a,b] + P_OoVv[j,i,b,a]
     end
-
 end
-
