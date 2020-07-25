@@ -26,7 +26,8 @@ function push!(M::DIISManager{T1,T2}, V::Array, E::Array) where { T1 <: Abstract
                                                                   T2 <: AbstractFloat }
     if length(M) > M.max_vec
         norms = norm.(M.errs)
-        idx = findmax(norms)[2]
+        #idx = findmax(norms)[2]
+        idx = 1
         deleteat!(M.vecs,idx)
         deleteat!(M.errs,idx)
     end

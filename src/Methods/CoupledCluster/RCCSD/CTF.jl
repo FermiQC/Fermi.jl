@@ -99,14 +99,16 @@ function RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, newT1::Array{T,
             newT1 ./= d
             newT2 ./= D
 
-            e1 = newT1 - T1
-            e2 = newT2 - T2
-            if do_diis 
-                push!(DM_T1,newT1,e1) 
-                push!(DM_T2,newT2,e2) 
-                newT1 = Fermi.DIIS.extrapolate(DM_T1)
-                newT2 = Fermi.DIIS.extrapolate(DM_T2)
-            end
+            #e1 = newT1 - T1
+            #e2 = newT2 - T2
+            #if do_diis 
+            #    push!(DM_T1,newT1,e1) 
+            #    push!(DM_T2,newT2,e2) 
+            #    if ite > 0
+            #        newT1 = Fermi.DIIS.extrapolate(DM_T1)
+            #        newT2 = Fermi.DIIS.extrapolate(DM_T2)
+            #    end
+            #end
 
             # Compute residues 
             r1 = sqrt(sum((newT1 - T1).^2))/length(T1)
