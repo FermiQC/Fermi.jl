@@ -1,3 +1,4 @@
+using LoopVectorization
 """
     Fermi.ConfigurationInteraction.DetOperations.Determinant(α::String, β::String)
 
@@ -78,20 +79,8 @@ end
 
 Compare two determinants to return the excitation level of the alpha electrons
 """
-function αexcitation_level(D1::Determinant, D2::Determinant)
-
-    αdiff = D1.α ⊻ D2.α
-    exc = 0
-    i = 1
-    while i ≤ αdiff
-        if i & αdiff ≠ 0
-            exc += 1
-        end
-        i = i << 1 
-    end
-
-    return exc/2
-        
+@inline function αexcitation_level(D1::Determinant, D2::Determinant;bail=false)
+    count_ones(D1.α ⊻ D2.α)/2
 end
 
 """
@@ -99,20 +88,8 @@ end
 
 Compare two determinants to return the excitation level of the beta electrons
 """
-function βexcitation_level(D1::Determinant, D2::Determinant)
-
-    βdiff = D1.β ⊻ D2.β
-    exc = 0
-    i = 1
-    while i ≤ βdiff
-        if i & βdiff ≠ 0
-            exc += 1
-        end
-        i = i << 1 
-    end
-
-    return exc/2
-
+@inline function βexcitation_level(D1::Determinant, D2::Determinant;bail=false)
+    count_ones(D1.β ⊻ D2.β)/2
 end
 
 """
@@ -120,8 +97,7 @@ end
 
 Compare two determinants to return the excitation level between them
 """
-function excitation_level(D1::Determinant, D2::Determinant)
-
+@inline function excitation_level(D1::Determinant, D2::Determinant)
     return αexcitation_level(D1, D2) + βexcitation_level(D1,D2)
 end
 
@@ -138,8 +114,8 @@ function αexclusive(D1::Determinant, D2::Determinant)
     out = []
     i = 1
     # Save alphas exclusives, in crescent order
-    while 1<<(i-1) ≤ αexcl
-        if 1<<(i-1) & αexcl ≠ 0
+    while 1<<((i-1)&63) ≤ αexcl
+        if 1<<((i-1)&63) & αexcl ≠ 0
             push!(out, i)
         end
         i += 1
@@ -160,14 +136,13 @@ function first_αexclusive(D1::Determinant, D2::Determinant)
 
     i = 1
     # Save alphas exclusives, in crescent order
-    while 1<<(i-1) ≤ αexcl
-        if 1<<(i-1) & αexcl ≠ 0
+    while 1<<((i-1)) ≤ αexcl
+        if 1<<((i-1)) & αexcl ≠ 0
             return i
         end
         i += 1
     end
-
-    return out
+    #return out
 end
 
 """
@@ -230,14 +205,14 @@ function first_βexclusive(D1::Determinant, D2::Determinant)
 
     i = 1
     # Save betas exclusives, in crescent order
-    while 1<<(i-1) ≤ βexcl
-        if 1<<(i-1) & βexcl ≠ 0
+    while 1<<((i-1)) ≤ βexcl
+        if 1<<((i-1)) & βexcl ≠ 0
             return i
         end
         i += 1
     end
 
-    return out
+    #return out
 
 end
 
@@ -254,7 +229,7 @@ function second_βexclusive(D1::Determinant, D2::Determinant)
     i = 1
     sec = false
     # Save betas exclusives, in crescent order
-    while 1<<(i-1) ≤ βexcl
+    while 1<<((i-1)&63) ≤ βexcl
         if 1<<(i-1) & βexcl ≠ 0
             if sec
                 return i
@@ -281,16 +256,16 @@ function exclusive(D1::Determinant, D2::Determinant)
     out = []
     i = 1
     # Save alphas exclusives, in crescent order
-    while 1<<(i-1) ≤ αexcl
-        if 1<<(i-1) & αexcl ≠ 0
+    while 1<<((i-1)) ≤ αexcl
+        if 1<<((i-1)) & αexcl ≠ 0
             push!(out, (i, 'α'))
         end
         i += 1
     end
     i = 1
     # Save betas exclusives, in crescent order
-    while 1<<(i-1) ≤ βexcl
-        if 1<<(i-1) & βexcl ≠ 0
+    while 1<<((i-1)) ≤ βexcl
+        if 1<<((i-1)) & βexcl ≠ 0
             push!(out, (i, 'β'))
         end
         i += 1
@@ -314,12 +289,12 @@ function annihilate(D::Determinant, orb::Int, spin::Char)
         # Determine sign
         l = 0
         i = 1
-        while i < (1 << (orb-1))
+        while i < (1 << ((orb-1)))
             l += D.α & i ≠ 0 ? 1 : 0
             i = i << 1
         end
 
-        newα = D.α ⊻ (1 << (orb-1))
+        newα = D.α ⊻ (1 << ((orb-1)))
 
         return (-1)^l, Determinant(newα, D.β)
 
