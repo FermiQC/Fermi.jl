@@ -1,5 +1,4 @@
-using LoopVectorization
-@fastmath function Hd0(αindex::Array{Int64,1}, βindex::Array{Int64,1}, h::Array{T, 2}, V::Array{T, 4}) where T <: AbstractFloat
+function Hd0(αindex::Array{Int64,1}, βindex::Array{Int64,1}, h::Array{T, 2}, V::Array{T, 4}) where T <: AbstractFloat
     """
     Σ [m|h|m] + 1/2 ΣΣ [mm|nn] - [mn|nm] 
     """
@@ -41,7 +40,7 @@ using LoopVectorization
     return E1 + 0.5*E2
 end
 
-@fastmath function Hd1(αindex::Array{Int64,1}, βindex::Array{Int64,1}, D1::Determinant, D2::Determinant, h::Array{T,2}, V::Array{T, 4}, αexc::Float64) where T <: AbstractFloat
+function Hd1(αindex::Array{Int64,1}, βindex::Array{Int64,1}, D1::Determinant, D2::Determinant, h::Array{T,2}, V::Array{T, 4}, αexc::Float64) where T <: AbstractFloat
     """
     differ m -> p
     [m|h|p] + Σ[mp|nn] - [mn|np]
@@ -110,7 +109,7 @@ end
         return E
     end
 end
-@fastmath function Hd2(D1::Determinant, D2::Determinant, V::Array{T, 4}, αexc::Float64) where T <: AbstractFloat
+function Hd2(D1::Determinant, D2::Determinant, V::Array{T, 4}, αexc::Float64) where T <: AbstractFloat
     """
     mn -> pq
     [mp|nq] - [mq|np]
@@ -184,7 +183,7 @@ end
             i = i << (1&63)
         end
 
-        return @fastmath @inbounds ph*(V[m,p,n,q] - V[m,q,n,p])
+        return ph*(V[m,p,n,q] - V[m,q,n,p])
 
     # If α excitation is zero, it means m,n,p and q are all β.
     elseif αexc == 0
@@ -220,6 +219,6 @@ end
             i = i << (1)
         end
 
-        return @fastmath @inbounds ph*(V[m,p,n,q] - V[m,q,n,p])
+        return ph*(V[m,p,n,q] - V[m,q,n,p])
     end
 end

@@ -124,7 +124,7 @@ function get_determinants(Ne::Int, No::Int, nfrozen::Int)
 
     dets = vcat(dets...)
     # Determinant list is sorted by its excitation level w.r.t the first determinant (normally HF)
-    sort!(dets, by=d->excitation_level(dets[1], d))
+    #sort!(dets, by=d->excitation_level(dets[1], d))
 
     return dets
 end

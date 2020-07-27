@@ -3,6 +3,9 @@ using SparseArrays
 using LinearAlgebra
 using ArnoldiMethod
 
+function CASCI{T}(wf::Fermi.HartreeFock.RHF, Alg::ACI) where T <: AbstractFloat
+    # we need this implementation
+end
 function CASCI{T}(Alg::ACI) where T <: AbstractFloat
 
     @output "Getting molecule...\n"
@@ -52,6 +55,7 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
 
     # Print intro
     Fermi.ConfigurationInteraction.print_header()
+    ttotal = @elapsed begin
     @output "\n    • Computing FCI with the ACI algorithm.\n\n"
     act_range = (frozen+1):(active+frozen)
     σ = Fermi.CurrentOptions["σ"]
@@ -63,7 +67,6 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
     @output "Active Electrons: {:3d}\n" act_elec
     @output "Active Orbitals:  {:3d}\n" active
 
-    Hd0s = Dict{Determinant,T}()
     # Start reference space as HF
     zeroth = repeat('1', frozen)*repeat('1', Int(act_elec/2))
     P = [Determinant(zeroth, zeroth)]
@@ -75,7 +78,13 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
     @output repeat("=",50)*"\n"
     Nα = Int(act_elec/2)
     Nβ = Int(act_elec/2)
+    Lenny = length(P)
+    M = nothing
+    ϵsum = nothing
+    ϵest = nothing
     while true
+        t = @elapsed GC.gc()
+        println("took out garbage in $t s")
         if ite > 20
             break
         end
@@ -94,48 +103,55 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
         t = @elapsed Fe = ϵI(F, P, Pcoef, E, h, V)
         @output "Screen complete in {:5.5} s.\n" t
         @output "Sorting F space...\n"
-        sleep(1)
-        t = @elapsed begin
+        _t = @elapsed begin
             Fperm = zeros(Int, length(Fe))
             sortperm!(Fperm, Fe, by=abs)
-            #reverse!(Fperm)
-            Fperm = reverse(Fperm)
+            reverse!(Fperm)
             Fe = Fe[Fperm]
             F = F[Fperm]
         end
-        println(Fe)
-        @output "Sorted in {:5.5f} s.\n" t
-        @output "Filtering F...\n"
+        @output "Sorted in {:5.5f} s.\n" _t
+        @output "Filtering F..."
         t = @elapsed begin
+        ϵest = 0.0
         ϵsum = 0.0
-        esum = sum(abs.(Fe))
         while true
-            ϵsum += abs(Fe[end])
+            if length(Fe) == 0 
+                #then no determinants were deemed important - exit ACI
+                break
+            end
             if ϵsum ≤ σ
+                ϵest += Fe[end]
+                ϵsum += abs(Fe[end])
                 pop!(Fe)
                 pop!(F)
             else
+                ϵest -= Fe[end]
                 ϵsum -= abs(Fe[end])
                 break
             end
         end
         end
-        @output "size of Q {}\n" length(Fe)
-        @output "Secondary space (Q) built in {:5.5f}\n\n" t
+        @output " Secondary space (Q) built in {:5.5f}\n\n" t
+        @output "Size of Q {}\n" length(Fe)
 
         @output "   • M = P ∪ Q\n"
         ΔE = -E
         M = vcat(P, F)
         @output "Model space size: {}\n" length(M)
+        @output "Updating model space ..." length(M)
         t = @elapsed E, Pcoef, P = update_model_space(M, h, V)
-        @output "Model space updated in {:5.5f}\n" t
+        @output " Model space updated in {:5.5f}\n" t
         ΔE += E
         @output "Model Space Energy           {:15.10f}\n" E + refwfn.molecule.Vnuc
         @output "Energy Change                {:15.10f}\n" ΔE
 
-        if abs(ΔE) < σ/10
+        dLenny = length(P) - Lenny
+        if abs(dLenny) == 0
+            #no new determinants were added to model space - exit ACI
             break
         end
+        Lenny = length(P)
         @output "Coarse graining model space for next iteration\n"
         # Coarse grain
         Cperm = zeros(Int, length(P))
@@ -146,9 +162,9 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
         P = P[Cperm]
 
         while true
-            if sum(Pcoef.^2) >= 1-γ*σ
-                c = pop!(Pcoef)
-                det = pop!(P)
+            if sum(Pcoef[1:end-1].^2) >= 1-γ*σ
+                pop!(Pcoef)
+                pop!(P)
             else
                 break
             end
@@ -157,15 +173,22 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
         @output repeat("=",50)*"\n"
         ite += 1
     end
+    end #@elapsed
 
+    @output repeat("=",50)*"\n"
+    @output "🔥🔥🔥🔥🔥 ACI procedure has converged. 🔥🔥🔥🔥🔥\n"
+    @output "Computation finished in {:5.5} seconds.\n" ttotal
+    @output "Model space size: {}\n" length(M)
+    @output "E[ACI:{}]     = {:15.10f}\n" σ E + refwfn.molecule.Vnuc
+    @output "E[ACI:{}]+PT2 = {:15.10f}\n" σ E + refwfn.molecule.Vnuc + ϵest
+    @output repeat("=",50)*"\n"
     E = (E+refwfn.molecule.Vnuc)
     CASCI{T}(refwfn, E, P, Pcoef)
 end
 
-function get_fois(dets::Array{Determinant,1}, Nα::Int, Nβ::Int, act_range::UnitRange{Int64})
+function get_fois(dets::Array{Determinant,1}, Nα::Int, Nβ::Int, act_range::UnitRange{Int64})::Array{Determinant,1}
 
     # Ns must be > 1
-
     αoccs = [zeros(Int,Nα) for i=1:Threads.nthreads()]
     βoccs = [zeros(Int,Nβ) for i=1:Threads.nthreads()]
     αunos = [zeros(Int,length(act_range)-Nα) for i=1:Threads.nthreads()]
@@ -176,6 +199,7 @@ function get_fois(dets::Array{Determinant,1}, Nα::Int, Nβ::Int, act_range::Uni
                        + length(αoccs[1])*length(αunos[1])*length(βoccs[1])*length(βunos[1]))
     lf_crit = Int(round(length(dets)*lf_per_det))
     fois = [Determinant(0,0) for i=1:lf_crit]
+    t = @elapsed begin
     @sync for _DI in eachindex(dets)
         Threads.@spawn begin
             d = dets[_DI]
@@ -252,27 +276,27 @@ function get_fois(dets::Array{Determinant,1}, Nα::Int, Nβ::Int, act_range::Uni
             end
         end #Threads.@spawn 
     end
+    end
+    @output "Determinants constructed in {}\n" t
 
     #fois = vcat(fois...)
     #fois = fois[lst]
-    println("Pre size $(length(fois))")
+    
     fois = filter((x)->x != Determinant(0,0), fois)
-    println("post1 size $(length(fois))")
-    fois = unique(fois)
-    println("post2 size $(length(fois))")
-    fois = filter((x)->!(x in dets), fois)
-    println("post size $(length(fois))")
+    fois = Set(fois)
+    setdiff!(fois, dets)
+    fois = collect(fois)
     return fois
 end
 
-function ϵI(Fdets::Array{Determinant,1}, P::Array{Determinant,1}, Pcoef::Array{Float64,1}, Ep::T, h::Array{T,2}, V::Array{T,4}) where T <: AbstractFloat
+function ϵI(Fdets, P::Array{Determinant,1}, Pcoef::Array{Float64,1}, Ep::T, h::Array{T,2}, V::Array{T,4}) where T <: AbstractFloat
     Fe = zeros(length(Fdets))
     N = sum(αlist(P[1]))
     αinds = [Array{Int64,1}(undef,N) for i=1:Threads.nthreads()]
     βinds = [Array{Int64,1}(undef,N) for i=1:Threads.nthreads()]
     tasks = Array{Task}(undef,length(Fe))
-    for i in eachindex(Fdets)
-        tasks[i] = Threads.@spawn begin
+    @sync for i in eachindex(Fdets)
+        Threads.@spawn begin
         D1 = Fdets[i]
         id = Threads.threadid()
         αind = αinds[id]
@@ -291,23 +315,14 @@ function ϵI(Fdets::Array{Determinant,1}, P::Array{Determinant,1}, Pcoef::Array{
                 continue 
             elseif el == 2
                 Vint += Pcoef[j]*Hd2(D1, D2, V, αexc)
-                #Vint += Hd2(D1, D2, V, αexc)
             elseif el == 1
                 Vint += Pcoef[j]*Hd1(αind, βind, D1, D2, h, V, αexc)
-                #Vint += Hd1(αind, βind, D1, D2, h, V, αexc)
             end
         end
-        test = zeros(2,2)
-        test[1,1] = Ep
-        test[2,2] = Ei
-        test[1,2] = Vint
-        test[2,1] = Vint
         ϵ = Δ/2 - √((Δ^2)/4 + Vint^2)
-        val,vec = eigen(Symmetric(test))
-        Fe[i] = val[1] - Ep
+        Fe[i] = ϵ
         end #Threads.@spawn
     end
-    wait.(tasks)
     return Fe
 end
 
@@ -318,6 +333,7 @@ function update_model_space(M::Array{Determinant,1}, h::Array{T,2}, V::Array{T,4
     @output "Diagonalizing Hamiltonian...\n"
     decomp, history = partialschur(H, nev=1, tol=10^-12, which=LM())
     λ, ϕ = partialeigen(decomp)
+    #λ,ϕ = eigen(Array(H))
 
     return λ[1], ϕ[:,1], deepcopy(M)
 end
