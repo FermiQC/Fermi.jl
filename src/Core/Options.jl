@@ -12,7 +12,7 @@ export @molecule
 Dictionary containing options for Fermi. Any information not given
 explicitly to Methods is obtained from here.
 """
-CurrentOptions = Dict{String,Union{Float64,Int,String,Bool}}(
+CurrentOptions = Dict{String,Union{Float64,Int,String,Bool,Nothing}}(
                                   "molstring" => """
                                   O        1.2091536548      1.7664118189     -0.0171613972
                                   H        2.1984800075      1.7977100627      0.0121161719
@@ -42,6 +42,7 @@ CurrentOptions = Dict{String,Union{Float64,Int,String,Bool}}(
                                   "diis" => true,
                                   "cc_damp_ratio" => 0.0,
                                   "num_frozen" => 0,
+                                  "aci_print_screen" => nothing,
                                   "cas_frozen" => 0,
                                   "cas_active" => -1,
                                   "cas_cutoff" => 10^-9,
