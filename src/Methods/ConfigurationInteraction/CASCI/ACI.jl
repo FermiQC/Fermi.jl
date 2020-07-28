@@ -336,7 +336,6 @@ end
         Ei = Hd0(αind, βind, h, V)
         Δ = Ei - Ep
         Vint = 0.0
-        @fastmath ϵ0 = Δ/2 
         for j in eachindex(P)
             D2 = P[j]
             αexc = αexcitation_level(D1,D2)
@@ -350,15 +349,8 @@ end
                 Vint += Pcoef[j]*Hd1(αind, βind, D1, D2, h, V, αexc)
             end
         end
-        test = zeros(2,2)
-        test[1,1] = Ep
-        test[1,2] = Vint
-        test[2,1] = Vint
-        test[2,2] = Ei
-        @fastmath ϵ1 = Δ/2 - √((Δ^2)/4 + Vint^2)
-        val,vec = eigen(test)
-        ϵ = Ep - val[1]
-        Fe[i] = ϵ
+        
+        @fastmath Fe[i] = Δ/2 - √((Δ^2)/4 + Vint^2)
         end #Threads.@spawn
     end
     return Fe
