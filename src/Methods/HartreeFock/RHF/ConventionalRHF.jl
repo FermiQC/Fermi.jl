@@ -81,12 +81,8 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, C::Array{Float6
     # Form the density matrix
     Co = C[:, 1:ndocc]
     D = Fermi.contract(Co,Co,"um","vm")
-    #@tensor D[u,v] := Co[u,m]*Co[v,m]
     
     F = Array{Float64,2}(undef, ndocc+nvir, ndocc+nvir)
-    F .= 0
-    #build_fock!(F, aoint.T+aoint.V, D, aoint.ERI)
-    E = RHFEnergy(D, aoint.T+aoint.V, F) + molecule.Vnuc
     eps = Array{Float64, 1}(undef, ndocc+nvir)
     ite = 1
     converged = false
@@ -94,19 +90,41 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, C::Array{Float6
     @output "\n Iter.   {:>15} {:>10} {:>10} {:>8} {:>8}\n" "E[RHF]" "ΔE" "√|ΔD|²" "t" "DIIS"
     @output repeat("~",80)*"\n"
 
+    H = aoint.T + aoint.V
+    S = aoint.S
+    for i = 1:ndocc+nvir
+        F[i,i] = H[i,i]
+        for j = 1:ndocc+nvir
+            F[i,j] = 0.875*S[i,j]*(H[i,i] + H[j,j])
+            F[j,i] = F[i,j]
+        end
+    end
+    Ft = A*F*transpose(A)
+
+    # Get orbital energies and transformed coefficients
+    eps,Ct = eigen(Hermitian(Ft))
+
+    # Reverse transformation to get MO coefficients
+    C = A*Ct
+
+    # Produce new Density Matrix
+    Co = C[:,1:ndocc]
+    D = Fermi.contract(Co,Co,"um","vm")
+    diis_start = 3
+    E = 0.0
     t = @elapsed while ite ≤ maxit
         t_iter = @elapsed begin
 
             # Build the Fock Matrix
             F_old = deepcopy(F)
             build_fock!(F, aoint.T+aoint.V, D, aoint.ERI)
+            Eelec = RHFEnergy(D, aoint.T+aoint.V, F)
+            #ite == 1 ? display(F) : nothing
 
 
-            #two different ways of defining error vector
-            #do_diis && ite > 1 ? err = transpose(A)*(F*D*aoint.S - aoint.S*D*F)*A : nothing
-            do_diis && ite > 1 ? err = F - F_old : nothing
-            do_diis && ite > 1 ? push!(DM, F, err) : nothing
-            do_diis && ite > 3 ? F = Fermi.DIIS.extrapolate(DM) : nothing
+            do_diis ? err = transpose(A)*(F*D*aoint.S - aoint.S*D*F)*A : nothing
+            do_diis ? push!(DM, F, err) : nothing
+            do_diis && ite > diis_start ? F = Fermi.DIIS.extrapolate(DM) : nothing
 
             # Produce Ft
             Ft = A*F*transpose(A)
@@ -123,7 +141,6 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, C::Array{Float6
             #@tensor Dnew[u,v] := Co[u,m]*Co[v,m]
 
             # Compute Energy
-            Eelec = RHFEnergy(Dnew, aoint.T+aoint.V, F)
             Enew = Eelec + molecule.Vnuc
 
             # Compute the Density RMS
@@ -135,7 +152,7 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, C::Array{Float6
             D .= Dnew
             E = Enew
         end
-        @output "    {:<3} {:>15.10f} {:>11.3e} {:>11.3e} {:>8.2f} {:>8}\n" ite E ΔE Drms t_iter (do_diis && ite > 2)
+        @output "    {:<3} {:>15.10f} {:>11.3e} {:>11.3e} {:>8.2f} {:>8}\n" ite E ΔE Drms t_iter (do_diis && ite > diis_start)
         ite += 1
 
         if (abs(ΔE) < Etol) & (Drms < Dtol) & (ite > 5)
@@ -167,7 +184,11 @@ end
 function build_fock!(F::Array{Float64,2}, H::Array{Float64,2}, D::Array{Float64,2}, ERI::Fermi.MemTensor)
     F .= H
     Fermi.contract!(F,D,ERI,1.0,1.0,2.0,"mn","rs","mnrs")
-    #@tensoropt F[m,n] += 2.0*D[r,s]*ERI.data[m,n,r,s]
     Fermi.contract!(F,D,ERI,1.0,1.0,-1.0,"mn","rs","mrns")
+    #J = 2*Fermi.contract(D,ERI,"rs","mnrs")
+    #@tensoropt F[m,n] += 2.0*D[r,s]*ERI.data[m,n,r,s]
+    #K = -Fermi.contract(D,ERI,"rs","mrns")
+    #F .+= J + K
     #@tensoropt F[m,n] -= D[r,s]*ERI.data[m,r,n,s]
+    #@assert F ≈ _F_
 end

@@ -123,6 +123,8 @@ function Hd2(D1::Determinant, D2::Determinant, V::Array{T, 4}, αexc::Int) where
         # Move m <-> p
         i = min(m,p)
         f = max(m,p)-1
+        #println("$i $f")
+        #println(bitstring(D1.α))
         r = count_ones(D1.α >> i)
         l = count_ones(D1.α << (64-f))
         t = count_ones(D1.α)
@@ -152,6 +154,8 @@ function Hd2(D1::Determinant, D2::Determinant, V::Array{T, 4}, αexc::Int) where
         #Transform D1 -> D2. First take m into p
         i = min(m,p)
         f = max(m,p)-1
+        #println("$i $f")
+        #println(bitstring(D1.α))
         r = count_ones(D1.α >> i)
         l = count_ones(D1.α << (64-f))
         t = count_ones(D1.α)
@@ -187,6 +191,8 @@ function Hd2(D1::Determinant, D2::Determinant, V::Array{T, 4}, αexc::Int) where
         #Transform D1 -> D2. First take m into p
         i = min(m,p)
         f = max(m,p)-1
+        #println("$i $f")
+        #println(bitstring(D1.α))
         r = count_ones(D1.β >> i)
         l = count_ones(D1.β << (64-f))
         t = count_ones(D1.β)
