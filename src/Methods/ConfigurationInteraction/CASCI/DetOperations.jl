@@ -80,7 +80,7 @@ end
 Compare two determinants to return the excitation level of the alpha electrons
 """
 @inline function αexcitation_level(D1::Determinant, D2::Determinant;bail=false)
-    count_ones(D1.α ⊻ D2.α)/2
+    count_ones(D1.α ⊻ D2.α) >> 1
 end
 
 """
@@ -89,7 +89,7 @@ end
 Compare two determinants to return the excitation level of the beta electrons
 """
 @inline function βexcitation_level(D1::Determinant, D2::Determinant;bail=false)
-    count_ones(D1.β ⊻ D2.β)/2
+    count_ones(D1.β ⊻ D2.β) >> 1
 end
 
 """
@@ -132,17 +132,15 @@ not in the second
 """
 function first_αexclusive(D1::Determinant, D2::Determinant)
 
-    αexcl = D1.α ⊻ D2.α & D1.α
-
-    i = 1
-    # Save alphas exclusives, in crescent order
-    while 1<<((i-1)) ≤ αexcl
-        if 1<<((i-1)) & αexcl ≠ 0
-            return i
-        end
-        i += 1
-    end
-    #return out
+    x = D1.α ⊻ D2.α & D1.α
+    return 64 - leading_zeros(x&(~(x-1)))
+    #i = 1
+    #while 1<<((i-1)) ≤ αexcl
+    #    if 1<<((i-1)) & αexcl ≠ 0
+    #        return i
+    #    end
+    #    i += 1
+    #end
 end
 
 """
@@ -201,16 +199,17 @@ not in the second
 """
 function first_βexclusive(D1::Determinant, D2::Determinant)
 
-    βexcl = D1.β ⊻ D2.β & D1.β
+    x = D1.β ⊻ D2.β & D1.β
+    return 64 - leading_zeros(x&(~(x-1)))
 
-    i = 1
-    # Save betas exclusives, in crescent order
-    while 1<<((i-1)) ≤ βexcl
-        if 1<<((i-1)) & βexcl ≠ 0
-            return i
-        end
-        i += 1
-    end
+    #i = 1
+    ## Save betas exclusives, in crescent order
+    #while 1<<((i-1)) ≤ βexcl
+    #    if 1<<((i-1)) & βexcl ≠ 0
+    #        return i
+    #    end
+    #    i += 1
+    #end
 
     #return out
 

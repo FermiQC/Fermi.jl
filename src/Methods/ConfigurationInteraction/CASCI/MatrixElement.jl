@@ -1,3 +1,4 @@
+using BitBasis
 function Hd0(αindex::Array{Int64,1}, βindex::Array{Int64,1}, h::Array{T, 2}, V::Array{T, 4}) where T <: AbstractFloat
     """
     Σ [m|h|m] + 1/2 ΣΣ [mm|nn] - [mn|nm] 
@@ -40,7 +41,7 @@ function Hd0(αindex::Array{Int64,1}, βindex::Array{Int64,1}, h::Array{T, 2}, V
     return E1 + 0.5*E2
 end
 
-function Hd1(αindex::Array{Int64,1}, βindex::Array{Int64,1}, D1::Determinant, D2::Determinant, h::Array{T,2}, V::Array{T, 4}, αexc::Float64) where T <: AbstractFloat
+function Hd1(αindex::Array{Int64,1}, βindex::Array{Int64,1}, D1::Determinant, D2::Determinant, h::Array{T,2}, V::Array{T, 4}, αexc::Int) where T <: AbstractFloat
     """
     differ m -> p
     [m|h|p] + Σ[mp|nn] - [mn|np]
@@ -53,17 +54,15 @@ function Hd1(αindex::Array{Int64,1}, βindex::Array{Int64,1}, D1::Determinant, 
 
         # Compute phase by counting the number of occupied orbitals between m and p
 
-        i = 1 << min(m,p)
-        f = 1 << (max(m,p) - 1)
-
-        ph = 1
-
-        while i < f
-            if i & D1.α ≠ 0
-                ph = -ph
-            end
-            i = i << 1
-        end
+        i = min(m,p)
+        f = max(m,p)-1
+        r = count_ones(D1.α >> i)
+        l = count_ones(D1.α << (64-f))
+        t = count_ones(D1.α)
+        t -= r
+        t -= l
+        #t = l
+        t << 63 == 0 ? ph = 1 : ph = -1
 
         # Compute matrix element
         E = h[m,p] 
@@ -83,17 +82,15 @@ function Hd1(αindex::Array{Int64,1}, βindex::Array{Int64,1}, D1::Determinant, 
 
         # Compute phase by counting the number of occupied orbitals between m and p
 
-        i = 1 << (min(m,p))
-        f = 1 << ((max(m,p) - 1))
-
-        ph = 1
-
-        while i < f
-            if i & D1.β ≠ 0
-                ph = -ph
-            end
-            i = i << (1) 
-        end
+        i = min(m,p)
+        f = max(m,p)-1
+        r = count_ones(D1.β >> i)
+        l = count_ones(D1.β << (64-f))
+        t = count_ones(D1.β)
+        t -= r
+        t -= l
+        #t = l
+        t << 63 == 0 ? ph = 1 : ph = -1
 
         # Compute matrix element
         E = h[m,p] 
@@ -109,7 +106,7 @@ function Hd1(αindex::Array{Int64,1}, βindex::Array{Int64,1}, D1::Determinant, 
         return E
     end
 end
-function Hd2(D1::Determinant, D2::Determinant, V::Array{T, 4}, αexc::Float64) where T <: AbstractFloat
+function Hd2(D1::Determinant, D2::Determinant, V::Array{T, 4}, αexc::Int) where T <: AbstractFloat
     """
     mn -> pq
     [mp|nq] - [mq|np]
@@ -124,30 +121,26 @@ function Hd2(D1::Determinant, D2::Determinant, V::Array{T, 4}, αexc::Float64) w
 
         # For the phase factor, there is no interference between the two cases since they have difference spin
         # Move m <-> p
-        i = 1 << (min(m,p))
-        f = 1 << ((max(m,p) - 1))
-
-        ph = 1
-
-        while i < f
-            if i & D1.α ≠ 0
-                ph = -ph
-            end
-            i = i << (1) 
-        end
+        i = min(m,p)
+        f = max(m,p)-1
+        r = count_ones(D1.α >> i)
+        l = count_ones(D1.α << (64-f))
+        t = count_ones(D1.α)
+        t -= r
+        t -= l
+        t << 63 == 0 ? ph1 = 1 : ph1 = -1
 
         # Move n <-> q
-        i = 1 << (min(n,q))
-        f = 1 << ((max(n,q) - 1))
+        i = min(n,q)
+        f = max(n,q)-1
+        r = count_ones(D1.β >> i)
+        l = count_ones(D1.β << (64-f))
+        t = count_ones(D1.β)
+        t -= r
+        t -= l
+        t << 63 == 0 ? ph2 = 1 : ph2 = -1
 
-        while i < f
-            if i & D1.β ≠ 0
-                ph = -ph
-            end
-            i = i << (1) 
-        end
-
-        return ph*V[m,p,n,q]
+        return ph1*ph2*V[m,p,n,q]
 
     # If α excitation is two, it means m,n,p and q are all α.
     elseif αexc == 2
@@ -157,33 +150,32 @@ function Hd2(D1::Determinant, D2::Determinant, V::Array{T, 4}, αexc::Float64) w
         q = second_αexclusive(D2, D1)
         
         #Transform D1 -> D2. First take m into p
-        i = 1 << (min(m,p))
-        f = 1 << ((max(m,p) - 1))
-        
-        ph = 1
-        while i < f
-            if i & D1.α ≠ 0
-                ph = -ph
-            end
-            i = i << (1)
-        end
+        i = min(m,p)
+        f = max(m,p)-1
+        r = count_ones(D1.α >> i)
+        l = count_ones(D1.α << (64-f))
+        t = count_ones(D1.α)
+        t -= r
+        t -= l
+        #t = l
+        t << 63 == 0 ? ph1 = 1 : ph1 = -1
         
         # Update bits
         newα = (D1.α ⊻ (1 << (m-1))) | (1 << (p-1))
         
         # Take n into q using the updated bit
         
-        i = 1 << (min(n,q))
-        f = 1 << ((max(n,q) - 1))
+        i = (min(n,q))
+        f = ((max(n,q) - 1))
         
-        while i < f
-            if i & newα ≠ 0
-                ph = -ph
-            end
-            i = i << (1&63)
-        end
+        r = count_ones(newα >> i)
+        l = count_ones(newα << (64-f))
+        t = count_ones(newα)
+        t -= r
+        t -= l
+        t << 63 == 0 ? ph2 = 1 : ph2 = -1
 
-        return ph*(V[m,p,n,q] - V[m,q,n,p])
+        return ph1*ph2*(V[m,p,n,q] - V[m,q,n,p])
 
     # If α excitation is zero, it means m,n,p and q are all β.
     elseif αexc == 0
@@ -193,32 +185,31 @@ function Hd2(D1::Determinant, D2::Determinant, V::Array{T, 4}, αexc::Float64) w
         q = second_βexclusive(D2, D1)
 
         #Transform D1 -> D2. First take m into p
-        i = 1 << (min(m,p)&63)
-        f = 1 << ((max(m,p) - 1)&63)
-        
-        ph = 1
-        while i < f
-            if i & D1.β ≠ 0
-                ph = -ph
-            end
-            i = i << (1)
-        end
+        i = min(m,p)
+        f = max(m,p)-1
+        r = count_ones(D1.β >> i)
+        l = count_ones(D1.β << (64-f))
+        t = count_ones(D1.β)
+        t -= r
+        t -= l
+        #t = l
+        t << 63 == 0 ? ph1 = 1 : ph1 = -1
         
         # Update bits
-        newβ = (D1.β ⊻ (1 << ((m-1)))) | (1 << ((p-1)))
+        newβ = (D1.β ⊻ (1 << (m-1))) | (1 << (p-1))
         
         # Take n into q using the updated bit
         
-        i = 1 << (min(n,q))
-        f = 1 << ((max(n,q) - 1))
+        i = (min(n,q))
+        f = ((max(n,q) - 1))
         
-        while i < f
-            if i & newβ ≠ 0
-                ph = -ph
-            end
-            i = i << (1)
-        end
+        r = count_ones(newβ >> i)
+        l = count_ones(newβ << (64-f))
+        t = count_ones(newβ)
+        t -= r
+        t -= l
+        t << 63 == 0 ? ph2 = 1 : ph2 = -1
 
-        return ph*(V[m,p,n,q] - V[m,q,n,p])
+        return ph1*ph2*(V[m,p,n,q] - V[m,q,n,p])
     end
 end

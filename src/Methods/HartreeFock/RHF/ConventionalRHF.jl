@@ -23,7 +23,7 @@ Conventional algorithm for to compute RHF wave function. Inital guess for orbita
 """
 function RHF(wfn::RHF, Alg::ConventionalRHF)
 
-    aoint = ConventionalAOIntegrals(wfn.molecule)
+    aoint = ConventionalAOIntegrals(Fermi.Geometry.Molecule())
     RHF(wfn, aoint, Alg)
 end
 
@@ -43,7 +43,8 @@ function RHF(wfn::RHF, aoint::ConventionalAOIntegrals, Alg::ConventionalRHF)
     Sab = Lints.projector(wfn.LintsBasis, aoint.LintsBasis)
     T = transpose(Ca)*Sab*(Sbb^-1)*transpose(Sab)*Ca
     Cb = (Sbb^-1)*transpose(Sab)*Ca*T^(-1/2)
-    RHF(wfn.molecule, aoint, Cb, Alg)
+    Cb = real.(Cb)
+    RHF(Fermi.Geometry.Molecule(), aoint, Cb, Alg)
 end
 
 """
@@ -137,7 +138,7 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, C::Array{Float6
         @output "    {:<3} {:>15.10f} {:>11.3e} {:>11.3e} {:>8.2f} {:>8}\n" ite E ΔE Drms t_iter (do_diis && ite > 2)
         ite += 1
 
-        if (abs(ΔE) < Etol) & (Drms < Dtol)
+        if (abs(ΔE) < Etol) & (Drms < Dtol) & (ite > 5)
             converged = true
             break
         end

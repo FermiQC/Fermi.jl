@@ -1,13 +1,11 @@
 using Combinatorics
 using SparseArrays
+using TensorOperations
 using LinearAlgebra
 using ArnoldiMethod
 
-function CASCI{T}(wf::Fermi.HartreeFock.RHF, Alg::ACI) where T <: AbstractFloat
-    # we need this implementation
-end
 function CASCI{T}(Alg::ACI) where T <: AbstractFloat
-
+    # we need this implementation
     @output "Getting molecule...\n"
     molecule = Molecule()
     @output "Computing AO Integrals...\n"
@@ -15,7 +13,12 @@ function CASCI{T}(Alg::ACI) where T <: AbstractFloat
 
     @output "Calling RHF module...\n"
     refwfn = Fermi.HartreeFock.RHF(molecule, aoint)
+    CASCI{T}(refwfn, Alg)
+end
 
+function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, Alg::ACI; ci = nothing) where T <: AbstractFloat
+    @output "Generating Integrals for CAS computation...\n"
+    aoint = ConventionalAOIntegrals()
     @output "Transforming Integrals for CAS computation...\n"
     # Read options
     frozen = Fermi.CurrentOptions["cas_frozen"]
@@ -44,14 +47,41 @@ function CASCI{T}(Alg::ACI) where T <: AbstractFloat
     end
 
     s = 1:(frozen+active)
+
     h = T.(Fermi.Integrals.transform_fock(aoint.T+aoint.V, refwfn.C[:,s], refwfn.C[:,s]))
     V = T.(Fermi.Integrals.transform_eri(aoint.ERI, refwfn.C[:,s], refwfn.C[:,s], refwfn.C[:,s], refwfn.C[:,s]))
 
     aoint = nothing
-    CASCI{T}(refwfn, h, V, frozen, act_elec, active, Alg)
+
+    #if Fermi.CurrentOptions["cas_use_no"]
+    #    eps = refwfn.eps
+    #    ndocc = refwfn.ndocc
+    #    nvir = refwfn.nvir
+    #    den = [i + j - a - b for i in eps[1:ndocc], j in eps[1:ndocc], a in eps[ndocc+1:end], b in eps[ndocc+1:end]]
+    #    o = 1:ndocc
+    #    v = ndocc+1:ndocc+nvir
+    #    VV = T.(Fermi.Integrals.transform_eri(aoint.ERI, refwfn.C[:,o], refwfn.C[:,v], refwfn.C[:,o], refwfn.C[:,v]))
+    #    VV = permutedims(VV,(1,3,2,4))
+    #    Dn = Array{T}(undef,size(nvir,nvir))
+    #    Dd = Array{T}(undef,size(nvir,nvir))
+    #    println(size(VV))
+    #    @tensor begin 
+    #        Dn[a,b] := VV[i,i,c,b]*VV[i,i,c,a]
+    #        Dd[a,b] := (den[i,i,c,b]*den[i,i,c,a])
+    #    end
+    #    D = Dn ./ Dd
+    #    refwfn.C[:,v] .= refwfn.C[:,v]*D
+    #    display(refwfn.C)
+    #    h = T.(Fermi.Integrals.transform_fock(aoint.T+aoint.V, refwfn.C[:,s], refwfn.C[:,s]))
+    #    V = T.(Fermi.Integrals.transform_eri(aoint.ERI, refwfn.C[:,s], refwfn.C[:,s], refwfn.C[:,s], refwfn.C[:,s]))
+    #end
+
+
+    aoint = nothing
+    CASCI{T}(refwfn, h, V, frozen, act_elec, active, Alg, ci=ci)
 end
 
-function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, frozen::Int, act_elec::Int, active::Int, Alg::ACI) where T <: AbstractFloat
+function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, frozen::Int, act_elec::Int, active::Int, Alg::ACI; ci=nothing) where T <: AbstractFloat
 
     # Print intro
     Fermi.ConfigurationInteraction.print_header()
@@ -69,8 +99,13 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
 
     # Start reference space as HF
     zeroth = repeat('1', frozen)*repeat('1', Int(act_elec/2))
-    P = [Determinant(zeroth, zeroth)]
-    Pcoef = [1.0]
+    if ci == nothing
+        P = [Determinant(zeroth, zeroth)]
+        Pcoef = [1.0]
+    else
+        P = deepcopy(ci.dets)
+        Pcoef = deepcopy(ci.coef)
+    end
     E = refwfn.energy - refwfn.molecule.Vnuc
     ΔE = 1.0
     ite = 1
@@ -82,9 +117,9 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
     M = nothing
     ϵsum = nothing
     ϵest = nothing
+    oldP = nothing
+    cflag = true
     while true
-        t = @elapsed GC.gc()
-        println("took out garbage in $t s")
         if ite > 20
             break
         end
@@ -146,17 +181,16 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
         @output "Model Space Energy           {:15.10f}\n" E + refwfn.molecule.Vnuc
         @output "Energy Change                {:15.10f}\n" ΔE
 
-        dLenny = length(P) - Lenny
-        if abs(dLenny) == 0
-            #no new determinants were added to model space - exit ACI
+        if oldP == Set(P) 
             break
         end
+        oldP = Set(deepcopy(P))
         Lenny = length(P)
         @output "Coarse graining model space for next iteration\n"
         # Coarse grain
         Cperm = zeros(Int, length(P))
         sortperm!(Cperm, Pcoef, by=i->i^2)
-        Cperm = reverse(Cperm)
+        reverse!(Cperm)
 
         Pcoef = Pcoef[Cperm]
         P = P[Cperm]
@@ -176,7 +210,11 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
     end #@elapsed
 
     @output repeat("=",50)*"\n"
-    @output "🔥🔥🔥🔥🔥 ACI procedure has converged. 🔥🔥🔥🔥🔥\n"
+    if cflag
+        @output "🔥🔥🔥🔥🔥 ACI procedure has converged. 🔥🔥🔥🔥🔥\n"
+    else
+        @output "😲😲😲😲😲 ACI procedure has failed!!!! 😲😲😲😲😲\n"
+    end
     @output "Computation finished in {:5.5} seconds.\n" ttotal
     @output "Model space size: {}\n" length(M)
     @output "E[ACI:{}]     = {:15.10f}\n" σ E + refwfn.molecule.Vnuc
@@ -186,7 +224,7 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
     CASCI{T}(refwfn, E, P, Pcoef)
 end
 
-function get_fois(dets::Array{Determinant,1}, Nα::Int, Nβ::Int, act_range::UnitRange{Int64})::Array{Determinant,1}
+@fastmath @inbounds function get_fois(dets::Array{Determinant,1}, Nα::Int, Nβ::Int, act_range::UnitRange{Int64})::Array{Determinant,1}
 
     # Ns must be > 1
     αoccs = [zeros(Int,Nα) for i=1:Threads.nthreads()]
@@ -199,7 +237,6 @@ function get_fois(dets::Array{Determinant,1}, Nα::Int, Nβ::Int, act_range::Uni
                        + length(αoccs[1])*length(αunos[1])*length(βoccs[1])*length(βunos[1]))
     lf_crit = Int(round(length(dets)*lf_per_det))
     fois = [Determinant(0,0) for i=1:lf_crit]
-    t = @elapsed begin
     @sync for _DI in eachindex(dets)
         Threads.@spawn begin
             d = dets[_DI]
@@ -276,12 +313,6 @@ function get_fois(dets::Array{Determinant,1}, Nα::Int, Nβ::Int, act_range::Uni
             end
         end #Threads.@spawn 
     end
-    end
-    @output "Determinants constructed in {}\n" t
-
-    #fois = vcat(fois...)
-    #fois = fois[lst]
-    
     fois = filter((x)->x != Determinant(0,0), fois)
     fois = Set(fois)
     setdiff!(fois, dets)
@@ -289,12 +320,11 @@ function get_fois(dets::Array{Determinant,1}, Nα::Int, Nβ::Int, act_range::Uni
     return fois
 end
 
-function ϵI(Fdets, P::Array{Determinant,1}, Pcoef::Array{Float64,1}, Ep::T, h::Array{T,2}, V::Array{T,4}) where T <: AbstractFloat
+@fastmath @inbounds function ϵI(Fdets, P::Array{Determinant,1}, Pcoef::Array{Float64,1}, Ep::T, h::Array{T,2}, V::Array{T,4}) where T <: AbstractFloat
     Fe = zeros(length(Fdets))
     N = sum(αlist(P[1]))
     αinds = [Array{Int64,1}(undef,N) for i=1:Threads.nthreads()]
     βinds = [Array{Int64,1}(undef,N) for i=1:Threads.nthreads()]
-    tasks = Array{Task}(undef,length(Fe))
     @sync for i in eachindex(Fdets)
         Threads.@spawn begin
         D1 = Fdets[i]
@@ -306,6 +336,7 @@ function ϵI(Fdets, P::Array{Determinant,1}, Pcoef::Array{Float64,1}, Ep::T, h::
         Ei = Hd0(αind, βind, h, V)
         Δ = Ei - Ep
         Vint = 0.0
+        @fastmath ϵ0 = Δ/2 
         for j in eachindex(P)
             D2 = P[j]
             αexc = αexcitation_level(D1,D2)
@@ -319,7 +350,14 @@ function ϵI(Fdets, P::Array{Determinant,1}, Pcoef::Array{Float64,1}, Ep::T, h::
                 Vint += Pcoef[j]*Hd1(αind, βind, D1, D2, h, V, αexc)
             end
         end
-        ϵ = Δ/2 - √((Δ^2)/4 + Vint^2)
+        test = zeros(2,2)
+        test[1,1] = Ep
+        test[1,2] = Vint
+        test[2,1] = Vint
+        test[2,2] = Ei
+        @fastmath ϵ1 = Δ/2 - √((Δ^2)/4 + Vint^2)
+        val,vec = eigen(test)
+        ϵ = Ep - val[1]
         Fe[i] = ϵ
         end #Threads.@spawn
     end
