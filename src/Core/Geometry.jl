@@ -17,6 +17,12 @@ using Fermi
 using Fermi.Output
 using Fermi.PhysicalConstants: atomic_number, bohr_to_angstrom, angstrom_to_bohr
 using LinearAlgebra
+using Formatting
+
+struct InvalidMolecule <: Exception
+    msg::String
+end
+Base.showerror(io::IO, e::InvalidMolecule) = print(io, "InvalidMolecule: ", e.msg)
 
 """
     Fermi.Atom
@@ -117,13 +123,13 @@ function Molecule(atoms::Array{Atom,1}, charge::Int, multiplicity::Int)
     nelec -= charge
 
     if nelec ≤ 0
-        throw(Fermi.InvalidFermiOption("Invalid charge ($charge) for given molecule"))
+        throw(Fermi.InvalidMolecule("Invalid charge ($charge) for given molecule"))
     end
 
     αexcess = multiplicity-1
 
     if isodd(nelec) != isodd(αexcess)
-        throw(Fermi.InvalidFermiOption("Incompatible charge $(charge) and multiplicity $(multiplicity)"))
+        throw(Fermi.InvalidMolecule("Incompatible charge $(charge) and multiplicity $(multiplicity)"))
     end
 
     Nβ = (nelec - αexcess)/2
@@ -165,16 +171,26 @@ function get_atoms(molstring::String; unit::String="angstrom")
     end
 
     atoms = Atom[]
-    exp = r"(\w{1,2})\s+([-+]??\d+\.\d+\s+[-+]??\d+\.\d+\s+[-+]??\d+\.\d+)"
+    #exp = r"(\w{1,2})\s+([-+]??\d+\.\d+\s+[-+]??\d+\.\d+\s+[-+]??\d+\.\d+)"
     for line in split(molstring, "\n")
-        m = match(exp, line)
+        #m = match(exp, line)
+        m = split(line)
+        if length(m) != 4
+            throw(InvalidMolecule("4 columns expected on XYZ string. Got $(length(m))"))
+        end
+
         if m != nothing
             # Convert SubString to String
-            AtomicSymbol = String(m.captures[1])
+            AtomicSymbol = String(m[1])
             Z = atomic_number(AtomicSymbol)
 
             # Convert Substring to String and then String to Float64 Array
-            xyz = parse.(Float64, split(String(m.captures[2]))).*conv
+            xyz = [0.0, 0.0, 0.0]
+            try
+                xyz .= parse.(Float64, m[2:4]).*conv
+            catch ArgumentError
+                throw(InvalidMolecule("Failed to process XYZ string"))
+            end
 
             push!(atoms, Atom(AtomicSymbol, Z, xyz))
         end
@@ -194,29 +210,9 @@ function get_xyz(M::Molecule)
     for i in eachindex(M.atoms)
 
         A = M.atoms[i]
-        xyz = ["$(A.xyz[1])", "$(A.xyz[2])", "$(A.xyz[3])"]
-
-        # Format the string because of OCD
-
-        ## Add space in front
-        for i in eachindex(xyz)
-            if !(xyz[i][1] in "+-")
-                xyz[i] = " "*xyz[i]
-            end
-        end
-
-        ## Equal the length
-        L = max(map(length, xyz)...)
-
-        for i in eachindex(xyz)
-            while length(xyz[i]) < L
-                xyz[i] = xyz[i]*"0"
-            end
-        end
-        molstring *= A.AtomicSymbol*"   "*join(xyz, "   ")*"\n"
+        molstring *= format("{}   {: 15.12f}   {: 15.12f}   {: 15.12f}\n", A.AtomicSymbol, A.xyz...)
     end
-
-    return String(strip(molstring))
+    return molstring
 end
 
 end #Module
