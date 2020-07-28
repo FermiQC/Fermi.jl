@@ -27,6 +27,14 @@ end
 Compute a RCCSD wave function using the Compiled time factorization algorithm (CTF). Precision (T), reference wavefunction (refwfn)
 and molecular orbital integrals (moint) must be passed.
 """
+function RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, Alg::CTF) where T <: AbstractFloat
+    d = [i - a for i = diag(moint.oo), a = diag(moint.vv)]
+    D = [i + j - a - b for i = diag(moint.oo), j = diag(moint.oo), a = diag(moint.vv), b = diag(moint.vv)]
+    newT1 = moint.ov./d
+    newT2 = moint.oovv./D
+    RCCSD{T}(refwfn, moint, newT1, newT2, Alg)
+end
+
 function RCCSD{T}(refwfn::RHF, guess::RCCSD{Tb}, moint::PhysRestrictedMOIntegrals, Alg::CTF) where { T <: AbstractFloat,
                                                                                                     Tb <: AbstractFloat }
     d = [i - a for i = diag(moint.oo), a = diag(moint.vv)]
