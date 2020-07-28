@@ -40,7 +40,6 @@ function ecRCCSDpT{T}() where T <: AbstractFloat
     @output "Active Virtual Orbitals:  {}\n" actvir
 
     T1, T2, ecT1, ecT2 = cas_decomposition(Casdata, refwfn.ndocc, drop_occ, actocc, actvir, moint.ov, moint.oovv, moint.ovvv, moint.ooov)
-    t3dets = Casdata[5]
     Casdata = nothing
 
     d = [i - a for i = diag(moint.oo), a = diag(moint.vv)]
@@ -52,12 +51,16 @@ function ecRCCSDpT{T}() where T <: AbstractFloat
     d = nothing
     D = nothing
 
-    ecRCCSDpT{T}(ecccsd, moint, drop_occ, refwfn.ndocc, t3dets)
+    ecRCCSDpT{T}(ecccsd, moint, actocc.-drop_occ, actvir.-refwfn.ndocc)
 end
 
-function ecRCCSDpT{T}(ecccsd::ecRCCSD, moint::PhysRestrictedMOIntegrals, frozen::Int, ndocc::Int, casdets::Array{Determinant,1}) where T <: AbstractFloat
+function ecRCCSDpT{T}(ecccsd::ecRCCSD, moint::PhysRestrictedMOIntegrals, cas_holes::Array{Int64,1}, cas_particles::Array{Int64,1}) where T <: AbstractFloat
 
     @output "\n   • Perturbative Triples Started\n\n"
+
+    @output "T3 within EC active space are going to be skipped\n"
+    @output "CAS hole space:     {}\n" cas_holes
+    @output "CAS particle space: {}\n\n" cas_particle
 
     T1 = ecccsd.T1.data
     T2 = ecccsd.T2.data
@@ -153,10 +156,9 @@ function ecRCCSDpT{T}(ecccsd::ecRCCSD, moint::PhysRestrictedMOIntegrals, frozen:
                     for b in 1:a
                         δab = Int(a == b)
                         for c in 1:b
-
-                            
-
-
+                            if issubset([i,j,k], cas_holes) && issubset([a,b,c], cas_particles)
+                                continue
+                            end
                             Dd = fo[i] + fo[j] + fo[k] - fv[a] - fv[b] - fv[c]
                             δbc = Int(b == c)
                             @inbounds X = (W[a,b,c]*V[a,b,c] + W[a,c,b]*V[a,c,b] + W[b,a,c]*V[b,a,c] + W[b,c,a]*V[b,c,a] + W[c,a,b]*V[c,a,b] + W[c,b,a]*V[c,b,a])
