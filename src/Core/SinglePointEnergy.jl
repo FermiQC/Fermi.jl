@@ -5,6 +5,7 @@ energy_dict = Dict{String, Expr}(
     "ccsd" => :(Fermi.CoupledCluster.RCCSD()),
     "ecccsd" => :(Fermi.CoupledCluster.ecRCCSD()),
     "ccsdpt"=> :(Fermi.CoupledCluster.RCCSDpT()),
+    "ecccsdpt"=> :(Fermi.CoupledCluster.ecRCCSDpT()),
     "ci" => :(Fermi.ConfigurationInteraction.CASCI()),
 )
 

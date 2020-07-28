@@ -128,7 +128,7 @@ function ecRCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, newT1::Array{
         oldE = Ecc
         Ecc = update_energy(newT1, newT2, fov, moint.oovv)
         dE = Ecc - oldE
-        @output "    {:<5.0d}    {:<15.10f}    {:<12.10f}    {:<12.10f}    {:<10.5f}\n" ite Ecc dE rms t
+        @output "    {: >5.0d}    {: >15.10f}    {: >12.10f}    {: >12.10f}    {: >10.5f}\n" ite Ecc dE rms t
         ite += 1
     end
 
@@ -151,12 +151,10 @@ function get_cas_data(cas::Fermi.ConfigurationInteraction.CASCI)
     Ccas = cas.coef
 
     ref = Determinant(repeat("1",cas.ref.ndocc),repeat("1",cas.ref.ndocc))
-    #i, = findall(d->d==ref, dets)
-    #C0 = Ccas[i]
-    #println(C0)
-
     z = 0
     acf = 0
+
+    @output "   • CAS Composition\n"
     @output "Excitation      N of dets\n"
     while acf < length(dets)
         x = count(d->excitation_level(ref,d)==z, dets)
@@ -171,45 +169,45 @@ function get_cas_data(cas::Fermi.ConfigurationInteraction.CASCI)
     # If the reference is not the RHF determinant the C matrix has to be modified
     # such that all orbitals occupied in the new reference comes first.
     ref = dets[1]
-    #zeroth = repeat('1', cas.ref.ndocc)*repeat('0', cas.ref.nvir)
-    #hf = Fermi.ConfigurationInteraction.Determinant(zeroth, zeroth)
-    #if ref == hf
-    #    @output "Dominant configuration is the RHF determinant.\n"
-    #else
-    #    if ref.α ≢ ref.β
-    #        error("Dominant determinant is not spin symmetric.")
-    #    end
-    #    @output "!! Dominant configuration is NOT the RHF determinant. Adapting hole-particle spaces\n"
-    #    holes = Fermi.ConfigurationInteraction.αexclusive(hf, ref)
-    #    particles = Fermi.ConfigurationInteraction.αexclusive(ref, hf)
-    #    for (h,p) in zip(holes,particles)
-    #        @inbounds for k = 1:size(cas.ref.C,1)
-    #            cas.ref.C[k,h], cas.ref.C[k,p] = cas.ref.C[k,p], cas.ref.C[k,h]
-    #        end
+    zeroth = repeat('1', cas.ref.ndocc)*repeat('0', cas.ref.nvir)
+    hf = Fermi.ConfigurationInteraction.Determinant(zeroth, zeroth)
+    if ref == hf
+        @output "Dominant configuration is the RHF determinant.\n"
+    else
+        if ref.α ≢ ref.β
+            error("Dominant determinant is not spin symmetric.")
+        end
+        @output "!! Dominant configuration is NOT the RHF determinant. Adapting hole-particle spaces\n"
+        holes = Fermi.ConfigurationInteraction.αexclusive(hf, ref)
+        particles = Fermi.ConfigurationInteraction.αexclusive(ref, hf)
+        for (h,p) in zip(holes,particles)
+            @inbounds for k = 1:size(cas.ref.C,1)
+               cas.ref.C[k,h], cas.ref.C[k,p] = cas.ref.C[k,p], cas.ref.C[k,h]
+            end
 
-    #        for id in eachindex(dets)
-    #            α = dets[id].α
-    #            β = dets[id].β
-    #            hbit = 1 << (h-1)
-    #            pbit = 1 << (p-1)
-    #            # If the bits are different, invert them
-    #            if (α & hbit == 0) && (α & pbit != 0) 
-    #                α = (α | hbit) ⊻ pbit
-    #            elseif (α & hbit != 0) && (α & pbit == 0) 
-    #                α = (α | pbit) ⊻ hbit
-    #            end
+            for id in eachindex(dets)
+                α = dets[id].α
+                β = dets[id].β
+                hbit = 1 << (h-1)
+                pbit = 1 << (p-1)
+                # If the bits are different, invert them
+                if (α & hbit == 0) && (α & pbit != 0) 
+                    α = (α | hbit) ⊻ pbit
+                elseif (α & hbit != 0) && (α & pbit == 0) 
+                    α = (α | pbit) ⊻ hbit
+                end
 
-    #            if (β & hbit == 0) && (β & pbit != 0) 
-    #                β = (β | hbit) ⊻ pbit
-    #            elseif (β & hbit != 0) && (β & pbit == 0)
-    #                β = (β | pbit) ⊻ hbit
-    #            end
+                if (β & hbit == 0) && (β & pbit != 0) 
+                    β = (β | hbit) ⊻ pbit
+                elseif (β & hbit != 0) && (β & pbit == 0)
+                    β = (β | pbit) ⊻ hbit
+                end
 
-    #            dets[id] = Fermi.ConfigurationInteraction.Determinant(α, β)
-    #        end
-    #    end
-    #    ref = dets[1]
-    #end
+                dets[id] = Fermi.ConfigurationInteraction.Determinant(α, β)
+            end
+        end
+        ref = dets[1]
+    end
     C0 = Ccas[1]
 
     # Intermediate Normalization
