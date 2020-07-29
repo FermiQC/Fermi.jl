@@ -339,7 +339,6 @@ function get_casT1_casT2!(T1::Array{Float64,2}, T2::Array{Float64,4}, Ccas::Arra
 
     #preT2 = copy(T2)
     @tensor T2[i,j,a,b] -= T1[i,a]*T1[j,b] 
-    println(count(i->i!=0, T2))
     #@tensor T12[i,j,a,b] := T1[i,a]*T1[j,b] 
     #T2 -= T12.*(T2 .!= 0)
     #for i = eachindex(T2)

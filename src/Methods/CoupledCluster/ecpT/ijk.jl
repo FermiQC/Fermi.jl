@@ -40,6 +40,8 @@ function ecRCCSDpT{T}() where T <: AbstractFloat
     @output "Active Virtual Orbitals:  {}\n" actvir
 
     T1, T2, ecT1, ecT2 = cas_decomposition(Casdata, refwfn.ndocc, drop_occ, actocc, actvir, moint.ov, moint.oovv, moint.ovvv, moint.ooov)
+    refdet = Casdata[1]
+    cast3 = Casdata[5]
     Casdata = nothing
 
     d = [i - a for i = diag(moint.oo), a = diag(moint.vv)]
@@ -51,16 +53,13 @@ function ecRCCSDpT{T}() where T <: AbstractFloat
     d = nothing
     D = nothing
 
-    ecRCCSDpT{T}(ecccsd, moint, actocc.-drop_occ, actvir.-refwfn.ndocc)
+    ecRCCSDpT{T}(ecccsd, moint, refdet, cast3, refwfn.ndocc, drop_occ)
 end
 
-function ecRCCSDpT{T}(ecccsd::ecRCCSD, moint::PhysRestrictedMOIntegrals, cas_holes::Array{Int64,1}, cas_particles::Array{Int64,1}) where T <: AbstractFloat
+function ecRCCSDpT{T}(ecccsd::ecRCCSD, moint::PhysRestrictedMOIntegrals, ref::Determinant, casT3::Array{Determinant,1}, ndocc::Int, fcn::Int) where T <: AbstractFloat
 
     @output "\n   • Perturbative Triples Started\n\n"
-
-    @output "T3 within EC active space are going to be skipped\n"
-    @output "CAS hole space:     {}\n" cas_holes
-    @output "CAS particle space: {}\n\n" cas_particles
+    @output "T3 within EC active space are going to be skipped\n\n"
 
     T1 = ecccsd.T1.data
     T2 = ecccsd.T2.data
@@ -106,11 +105,13 @@ function ecRCCSDpT{T}(ecccsd::ecRCCSD, moint::PhysRestrictedMOIntegrals, cas_hol
     T1_1j       = Array{T}(undef,v) 
     @output "Computing energy contribution from occupied orbitals:\n"
     for i in 1:o
+        iα = ref.α ⊻ 1 << (i+fcn-1)
         @output "→ Orbital {} of {}\n" i o
         Vvvvo_4i .= view(Vvvvo, :,:,:,i)
         T2_1i    .= view(T2, i,:,:,:)
         T1_1i    .= view(T1, i, :)
         for j in 1:i
+            jβ = ref.β ⊻ 1 << (j+fcn-1)
             Vvvvo_4j    .= view(Vvvvo, :,:,:,j)
             Vvooo_2i_3j .= view(Vvooo,:,i,j,:)
             Vvooo_2j_3i .= view(Vvooo,:,j,i,:)
@@ -121,6 +122,7 @@ function ecRCCSDpT{T}(ecccsd::ecRCCSD, moint::PhysRestrictedMOIntegrals, cas_hol
             T1_1j       .= view(T1, j, :)
             δij = Int(i == j)
             for k in 1:j
+                kiα = iα ⊻ 1 << (k+fcn-1)
                 Vvvvo_4k    .= view(Vvvvo, :,:,:,k)
                 Vvooo_2k_3j .= view(Vvooo,:,k,j,:)
                 Vvooo_2k_3i .= view(Vvooo,:,k,i,:)
@@ -153,10 +155,14 @@ function ecRCCSDpT{T}(ecccsd::ecRCCSD, moint::PhysRestrictedMOIntegrals, cas_hol
                 # Compute Energy contribution
                 δjk = Int(j == k)
                 for a in 1:v
+                    akiα = kiα | 1 << (a+ndocc-1)
                     for b in 1:a
+                        bjβ = jβ | 1 << (b+ndocc-1)
                         δab = Int(a == b)
                         for c in 1:b
-                            if issubset([i,j,k], cas_holes) && issubset([a,b,c], cas_particles)
+                            cakiα = akiα | 1 << (c+ndocc-1)
+                            _det = Determinant(cakiα, bjβ)
+                            if _det in casT3
                                 continue
                             end
                             Dd = fo[i] + fo[j] + fo[k] - fv[a] - fv[b] - fv[c]

@@ -1,3 +1,5 @@
+using Fermi.ConfigurationInteraction: Determinant
+
 """
     Fermi.CoupledCluster.RCCSDpT
 
