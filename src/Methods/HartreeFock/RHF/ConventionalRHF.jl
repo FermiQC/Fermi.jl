@@ -8,11 +8,11 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, Alg::Convention
 
     @output "Using Core Guess\n"
     S = Hermitian(aoint.S)
-    F = Array{Float64,2}(undef, ndocc+nvir, ndocc+nvir)
     A = S^(-1/2)
     H = Hermitian(aoint.T + aoint.V)
     ndocc = molecule.Nα#size(S,1)
     nvir = size(S,1) - ndocc
+    F = Array{Float64,2}(undef, ndocc+nvir, ndocc+nvir)
     for i = 1:ndocc+nvir
         F[i,i] = H[i,i]
         for j = 1:ndocc+nvir
