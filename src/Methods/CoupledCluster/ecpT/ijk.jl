@@ -60,7 +60,7 @@ function ecRCCSDpT{T}(ecccsd::ecRCCSD, moint::PhysRestrictedMOIntegrals, cas_hol
 
     @output "T3 within EC active space are going to be skipped\n"
     @output "CAS hole space:     {}\n" cas_holes
-    @output "CAS particle space: {}\n\n" cas_particle
+    @output "CAS particle space: {}\n\n" cas_particles
 
     T1 = ecccsd.T1.data
     T2 = ecccsd.T2.data

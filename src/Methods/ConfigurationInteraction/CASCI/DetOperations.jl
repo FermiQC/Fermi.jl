@@ -449,3 +449,35 @@ function βvir!(D::Determinant, R::UnitRange{Int64}, Out::Array{Int64,1})
         end
     end
 end
+
+function detstring(D::Determinant,l::Int=64)
+
+    αstr = ""
+    βstr = ""
+    str = ""
+
+    i = 1
+    for i = 1:l
+        if 1<<(i-1) & (D.α & D.β) != 0
+            αstr *= "1"
+            βstr *= "1"
+            str  *= "2"
+        elseif 1<<(i-1) & D.α != 0
+            αstr *= "1"
+            βstr *= "0"
+            str  *= "+"
+        elseif 1<<(i-1) & D.β != 0
+            αstr *= "0"
+            βstr *= "1"
+            str  *= "-"
+        else
+            αstr *= "0"
+            βstr *= "0"
+            str  *= "0"
+        end
+        i += 1
+    end
+
+    return "$str     $αstr     $βstr"
+end
+

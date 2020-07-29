@@ -219,8 +219,15 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
     @output "Model space size: {}\n" length(M)
     @output "E[ACI:{}]     = {:15.10f}\n" σ E + refwfn.molecule.Vnuc
     @output "E[ACI:{}]+PT2 = {:15.10f}\n" σ E + refwfn.molecule.Vnuc + ϵest
-    @output repeat("=",50)*"\n"
+    @output repeat("=",51)*"\n\n"
     E = (E+refwfn.molecule.Vnuc)
+
+    @output "\n • Most important determinants:\n\n"
+
+    for i in 1:(min(20,length(P)))
+        @output "{:15.5f}      {}\n" Pcoef[i]  detstring(P[i], frozen+active)
+    end
+    
     CASCI{T}(refwfn, E, P, Pcoef)
 end
 
@@ -358,6 +365,7 @@ end
 
 function update_model_space(M::Array{Determinant,1}, h::Array{T,2}, V::Array{T,4}) where T <: AbstractFloat
 
+    M = complete_set(M)
     H = get_sparse_hamiltonian_matrix(M, h, V, Fermi.CurrentOptions["cas_cutoff"])
 
     @output "Diagonalizing Hamiltonian...\n"
@@ -366,4 +374,64 @@ function update_model_space(M::Array{Determinant,1}, h::Array{T,2}, V::Array{T,4
     #λ,ϕ = eigen(Array(H))
 
     return λ[1], ϕ[:,1], deepcopy(M)
+end
+
+
+function incomp(dets::Array{Determinant,1})
+
+    ming = 0
+    for d in dets
+
+        _det = Determinant(d.β, d.α)
+        if !(_det in dets)
+            ming += 1
+        end
+    end
+
+    return ming
+end
+
+function complete_set(dets::Array{Determinant,1})
+
+    newdets = Determinant[]
+    for d in dets
+        
+        asym = d.α ⊻ d.β
+        if asym == 0
+            continue
+        end
+
+        sym = d.α & d.β
+
+        n = count_ones(asym)
+        e = Int(n/2)
+        idx = Int[]
+
+        str = repeat("1",e)*repeat("0",e)
+        perms = multiset_permutations(str, n)
+        
+        i = 1
+        while i ≤ asym
+            if 1<<(i-1) & asym ≠ 0
+                push!(idx, i) 
+            end
+            i += 1
+        end
+
+        foo = x->reverse(bitstring(x))[1:7]
+        for p in perms
+            newα = sym
+            newβ = sym
+            for (x,i) in zip(p,idx)
+                if x == '1'
+                    newα = newα | (1<<(i-1))
+                elseif x == '0'
+                    newβ = newβ | (1<<(i-1))
+                end
+            end
+            push!(newdets, Determinant(newα, newβ))
+        end
+    end
+
+    return unique(vcat(dets,newdets))
 end
