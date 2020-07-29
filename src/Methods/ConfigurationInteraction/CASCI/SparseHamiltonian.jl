@@ -66,6 +66,7 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
         dets = get_determinants(act_elec, active, frozen)
         Ndets = length(dets)
     end
+    
     @output " done in {} seconds.\n" t
     @output "\nNumber of Determinants: {:10d}\n" Ndets
 
@@ -91,11 +92,8 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
 
     @output "\n • Most important determinants:\n\n"
 
-    @output "    Coefficient      α-String      β-String\n"
-
-    ds = d -> reverse(bitstring(d))[1:frozen+active]
-    for i in 1:10
-        @output "{:15.5f}      {}      {}\n" C[i]  ds(dets[i].α) ds(dets[i].β)
+    for i in 1:50
+        @output "{:15.5f}      {}\n" C[i]  detstring(dets[i], frozen+active)
     end
     @output "\n"
     return CASCI{T}(refwfn, λ[1]+T(refwfn.molecule.Vnuc), dets, C)
