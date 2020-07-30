@@ -896,6 +896,7 @@ function cas_decomposition(Cas_data::Tuple, ndocc::Int, frozen::Int, actocc::Arr
 
     # Compute ecT1
     for n in actocc 
+        @output "{}\n" n
         for f in actvir
 
             get_casT3!(T3_3n6f, n, f, Ccas_ex3, dets_ex3, ref, frozen, ndocc, T1, T2)

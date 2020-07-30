@@ -1,10 +1,12 @@
 using TensorOperations
 using Lints
 using Fermi.DIIS
+using Fermi.Integrals: ConventionalAOIntegrals, DFAOIntegrals
 
 # Define Algorithims
 abstract type RHFAlgorithm end
 struct ConventionalRHF <: RHFAlgorithm end
+struct DFRHF <: RHFAlgorithm end
 
 """
     Fermi.HartreeFock.RHF
@@ -37,10 +39,12 @@ end
 
 # Algorithm-specific dispatches
 include("ConventionalRHF.jl")
+include("DF-RHF.jl")
 
 function select_algorithm(A::String)
     implemented = Dict{String,Any}(
-        "conventional" => ConventionalRHF()
+        "conventional" => ConventionalRHF(),
+        "df"           => DFRHF()
        )
 
     try
@@ -58,8 +62,12 @@ Compute RHF wave function using data from Fermi.CurrentOptions
 """
 function RHF()
     molecule = Molecule()
-    aoint = ConventionalAOIntegrals(molecule) 
+    ints_selector = Dict{Any,Any}(
+                                     ConventionalRHF() => ConventionalAOIntegrals,
+                                     DFRHF()           => DFAOIntegrals
+                                    )
     Alg = select_algorithm(Fermi.CurrentOptions["scf_alg"])
+    aoint = ints_selector[Alg](molecule) 
     RHF(molecule, aoint, Alg)
 end
 
