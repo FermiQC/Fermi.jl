@@ -7,10 +7,25 @@ Conventional algorithm for to compute RHF wave function given Molecule, Integral
 function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, Alg::ConventionalRHF)
 
     @output "Using Core Guess\n"
-    sS = Hermitian(aoint.S)
-    A = sS^(-1/2)
-    Ft = (A)*(aoint.T+aoint.V)*transpose(A)
-    e,Ct = eigen(Ft)
+    S = Hermitian(aoint.S)
+    A = S^(-1/2)
+    H = Hermitian(aoint.T + aoint.V)
+    ndocc = molecule.Nα#size(S,1)
+    nvir = size(S,1) - ndocc
+    F = Array{Float64,2}(undef, ndocc+nvir, ndocc+nvir)
+    for i = 1:ndocc+nvir
+        F[i,i] = H[i,i]
+        for j = 1:ndocc+nvir
+            F[i,j] = 0.875*S[i,j]*(H[i,i] + H[j,j])
+            F[j,i] = F[i,j]
+        end
+    end
+    Ft = A*F*transpose(A)
+
+    # Get orbital energies and transformed coefficients
+    eps,Ct = eigen(Hermitian(Ft))
+
+    # Reverse transformation to get MO coefficients
     C = A*Ct
 
     RHF(molecule, aoint, C, Alg)
@@ -90,22 +105,6 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, C::Array{Float6
     @output "\n Iter.   {:>15} {:>10} {:>10} {:>8} {:>8}\n" "E[RHF]" "ΔE" "√|ΔD|²" "t" "DIIS"
     @output repeat("~",80)*"\n"
 
-    H = aoint.T + aoint.V
-    S = aoint.S
-    for i = 1:ndocc+nvir
-        F[i,i] = H[i,i]
-        for j = 1:ndocc+nvir
-            F[i,j] = 0.875*S[i,j]*(H[i,i] + H[j,j])
-            F[j,i] = F[i,j]
-        end
-    end
-    Ft = A*F*transpose(A)
-
-    # Get orbital energies and transformed coefficients
-    eps,Ct = eigen(Hermitian(Ft))
-
-    # Reverse transformation to get MO coefficients
-    C = A*Ct
 
     # Produce new Density Matrix
     Co = C[:,1:ndocc]
