@@ -174,7 +174,7 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
         ΔE = -E
         M = vcat(P, F)
         @output "Model space size: {}\n" length(M)
-        @output "Updating model space ..." length(M)
+        @output "Updating model space...\n" length(M)
         t = @elapsed E, Pcoef, P = update_model_space(M, h, V)
         @output " Model space updated in {:5.5f}\n" t
         ΔE += E
@@ -393,8 +393,8 @@ end
 
 function complete_set(dets::Array{Determinant,1})
 
-    newdets = Determinant[]
-    for d in dets
+    newdets = [Determinant[] for i = 1:Threads.nthreads()]
+    @Threads.threads for d in dets
         
         asym = d.α ⊻ d.β
         if asym == 0
@@ -407,7 +407,7 @@ function complete_set(dets::Array{Determinant,1})
         e = Int(n/2)
         idx = Int[]
 
-        str = repeat("1",e)*repeat("0",e)
+        str = vcat(repeat([1],e), repeat([0],e))
         perms = multiset_permutations(str, n)
         
         i = 1
@@ -418,20 +418,19 @@ function complete_set(dets::Array{Determinant,1})
             i += 1
         end
 
-        foo = x->reverse(bitstring(x))[1:7]
         for p in perms
             newα = sym
             newβ = sym
             for (x,i) in zip(p,idx)
-                if x == '1'
+                if x == 1
                     newα = newα | (1<<(i-1))
-                elseif x == '0'
+                elseif x == 0
                     newβ = newβ | (1<<(i-1))
                 end
             end
-            push!(newdets, Determinant(newα, newβ))
+            push!(newdets[Threads.threadid()], Determinant(newα, newβ))
         end
     end
-
+    newdets = vcat(newdets...)
     return unique(vcat(dets,newdets))
 end

@@ -870,10 +870,15 @@ function cas_decomposition(Cas_data::Tuple, ndocc::Int, frozen::Int, actocc::Arr
 
     ref, Ccas_ex1or2, dets_ex1or2, Ccas_ex3, dets_ex3, Ccas_ex4, dets_ex4 = Cas_data
 
+    o = 1:length(actocc)
+    v = 1:length(actvir)
+
     # Get T1 and T2
     T1 = zeros(size(fov))
     T2 = zeros(size(Voovv))
+    @output "Getting T1 and T2..."
     get_casT1_casT2!(T1, T2, Ccas_ex1or2, dets_ex1or2, ref, frozen, ndocc)
+    @output "Done.\n"
 
     # Initialize arrays
     ecT1 = zeros(size(fov))
@@ -884,25 +889,27 @@ function cas_decomposition(Cas_data::Tuple, ndocc::Int, frozen::Int, actocc::Arr
     T3_3m6f = similar(T2)
     T3_3n6e = similar(T2)
     T3_3m6e = similar(T2)
-    T4αβ = similar(T2)
-    T4αα = similar(T2)
+    #T4αβ = similar(T2)
+    #T4αα = similar(T2)
 
-    #T3_3n6f = zeros(size(T2))
-    #T3_3m6f = zeros(size(T2))
-    #T3_3n6e = zeros(size(T2))
-    #T3_3m6e = zeros(size(T2))
-    #T4αβ = zeros(size(T2))
-    #T4αα = zeros(size(T2))
+    T4αβ = zeros(length(o), length(o), length(v), length(v))
+    T4αα = zeros(length(o), length(o), length(v), length(v))
 
     # Compute ecT1
+    @output "Computing ecT1, ecT2\n"
+    maxn = maximum(actocc)
     for n in actocc 
+        @output "{} out of {}\n" n maxn
+        rn = n - frozen
         for f in actvir
+            rf = f - ndocc
 
             get_casT3!(T3_3n6f, n, f, Ccas_ex3, dets_ex3, ref, frozen, ndocc, T1, T2)
 
             get_ec_from_T3!(n, f, frozen, ndocc, ecT1, ecT2, T1, T3_3n6f, fov, Voovv, Vovvv, Vooov)
 
             for m in actocc 
+                rm = m - frozen
 
                 get_casT3!(T3_3m6f, m, f, Ccas_ex3, dets_ex3, ref, frozen, ndocc, T1, T2)
 
@@ -911,15 +918,12 @@ function cas_decomposition(Cas_data::Tuple, ndocc::Int, frozen::Int, actocc::Arr
                     get_casT3!(T3_3m6e, m, e, Ccas_ex3, dets_ex3, ref, frozen, ndocc, T1, T2)
                     get_casT3!(T3_3n6e, n, e, Ccas_ex3, dets_ex3, ref, frozen, ndocc, T1, T2)
 
-                    get_casT4αβ!(T4αβ, m,n,e,f, Ccas_ex4, dets_ex4, Ccas_ex3, dets_ex3, ref, frozen, ndocc, T1, T2, T3_3n6f, T3_3m6e)
-                    get_casT4αα!(T4αα, m,n,e,f, Ccas_ex4, dets_ex4, Ccas_ex3, dets_ex3, ref, frozen, ndocc, T1, T2, T3_3n6f, T3_3m6f, T3_3n6e, T3_3m6e)
+                    get_casT4αβ!(T4αβ, m,n,e,f, Ccas_ex4, dets_ex4, Ccas_ex3, dets_ex3, ref, frozen, ndocc, T1[o,v], T2[o,o,v,v], T3_3n6f[o,o,v,v], T3_3m6e[o,o,v,v])
+                    get_casT4αα!(T4αα, m,n,e,f, Ccas_ex4, dets_ex4, Ccas_ex3, dets_ex3, ref, frozen, ndocc, T1[o,v], T2[o,o,v,v], T3_3n6f[o,o,v,v], T3_3m6f[o,o,v,v], T3_3n6e[o,o,v,v], T3_3m6e[o,o,v,v])
 
-                    rm = m - frozen
-                    rn = n - frozen
                     re = e - ndocc
-                    rf = f - ndocc
-                    ecT2 += T4αβ.*Voovv[rm,rn,re,rf]
-                    ecT2 += 0.25.*(T4αα + permutedims(T4αα, [2,1,4,3])).*(Voovv[rm,rn,re,rf] - Voovv[rn,rm,re,rf])
+                    ecT2[o,o,v,v] += T4αβ.*Voovv[rm,rn,re,rf]
+                    ecT2[o,o,v,v] += 0.25.*(T4αα + permutedims(T4αα, [2,1,4,3])).*(Voovv[rm,rn,re,rf] - Voovv[rn,rm,re,rf])
                 end
             end
         end
