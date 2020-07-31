@@ -172,7 +172,7 @@ function get_atoms(molstring::String; unit::String="angstrom")
 
     atoms = Atom[]
     #exp = r"(\w{1,2})\s+([-+]??\d+\.\d+\s+[-+]??\d+\.\d+\s+[-+]??\d+\.\d+)"
-    for line in split(molstring, "\n")
+    for line in split(strip(molstring), "\n")
         #m = match(exp, line)
         m = split(line)
         if length(m) != 4

@@ -901,6 +901,7 @@ function cas_decomposition(Cas_data::Tuple, ndocc::Int, frozen::Int, actocc::Arr
     for n in actocc 
         @output "{} out of {}\n" n maxn
         rn = n - frozen
+
         for f in actvir
             rf = f - ndocc
 

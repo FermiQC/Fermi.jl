@@ -71,6 +71,7 @@ struct ConventionalAOIntegrals{T} <: AbstractAOIntegrals where T <: AbstractFloa
     ERI:: I where I <: Fermi.AbstractTensor
 end
 
+
 """
     Fermi.Integrals.ConventionalAOIntegrals()
 
@@ -164,6 +165,85 @@ function ConventionalAOIntegrals(molecule::Molecule, basis::String, interconnect
     @output "Exiting Lints.\n\n"
 
     return ConventionalAOIntegrals{Float64}(basis, bas, S, T, V, I)
+end
+
+struct DFAOIntegrals{T} <: AbstractAOIntegrals where T <: AbstractFloat
+    bname::String
+    dfbname::String
+    basis::Lints.BasisSetAllocated
+    dfbasis::Lints.BasisSetAllocated
+    S::Array{T,2}
+    T::Array{T,2}
+    V::Array{T,2}
+    B::Array{T,3}
+end
+
+function DFAOIntegrals(mol::Fermi.Geometry.Molecule)
+    bname = Fermi.CurrentOptions["basis"]
+    DFAOIntegrals(mol,bname)
+end
+function DFAOIntegrals()
+    bname = Fermi.CurrentOptions["basis"]
+    DFAOIntegrals(Molecule(),bname)
+end
+
+function DFAOIntegrals(molecule::Molecule, bname::String)
+    DFAOIntegrals(molecule,bname,Fermi.ComputeEnvironment.interconnect,
+                            Fermi.ComputeEnvironment.communicator,
+                            Fermi.ComputeEnvironment.accelerator)
+end
+
+function DFAOIntegrals(molecule::Molecule, bname::String, interconnnect::Fermi.Environments.No_IC,
+                                                communicator::Fermi.Environments.NoCommunicator,
+                                                accelerator::Fermi.Environments.NoAccelerator)
+    open("/tmp/molfile.xyz","w") do molfile
+        natom = length(molecule.atoms)
+        write(molfile,"$natom\n\n")
+        write(molfile,Fermi.Geometry.get_xyz(molecule))
+    end
+
+    @assert lowercase(bname) in ["cc-pvdz",
+                                  "cc-pvtz",
+                                  "cc-pvqz",
+                                  "cc-pv5z",
+                                  "aug-cc-pvdz",
+                                  "aug-cc-pvtz",
+                                  "aug-cc-pvqz",
+                                  "aug-cc-pv5z"] "Only Dunning basis sets are supported for density fitting!"
+    dfbname = bname*"-RI"
+    Lints.libint2_init()
+    @output "   • Lints started\n\n"
+    @output "   Basis set: {}\n" bname
+    @output "   DF Basis set: {}\n" dfbname 
+    mol = Lints.Molecule("/tmp/molfile.xyz")
+    bas = Lints.BasisSet(bname, mol)
+    dfbas = Lints.BasisSet(dfbname,mol)
+
+    nprim = max(Lints.max_nprim(bas),Lints.max_nprim(dfbas))
+    l = max(Lints.max_l(bas),Lints.max_l(dfbas))
+
+    S_engine = Lints.OverlapEngine(nprim,l)
+    T_engine = Lints.KineticEngine(nprim,l)
+    V_engine = Lints.NuclearEngine(nprim,l,mol)
+    eri_engines = [Lints.DFEngine(nprim,l) for i=1:Threads.nthreads()]
+    sz = Lints.getsize(S_engine,bas)
+    dfsz = Lints.getsize(S_engine,dfbas)
+    S = zeros(sz,sz)
+    T = zeros(sz,sz)
+    V = zeros(sz,sz)
+    J = zeros(dfsz,dfsz)
+    Pqp = zeros(dfsz,sz,sz)
+    Lints.make_2D(S,S_engine,bas)
+    Lints.make_2D(T,T_engine,bas)
+    Lints.make_2D(V,V_engine,bas)
+    Lints.make_j(J,eri_engines[1],dfbas)
+    Lints.make_b(Pqp,eri_engines,bas,dfbas)
+    Jh = J^(-1/2)
+    B = zeros(dfsz,sz,sz)
+    Fermi.contract!(B,Pqp,Jh,"Qpq","Pqp","PQ")
+    @output "Exiting Lints.\n\n"
+
+    return DFAOIntegrals{Float64}(bname,dfbname,bas, dfbas, S, T, V, B)
 end
 
 """
