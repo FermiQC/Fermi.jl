@@ -4,7 +4,7 @@ using TensorOperations
 
 Conventional algorithm for to compute RHF wave function given Molecule, Integrals objects.
 """
-function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, Alg::ConventionalRHF)
+function RHF(molecule::Molecule, aoint::DFAOIntegrals, Alg::DFRHF)
 
     @output "Using GWH Guess\n"
     S = Hermitian(aoint.S)
@@ -36,7 +36,7 @@ end
 
 Conventional algorithm for to compute RHF wave function. Inital guess for orbitals is built from given RHF wfn.
 """
-function RHF(wfn::RHF, Alg::ConventionalRHF)
+function RHF(wfn::RHF, Alg::DFRHF)
 
     aoint = ConventionalAOIntegrals(Fermi.Geometry.Molecule())
     RHF(wfn, aoint, Alg)
@@ -48,7 +48,7 @@ end
 Conventional algorithm for to compute RHF wave function. Inital guess for orbitals is built from given RHF wfn. Integrals
 are taken from the aoint input.
 """
-function RHF(wfn::RHF, aoint::ConventionalAOIntegrals, Alg::ConventionalRHF)
+function RHF(wfn::RHF, aoint::DFAOIntegrals, Alg::DFRHF)
 
     # Projection of A→B done using equations described in Werner 2004 
     # https://doi.org/10.1080/0026897042000274801
@@ -67,7 +67,7 @@ end
 
 Basic function for conventional RHF using conventional integrals.
 """
-function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, C::Array{Float64,2}, Alg::ConventionalRHF)
+function RHF(molecule::Molecule, aoint::DFAOIntegrals, C::Array{Float64,2}, Alg::DFRHF)
     # Print header
     do_diis = Fermi.CurrentOptions["diis"]
     Fermi.HartreeFock.print_header()
@@ -116,7 +116,7 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, C::Array{Float6
 
             # Build the Fock Matrix
             F_old = deepcopy(F)
-            build_fock!(F, aoint.T+aoint.V, D, aoint.ERI)
+            build_fock!(F, aoint.T+aoint.V, D, aoint.B,Alg)
             Eelec = RHFEnergy(D, aoint.T+aoint.V, F)
             #ite == 1 ? display(F) : nothing
 
@@ -173,17 +173,34 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, C::Array{Float6
     if !converged
         @output "\n !! SCF Equations did not converge in {:>5} iterations !!\n" maxit
     end
-    return RHF(aoint.basis, aoint.LintsBasis, molecule, E, ndocc, nvir, C, eps)
+    return RHF(aoint.bname, aoint.basis, molecule, E, ndocc, nvir, C, eps)
 end
 
 function RHFEnergy(D::Array{Float64,2}, H::Array{Float64,2},F::Array{Float64,2})
     return sum(D .* (H .+ F))
 end
 
-function build_fock!(F::Array{Float64,2}, H::Array{Float64,2}, D::Array{Float64,2}, ERI::Fermi.MemTensor)
+function build_fock!(F::Array{Float64,2}, H::Array{Float64,2}, D::Array{Float64,2}, ERI::Array{Float64,3}, Alg::DFRHF)
     F .= H
-    Fermi.contract!(F,D,ERI,1.0,1.0,2.0,"mn","rs","mnrs")
-    Fermi.contract!(F,D,ERI,1.0,1.0,-1.0,"mn","rs","mrns")
+    sz = size(F,1)
+    dfsz = size(ERI,1)
+    Fp = zeros(dfsz)
+    Fermi.contract!(Fp,D,ERI,1.0,1.0,2.0,"Q","rs","Qrs")
+    Fermi.contract!(F,Fp,ERI,1.0,1.0,1.0,"mn","Q","Qmn")
+    Fp = zeros(dfsz,sz,sz)
+    Fermi.contract!(Fp,D,ERI,0.0,1.0,-1.0,"Qrn","rs","Qns")
+    Fermi.contract!(F,ERI,Fp,1.0,1.0,1.0,"mn","Qmr","Qrn")
+    #_ERI = zeros(sz,sz,sz,sz)
+    #@tensor _ERI[p,q,r,s] = ERI[Q,p,q]*ERI[Q,r,s]
+    #Fermi.contract!(_ERI,ERI,ERI,"pqrs","Qpq","Qrs")
+    #Fermi.contract!(F,D,_ERI,1.0,1.0,2.0,"mn","rs","mnrs")
+    #Fermi.contract!(F,D,_ERI,1.0,1.0,-1.0,"mn","rs","mrns")
+    #Fermi.contract!(F,D,_ERI,1.0,1.0,2.0,"mn","rs","mnrs")
+    #Fermi.contract!(F,D,_ERI,1.0,1.0,-1.0,"mn","rs","mrns")
+    #@tensor F[m,n] = D[r,s]*(2*_ERI[m,n,r,s] - _ERI[m,r,n,s])
+    #@tensoropt F[m,n] = D[r,s]*(2*ERI[Q,m,n]*ERI[Q,r,s] - ERI[Q,m,r]*ERI[Q,n,s])
+    #@tensoropt F[p,q] = 2*D[r,s]*ERI[Q,p,q]*ERI[Q,r,s]
+    #@tensoropt F[p,q] -= D[r,s]*ERI[Q,p,r]*ERI[Q,q,s]
     #J = 2*Fermi.contract(D,ERI,"rs","mnrs")
     #@tensoropt F[m,n] += 2.0*D[r,s]*ERI.data[m,n,r,s]
     #K = -Fermi.contract(D,ERI,"rs","mrns")
