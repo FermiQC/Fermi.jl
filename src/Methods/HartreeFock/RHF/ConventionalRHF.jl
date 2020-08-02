@@ -1,4 +1,5 @@
 using TensorOperations
+using Zygote
 """
     Fermi.HartreeFock.RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, Alg::ConventionalRHF)
 
@@ -111,25 +112,28 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, C::Array{Float6
     D = Fermi.contract(Co,Co,"um","vm")
     diis_start = 3
     E = 0.0
+    ΔE = 1.0
+    Drms = 1.0
+    oda_cutoff = 1E-2
+    oda = Fermi.CurrentOptions["oda"]
     t = @elapsed while ite ≤ maxit
         t_iter = @elapsed begin
 
             # Build the Fock Matrix
             F_old = deepcopy(F)
+            D_old = deepcopy(D)
             build_fock!(F, aoint.T+aoint.V, D, aoint.ERI)
-            Eelec = RHFEnergy(D, aoint.T+aoint.V, F)
-            #ite == 1 ? display(F) : nothing
-
-
-            do_diis ? err = transpose(A)*(F*D*aoint.S - aoint.S*D*F)*A : nothing
-            do_diis ? push!(DM, F, err) : nothing
-            do_diis && ite > diis_start ? F = Fermi.DIIS.extrapolate(DM) : nothing
-
+            if !oda || Drms < oda_cutoff
+                do_diis ? err = transpose(A)*(F*D*aoint.S - aoint.S*D*F)*A : nothing
+                do_diis ? push!(DM, F, err) : nothing
+                do_diis && ite > diis_start ? F = Fermi.DIIS.extrapolate(DM) : nothing
+            end
+            
             # Produce Ft
             Ft = A*F*transpose(A)
 
             # Get orbital energies and transformed coefficients
-            eps,Ct = eigen(Hermitian(Ft))
+            eps,Ct = eigen(Hermitian(real.(Ft)))
 
             # Reverse transformation to get MO coefficients
             C = A*Ct
@@ -137,6 +141,18 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, C::Array{Float6
             # Produce new Density Matrix
             Co = C[:,1:ndocc]
             Dnew = Fermi.contract(Co,Co,"um","vm")
+            if oda && Drms > oda_cutoff 
+                s = -tr(F * (D_old - Dnew ))
+                c = -tr(( F_old - F) * (D_old - Dnew))
+                if c <= -s/2
+                    λ = 1.0
+                else
+                    λ = -s/(2*c)
+                end
+                F = (1-λ)*F_old + λ*F
+                Dnew = (1-λ)*D_old + λ*Dnew
+            end
+            Eelec = RHFEnergy(Dnew, aoint.T+aoint.V, F)
             #@tensor Dnew[u,v] := Co[u,m]*Co[v,m]
 
             # Compute Energy
@@ -176,6 +192,24 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, C::Array{Float6
     return RHF(aoint.basis, aoint.LintsBasis, molecule, E, ndocc, nvir, C, eps)
 end
 
+function RHFEnergy2(C,H,F,ndocc)
+    nao = size(C,1)
+    Co = C[:,1:ndocc]
+    D = zeros(size(C))
+    for u = 1:nao
+        for v = 1:nao
+            for m = 1:ndocc
+                D[u,v] += Co[u,m]*Co[v,m]
+            end
+        end
+    end
+    return sum(D .* (H .+ F))
+end
+function RHFEnergy3(D1,D2,H,F1,F2,p)
+    F = (1-p) .* F1 .+ p .* F2
+    D = (1-p) .* D1 .+ p .* D2
+    return sum(D .* (H .+ F))
+end
 function RHFEnergy(D::Array{Float64,2}, H::Array{Float64,2},F::Array{Float64,2})
     return sum(D .* (H .+ F))
 end
