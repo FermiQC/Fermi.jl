@@ -26,6 +26,7 @@ CurrentOptions = Dict{String,Union{Float64,Int,String,Bool,Nothing}}(
                                   "scf_max_iter" => 50,
                                   "scf_max_rms" => 10^-10,
                                   "scf_alg" => "conventional",
+                                  "scf_guess" => "gwh",
                                   "quiet" => true,
                                   "mp2_type" => "conv",
                                   "precision" => "double",
