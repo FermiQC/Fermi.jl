@@ -1,35 +1,4 @@
 using TensorOperations
-"""
-    Fermi.HartreeFock.RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, Alg::ConventionalRHF)
-
-Conventional algorithm for to compute RHF wave function given Molecule, Integrals objects.
-"""
-function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, Alg::ConventionalRHF)
-
-    @output "Using GWH Guess\n"
-    S = Hermitian(aoint.S)
-    A = S^(-1/2)
-    H = Hermitian(aoint.T + aoint.V)
-    ndocc = molecule.Nα#size(S,1)
-    nvir = size(S,1) - ndocc
-    F = Array{Float64,2}(undef, ndocc+nvir, ndocc+nvir)
-    for i = 1:ndocc+nvir
-        F[i,i] = H[i,i]
-        for j = 1:ndocc+nvir
-            F[i,j] = 0.875*S[i,j]*(H[i,i] + H[j,j])
-            F[j,i] = F[i,j]
-        end
-    end
-    Ft = A*F*transpose(A)
-
-    # Get orbital energies and transformed coefficients
-    eps,Ct = eigen(Hermitian(Ft))
-
-    # Reverse transformation to get MO coefficients
-    C = A*Ct
-
-    RHF(molecule, aoint, C, Alg)
-end
 
 """
     Fermi.HartreeFock.RHF(wfn::RHF, Alg::ConventionalRHF)
@@ -42,25 +11,6 @@ function RHF(wfn::RHF, Alg::ConventionalRHF)
     RHF(wfn, aoint, Alg)
 end
 
-"""
-    Fermi.HartreeFock.RHF(wfn::RHF, aoint::ConventionalAOIntegrals, Alg::ConventionalRHF)
-
-Conventional algorithm for to compute RHF wave function. Inital guess for orbitals is built from given RHF wfn. Integrals
-are taken from the aoint input.
-"""
-function RHF(wfn::RHF, aoint::ConventionalAOIntegrals, Alg::ConventionalRHF)
-
-    # Projection of A→B done using equations described in Werner 2004 
-    # https://doi.org/10.1080/0026897042000274801
-    @output "Using {} wave function as initial guess\n" wfn.basis
-    Ca = wfn.C
-    Sbb = aoint.S
-    Sab = Lints.projector(wfn.LintsBasis, aoint.LintsBasis)
-    T = transpose(Ca)*Sab*(Sbb^-1)*transpose(Sab)*Ca
-    Cb = (Sbb^-1)*transpose(Sab)*Ca*T^(-1/2)
-    Cb = real.(Cb)
-    RHF(Fermi.Geometry.Molecule(), aoint, Cb, Alg)
-end
 
 """
     Fermi.HartreeFock.RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, Cguess::Array{Float64,2}, Alg::ConventionalRHF)
@@ -173,7 +123,7 @@ function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, C::Array{Float6
     if !converged
         @output "\n !! SCF Equations did not converge in {:>5} iterations !!\n" maxit
     end
-    return RHF(aoint.basis, aoint.LintsBasis, molecule, E, ndocc, nvir, C, eps)
+    return RHF(aoint.basis, deepcopy(aoint.LintsBasis), molecule, E, ndocc, nvir, C, eps, aoint)
 end
 
 function RHFEnergy(D::Array{Float64,2}, H::Array{Float64,2},F::Array{Float64,2})
@@ -184,10 +134,4 @@ function build_fock!(F::Array{Float64,2}, H::Array{Float64,2}, D::Array{Float64,
     F .= H
     Fermi.contract!(F,D,ERI,1.0,1.0,2.0,"mn","rs","mnrs")
     Fermi.contract!(F,D,ERI,1.0,1.0,-1.0,"mn","rs","mrns")
-    #J = 2*Fermi.contract(D,ERI,"rs","mnrs")
-    #@tensoropt F[m,n] += 2.0*D[r,s]*ERI.data[m,n,r,s]
-    #K = -Fermi.contract(D,ERI,"rs","mrns")
-    #F .+= J + K
-    #@tensoropt F[m,n] -= D[r,s]*ERI.data[m,r,n,s]
-    #@assert F ≈ _F_
 end
