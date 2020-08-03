@@ -190,21 +190,4 @@ function build_fock!(F::Array{Float64,2}, H::Array{Float64,2}, D::Array{Float64,
     Fp = zeros(dfsz,sz,sz)
     Fermi.contract!(Fp,D,ERI,0.0,1.0,-1.0,"Qrn","rs","Qns")
     Fermi.contract!(F,ERI,Fp,1.0,1.0,1.0,"mn","Qmr","Qrn")
-    #_ERI = zeros(sz,sz,sz,sz)
-    #@tensor _ERI[p,q,r,s] = ERI[Q,p,q]*ERI[Q,r,s]
-    #Fermi.contract!(_ERI,ERI,ERI,"pqrs","Qpq","Qrs")
-    #Fermi.contract!(F,D,_ERI,1.0,1.0,2.0,"mn","rs","mnrs")
-    #Fermi.contract!(F,D,_ERI,1.0,1.0,-1.0,"mn","rs","mrns")
-    #Fermi.contract!(F,D,_ERI,1.0,1.0,2.0,"mn","rs","mnrs")
-    #Fermi.contract!(F,D,_ERI,1.0,1.0,-1.0,"mn","rs","mrns")
-    #@tensor F[m,n] = D[r,s]*(2*_ERI[m,n,r,s] - _ERI[m,r,n,s])
-    #@tensoropt F[m,n] = D[r,s]*(2*ERI[Q,m,n]*ERI[Q,r,s] - ERI[Q,m,r]*ERI[Q,n,s])
-    #@tensoropt F[p,q] = 2*D[r,s]*ERI[Q,p,q]*ERI[Q,r,s]
-    #@tensoropt F[p,q] -= D[r,s]*ERI[Q,p,r]*ERI[Q,q,s]
-    #J = 2*Fermi.contract(D,ERI,"rs","mnrs")
-    #@tensoropt F[m,n] += 2.0*D[r,s]*ERI.data[m,n,r,s]
-    #K = -Fermi.contract(D,ERI,"rs","mrns")
-    #F .+= J + K
-    #@tensoropt F[m,n] -= D[r,s]*ERI.data[m,r,n,s]
-    #@assert F ≈ _F_
 end
