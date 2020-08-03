@@ -33,7 +33,7 @@ _struct tree:_
 """
 struct RHF <: AbstractHFWavefunction
     basis::String
-    LintsBasis::Lints.BasisSetAllocated
+#    LintsBasis::Lints.BasisSetAllocated
     molecule::Molecule
     energy::Float64
     ndocc::Int
@@ -44,8 +44,9 @@ struct RHF <: AbstractHFWavefunction
 end
 
 # Algorithm-specific dispatches
-include("ConventionalRHF.jl")
-include("DF-RHF.jl")
+#include("ConventionalRHF.jl")
+#include("DF-RHF.jl")
+include("SCF.jl")
 
 function select_alg(A::String)
     implemented = Dict{String,Any}(
@@ -172,3 +173,6 @@ function RHF(wfn::RHF)
     RHF(wfn, Alg)
 end
 
+function RHFEnergy(D::Array{Float64,2}, H::Array{Float64,2},F::Array{Float64,2})
+    return sum(D .* (H .+ F))
+end

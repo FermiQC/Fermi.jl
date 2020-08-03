@@ -63,7 +63,7 @@ _struct tree:_
 **ConventionalAOIntegrals** <: AbstractAOIntegrals <: AbstractIntegrals
 """
 struct ConventionalAOIntegrals{T} <: AbstractAOIntegrals where T <: AbstractFloat
-    basis::String
+    bname::String
     LintsBasis::Lints.BasisSetAllocated
     S::Array{T,2}
     T::Array{T,2}
@@ -175,7 +175,7 @@ struct DFAOIntegrals{T} <: AbstractAOIntegrals where T <: AbstractFloat
     S::Array{T,2}
     T::Array{T,2}
     V::Array{T,2}
-    B::Array{T,3}
+    ERI::Array{T,3}
 end
 
 function DFAOIntegrals(mol::Fermi.Geometry.Molecule)
