@@ -266,6 +266,14 @@ struct PhysRestrictedMOIntegrals{T} <: AbstractMOIntegrals where T <: AbstractFl
    vv::Array{T,2}
 end
 
+struct Ints{T<: AbstractFloat}
+    cache::Dict{String,A} where A <: Fermi.AbstractTensor
+    bname::String
+    mol::Molecule
+    basis::B where B <: Lints.BasisSet
+end
+
+
 """
 test
 """

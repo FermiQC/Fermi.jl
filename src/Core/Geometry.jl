@@ -38,7 +38,7 @@ Object storing information about an atom.
 struct Atom
     AtomicSymbol::String
     Z::Int
-    xyz::Array{Float64,1}
+    xyz::Tuple
 end
 
 """
@@ -56,7 +56,7 @@ Object storing information about a molecule (group of atoms).
     Vnuc         Nuclear repulsion energy
 """
 struct Molecule
-    atoms::Array{Atom,1}
+    atoms::Tuple
     charge::Int
     multiplicity::Int
     Nα::Int
@@ -135,7 +135,7 @@ function Molecule(atoms::Array{Atom,1}, charge::Int, multiplicity::Int)
     Nβ = (nelec - αexcess)/2
     Nα = nelec - Nβ
     
-    out =  Molecule(atoms, charge, multiplicity, Nα, Nβ, Vnuc)
+    out =  Molecule(Tuple(atoms), charge, multiplicity, Nα, Nβ, Vnuc)
     @output "   • Molecule:\n\n"
     output(get_xyz(out))
     @output "\n"
@@ -192,7 +192,7 @@ function get_atoms(molstring::String; unit::String="angstrom")
                 throw(InvalidMolecule("Failed to process XYZ string"))
             end
 
-            push!(atoms, Atom(AtomicSymbol, Z, xyz))
+            push!(atoms, Atom(AtomicSymbol, Z, Tuple(xyz)))
         end
     end
     return atoms
