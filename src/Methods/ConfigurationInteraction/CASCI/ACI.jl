@@ -118,11 +118,8 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
     ϵsum = nothing
     ϵest = nothing
     oldP = nothing
-    cflag = true
+    cflag = false
     while true
-        if ite > 20
-            break
-        end
         @output " → Iteration {}\n\n" ite
         @output "   • P\n"
         @output "Initial model space size: {}\n\n" length(P)
@@ -182,6 +179,11 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
         @output "Energy Change                {:15.10f}\n" ΔE
 
         if oldP == Set(P) 
+            cflag = true
+            break
+        end
+        ite += 1
+        if ite > 100
             break
         end
         oldP = Set(deepcopy(P))
@@ -205,7 +207,6 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
         end
         @output "Final coarse grained model space size is {}\n" length(P)
         @output repeat("=",50)*"\n"
-        ite += 1
     end
     end #@elapsed
 
