@@ -80,6 +80,8 @@ function RCCSD{T}(refwfn::RHF, newT1::Array{T, 2}, newT2::Array{T,4}, Alg::CTF) 
     fvv = ints["FVV"] - Diagonal(ints["FVV"])
     fov = ints["FOV"]
 
+    #display(ints.C["V"])
+    #display(ints["OOVV"])
     # Compute Guess Energy
     @assert newT1 ≈ ints["FOV"] ./ d
     @assert newT2 ≈ ints["OOVV"] ./ D

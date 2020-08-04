@@ -13,6 +13,13 @@ import Base.getindex
 
 ## TODO: Implement zeroed initialization for all AbstractTensor
 
+struct PackedTensor{T} <: AbstractTensor where T <: Number
+    symmetries::Dict{Tuple,String}
+    data::Array{T,1}
+    ndim::Int8
+    dims::Array{UInt16,1}
+end
+
 struct MemTensor{T} <: AbstractTensor where T <: Number
     data::Array{T}
     ndim::Int8

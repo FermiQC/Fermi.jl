@@ -1,7 +1,7 @@
 using TensorOperations
 using Lints
 using Fermi.DIIS
-using Fermi.Integrals: ConventionalAOIntegrals, DFAOIntegrals
+using Fermi.Integrals: ConventionalAOIntegrals, DFAOIntegrals, IntegralHelper
 
 # Define Algorithims
 abstract type RHFAlgorithm end
@@ -32,26 +32,21 @@ _struct tree:_
 **RHF** <: AbstractHFWavefunction <: AbstractReferenceWavefunction <: AbstractWavefunction
 """
 struct RHF <: AbstractHFWavefunction
-    basis::String
-#    LintsBasis::Lints.BasisSetAllocated
     molecule::Molecule
     energy::Float64
     ndocc::Int
     nvir::Int
-    C::Array{Float64,2} 
     eps::Array{Float64,1}
-    ints::I where I <: AbstractAOIntegrals
+    ints::IntegralHelper
 end
 
 # Algorithm-specific dispatches
-#include("ConventionalRHF.jl")
-#include("DF-RHF.jl")
 include("SCF.jl")
 
 function select_alg(A::String)
     implemented = Dict{String,Any}(
-        "conventional" => (ConventionalAOIntegrals,ConventionalRHF()),
-        "df"           => (DFAOIntegrals,DFRHF())
+        "conventional" => (ConventionalRHF()),
+        "df"           => (DFRHF())
        )
 
     try
@@ -85,10 +80,11 @@ function RHF()
 end
 
 function RHF(molecule::Molecule)
-    aoint_type,Alg = select_alg(Fermi.CurrentOptions["scf_alg"])
-    aoint = aoint_type(molecule)
+    Alg = select_alg(Fermi.CurrentOptions["scf_alg"])
+    ints = Fermi.Integrals.IntegralHelper()
+    #aoint = aoint_type(molecule)
     guess = select_guess(Fermi.CurrentOptions["scf_guess"])
-    RHF(molecule, aoint, Alg, guess)
+    RHF(molecule, ints, Alg, guess)
 end
 
 """
@@ -96,13 +92,12 @@ end
 
 Conventional algorithm for to compute RHF wave function given Molecule, Integrals objects.
 """
-function RHF(molecule::Molecule, aoint::A, Alg::B, guess::GWHGuess) where { A <: AbstractAOIntegrals,
-                                                                            B <: RHFAlgorithm }
+function RHF(molecule::Molecule, aoint::IntegralHelper, Alg::B, guess::GWHGuess) where B <: RHFAlgorithm 
 
     @output "Using GWH Guess\n"
-    S = Hermitian(aoint.S)
+    S = Hermitian(aoint["S"])
     Λ = S^(-1/2)
-    H = Hermitian(aoint.T + aoint.V)
+    H = Hermitian(aoint["T"] + aoint["V"])
     ndocc = molecule.Nα#size(S,1)
     nvir = size(S,1) - ndocc
     F = Array{Float64,2}(undef, ndocc+nvir, ndocc+nvir)
@@ -124,12 +119,11 @@ function RHF(molecule::Molecule, aoint::A, Alg::B, guess::GWHGuess) where { A <:
     RHF(molecule, aoint, C, Alg)
 end
 
-function RHF(molecule::Molecule, aoint::A, Alg::B, guess::CoreGuess) where { A <: AbstractAOIntegrals,
-                                                                             B <: AbstractAOIntegrals }
+function RHF(molecule::Molecule, aoint::IntegralHelper, Alg::B, guess::CoreGuess) where B <: AbstractAOIntegrals 
 
-    S = Hermitian(aoint.S)
+    S = Hermitian(aoint["S"])
     Λ = S^(-1/2)
-    H = Hermitian(aoint.T + aoint.V)
+    H = Hermitian(aoint["T"] + aoint["V"])
     F = Array{Float64,2}(undef, ndocc+nvir, ndocc+nvir)
     F .= H
     Ft = Λ*F*transpose(Λ)
@@ -148,8 +142,7 @@ end
 Conventional algorithm for to compute RHF wave function. Inital guess for orbitals is built from given RHF wfn. Integrals
 are taken from the aoint input.
 """
-function RHF(wfn::RHF, aoint::A, Alg::B) where { A <: AbstractAOIntegrals,
-                                                 B <: RHFAlgorithm }
+function RHF(wfn::RHF, aoint::IntegralHelper, Alg::B) where B <: RHFAlgorithm 
 
     # Projection of A→B done using equations described in Werner 2004 
     # https://doi.org/10.1080/0026897042000274801
