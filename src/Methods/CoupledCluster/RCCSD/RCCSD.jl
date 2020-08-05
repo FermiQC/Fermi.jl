@@ -20,11 +20,6 @@ struct RCCSD{T} <: AbstractCCWavefunction
     T2::_T where _T <: Fermi.AbstractTensor
 end
 
-
-#implementations
-include("CTF.jl")
-include("DF-CTF.jl")
-
 # Most general function. It defines the precision and call a precision-specific function
 """
     Fermi.CoupledCluster.RCCSD()
@@ -36,6 +31,7 @@ function RCCSD()
     dummy = RCCSD{prec}(0.0,0.0,Fermi.MemTensor(zeros(prec,0,0)),Fermi.MemTensor(zeros(prec,0,0,0,0)))
     RCCSD(dummy)
 end
+
 function RCCSD(guess::RCCSD{T}) where T <: AbstractFloat
     prec = eltype(guess.T2.data)
     RCCSD{prec}(guess)
@@ -52,3 +48,10 @@ function RCCSD{T}(guess::RCCSD{Tb}) where { T <: AbstractFloat,
     RCCSD{T}(guess,alg)
 end
 
+
+# main kernel (ccsd iteration logic)
+include("kernel.jl")
+
+# implementation specific functions (look at one of these for guidance implementing a new method!)
+include("CTF.jl")
+include("DF-CTF.jl")

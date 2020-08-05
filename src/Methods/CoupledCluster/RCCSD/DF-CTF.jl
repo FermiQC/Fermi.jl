@@ -1,6 +1,9 @@
 using LinearAlgebra
 using Fermi.DIIS
 
+# Functions specific to DF-CTF
+#
+############ PREPROCESSING ################
 """
     Fermi.CoupledCluster.RCCSD{T}(Alg::CTF)
 
@@ -8,9 +11,6 @@ Compute a RCCSD wave function using the Compiled time factorization algorithm (C
 """
 function RCCSD{T}(guess::RCCSD{Tb},Alg::DFCTF) where { T <: AbstractFloat,
                                                     Tb <: AbstractFloat }
-    #molecule = Fermi.Geometry.Molecule()
-    #aoint = Fermi.Integrals.DFAOIntegrals(molecule)
-    #refwfn = Fermi.HartreeFock.RHF(molecule, aoint, Fermi.HartreeFock.DFRHF())
     refwfn = Fermi.HartreeFock.RHF()
 
     drop_occ = Fermi.CurrentOptions["drop_occ"]
@@ -20,25 +20,6 @@ function RCCSD{T}(guess::RCCSD{Tb},Alg::DFCTF) where { T <: AbstractFloat,
     Fermi.Integrals.aux_ri!(ints)
     RCCSD{T}(refwfn, guess, ints, Alg) 
 end
-
-#"""
-#    Fermi.CoupledCluster.RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, Alg::CTF)
-#
-#Compute a RCCSD wave function using the Compiled time factorization algorithm (CTF). Precision (T), reference wavefunction (refwfn)
-#and molecular orbital integrals (moint) must be passed.
-#"""
-#function RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, Alg::DFCTF) where T <: AbstractFloat
-#    d = [i - a for i = diag(moint.oo), a = diag(moint.vv)]
-#    D = [i + j - a - b for i = diag(moint.oo), j = diag(moint.oo), a = diag(moint.vv), b = diag(moint.vv)]
-#    newT1 = moint.ov./d
-#    Bov = moint.Bov
-#    @tensor oovv[i,j,a,b] := Bov[Q,i,a]*Bov[Q,j,b]
-#    #oovv = permutedims(zeros(size(D)),(1,3,2,4))
-#    #Fermi.contract!(oovv,aoint.Bov,aoint.Bov,"pqrs","Qpq","Qrs")
-#    #oovv = permutedims(oovv,(1,3,2,4))
-#    newT2 = oovv./D
-#    RCCSD{T}(refwfn, moint, newT1, newT2, Alg)
-#end
 
 function RCCSD{T}(refwfn::RHF, guess::RCCSD{Tb}, ints::IntegralHelper, Alg::DFCTF) where { T <: AbstractFloat,
                                                                                                     Tb <: AbstractFloat }
@@ -50,214 +31,28 @@ function RCCSD{T}(refwfn::RHF, guess::RCCSD{Tb}, ints::IntegralHelper, Alg::DFCT
     newT2 = oovv ./ D
     RCCSD{T}(refwfn, ints, newT1, newT2, Alg)
 end
+############ END PREPROCESSING ################
+#
+#
+#
+############# KERNEL FUNCTIONS ###################
 
-"""
-    Fermi.CoupledCluster.RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, Alg::CTF)
-
-Base function for CTF RCCSD.
-"""
-function RCCSD{T}(refwfn::RHF, ints::IntegralHelper, newT1::Array{T, 2}, newT2::Array{T,4}, Alg::DFCTF) where T <: AbstractFloat
-
-    # Print intro
-    Fermi.CoupledCluster.print_header()
+function print_alg(Alg::DFCTF)
     @output "\n    • Computing CCSD with the DF-CTF algorithm .\n\n"
-
-    @output repeat("-",80)*"\n"
-    @output "\nBasis: {}\n" ints.bname["primary"]
-    @output "Aux basis: {}\n" ints.bname["aux"]
-    @output "Computing and Transforming Integrals..."
-    tint = @elapsed begin
-        ints["BOV"]
-        ints["BOO"]
-        ints["BVV"]
-    end
-    @output " done in {} s\n" tint
-
-    # Process Fock matrix, important for non HF cases
-    foo = ints["FOO"] - Diagonal(ints["FOO"])
-    fvv = ints["FVV"] - Diagonal(ints["FVV"])
-    fov = ints["FOV"]
-
-    d = [i - a for i = diag(ints["FOO"]), a = diag(ints["FVV"])]
-    D = [i + j - a - b for i = diag(ints["FOO"]), j = diag(ints["FOO"]), a = diag(ints["FVV"]), b = diag(ints["FVV"])]
-
-    # Compute Guess Energy
-    Bov = ints["BOV"]
-    @tensor oovv[i,j,a,b] := Bov[Q,i,a]*Bov[Q,j,b]
-    Ecc = update_energy(newT1, newT2, fov, oovv)
-    Eguess = Ecc+refwfn.energy
-    
-    @output "Initial Amplitudes Guess: MP2\n"
-    @output "MP2 Energy:   {:15.10f}\n\n" Ecc
-    @output "MP2 Total Energy:   {:15.10f}\n\n" Ecc+refwfn.energy
-    
-    # Start CC iterations
-    
-    cc_max_iter = Fermi.CurrentOptions["cc_max_iter"]
-    cc_e_conv = Fermi.CurrentOptions["cc_e_conv"]
-    cc_max_rms = Fermi.CurrentOptions["cc_max_rms"]
-    preconv_T1 = Fermi.CurrentOptions["preconv_T1"]
-    dp = Fermi.CurrentOptions["cc_damp_ratio"]
-    do_diis = Fermi.CurrentOptions["diis"]
-    do_diis ? DM_T1 = Fermi.DIIS.DIISManager{Float64,Float64}(size=8) : nothing
-    do_diis ? DM_T2 = Fermi.DIIS.DIISManager{Float64,Float64}(size=8) : nothing
-
-
-    @output "Iteration Options:\n"
-    @output "   cc_max_iter →  {:3.0d}\n" Int(cc_max_iter)
-    @output "   cc_e_conv   →  {:2.0e}\n" cc_e_conv
-    @output "   cc_max_rms  →  {:2.0e}\n\n" cc_max_rms
-    @output repeat("-",80)*"\n"
-
-    r1 = 1
-    r2 = 1
-    dE = 1
-    rms = 1
-    ite = 1
-    T1 = deepcopy(newT1)
-    T2 = deepcopy(newT2)
-
-    dfsz,nocc,nvir = size(Bov)
-
-
-    @output "    Starting CC Iterations\n\n"
-    preconv_T1 ? T1_time = 0 : nothing
-    if preconv_T1
-        @output "Preconverging T1 amplitudes\n"
-        @output "Taking one T2 step\n"
-        @output "{:10s}    {: 15s}    {: 12s}    {:12s}    {:10s}\n" "Iteration" "CC Energy" "ΔE" "Max RMS (T1)" "Time (s)"
-        t = @elapsed begin 
-            update_amp(T1, T2, newT1, newT2, foo, fov, fvv, ints)
-
-            # Apply resolvent
-            newT1 ./= d
-            newT2 ./= D
-
-            # Compute residues 
-            r1 = sqrt(sum((newT1 .- T1).^2))/length(T1)
-            r2 = sqrt(sum((newT2 .- T2).^2))/length(T2)
-
-            if do_diis 
-                e1 = (newT1 - T1)
-                e2 = (newT2 - T2)
-                push!(DM_T1,newT1,e1) 
-                push!(DM_T2,newT2,e2) 
-                #newT1 = Fermi.DIIS.extrapolate(DM_T1)
-                #newT2 = Fermi.DIIS.extrapolate(DM_T2)
-            end
-
-            newT1 .= (1-dp)*newT1 .+ dp*T1
-            newT2 .= (1-dp)*newT2 .+ dp*T2
-        end
-        T1_time += t
-
-        rms = max(r1,r2)
-        oldE = Ecc
-        Ecc = update_energy(newT1, newT2, fov, oovv)
-        dE = Ecc - oldE
-        @output "    {:<5}    {:<15.10f}    {:<12.10f}    {:<12.10f}    {:<10.5f}\n" "pre" Ecc dE rms t
-
-        while abs(dE) > cc_e_conv || rms > cc_max_rms
-            if ite > cc_max_iter
-                @output "\n⚠️  CC Equations did not converge in {:1.0d} iterations.\n" cc_max_iter
-                break
-            end
-            t = @elapsed begin
-                T1 .= newT1
-                T2 .= newT2
-                update_T1(T1,T2,newT1,foo,fov,fvv,ints)
-                newT1 ./= d
-                if do_diis 
-                    e1 = newT1 - T1
-                    push!(DM_T1,newT1,e1) 
-                    newT1 = Fermi.DIIS.extrapolate(DM_T1)
-                end
-
-                # Compute residues 
-                r1 = sqrt(sum((newT1 .- T1).^2))/length(T1)
-
-                newT1 .= (1-dp)*newT1 .+ dp*T1
-
-                rms = r1
-                oldE = Ecc
-                Ecc = update_energy(newT1, newT2, fov, oovv)
-                dE = Ecc - oldE
-            end
-            T1_time += t
-            dE > 0 ? sign = "+" : sign = "-"
-            @output "    {:<5.0d}    {:<15.10f}    {}{:>12.10f}    {:<12.10f}    {:<10.5f}\n" ite Ecc sign abs(dE) rms t
-            ite += 1
-        end
-        @output "\nT1 pre-convergence took {}s\n" T1_time
-    end
-
-    dE = 1
-    rms = 1
-    ite = 1
-
-    do_diis ? DM_T1 = Fermi.DIIS.DIISManager{Float64,Float64}(size=6) : nothing
-    do_diis ? DM_T2 = Fermi.DIIS.DIISManager{Float64,Float64}(size=6) : nothing
-    if preconv_T1
-        @output "Including T2 update\n"
-    end
-
-    main_time = 0
-    @output "{:10s}    {: 15s}    {: 12s}    {:12s}    {:10s}\n" "Iteration" "CC Energy" "ΔE" "Max RMS" "Time (s)"
-
-    while (abs(dE) > cc_e_conv || rms > cc_max_rms) 
-        if ite > cc_max_iter
-            @output "\n⚠️  CC Equations did not converge in {:1.0d} iterations.\n" cc_max_iter
-            break
-        end
-        t = @elapsed begin
-
-            T1 .= newT1
-            T2 .= newT2
-            update_amp(T1, T2, newT1, newT2, foo, fov, fvv, ints)
-
-            # Apply resolvent
-            newT1 ./= d
-            newT2 ./= D
-
-            # Compute residues 
-            r1 = sqrt(sum((newT1 .- T1).^2))/length(T1)
-            r2 = sqrt(sum((newT2 .- T2).^2))/length(T2)
-
-            if do_diis 
-                e1 = (newT1 - T1)
-                e2 = (newT2 - T2)
-                push!(DM_T1,newT1,e1) 
-                push!(DM_T2,newT2,e2) 
-                if length(DM_T2) > DM_T2.max_vec
-                    newT2 = Fermi.DIIS.extrapolate(DM_T2)
-                    newT1 = Fermi.DIIS.extrapolate(DM_T1)
-                end
-            end
-
-            newT1 .= (1-dp)*newT1 .+ dp*T1
-            newT2 .= (1-dp)*newT2 .+ dp*T2
-        end
-        rms = max(r1,r2)
-        oldE = Ecc
-        Ecc = update_energy(newT1, newT2, fov, oovv)
-        dE = Ecc - oldE
-        main_time += t
-        dE > 0 ? sign = "+" : sign = "-"
-        @output "    {:<5.0d}    {:<15.10f}    {}{:>12.10f}    {:<12.10f}    {:<10.5f}\n" ite Ecc sign abs(dE) rms t
-        ite += 1
-    end
-    @output "\nMain CCSD iterations done in {}s\n" main_time
-
-    # Converged?
-    if abs(dE) < cc_e_conv && rms < cc_max_rms 
-        @output "\n 🍾 Equations Converged!\n"
-    end
-    @output "\n⇒ Final CCSD Energy:     {:15.10f}\n" Ecc+refwfn.energy
-    @output repeat("-",80)*"\n"
-
-    return RCCSD{T}(Eguess, Ecc+refwfn.energy, Fermi.MemTensor(newT1), Fermi.MemTensor(newT2))
 end
 
+function compute_integrals(ints,Alg::DFCTF)
+    @output "Aux basis: {}\n" ints.bname["aux"]
+    ints["BOV"]
+    ints["BOO"]
+    ints["BVV"]
+end
+
+function compute_oovv(ints,alg::DFCTF)
+    Bov = ints["BOV"]
+    @tensor oovv[i,j,a,b] := Bov[Q,i,a]*Bov[Q,j,b]
+    oovv
+end
 """
     Fermi.Coupled Cluster.update_energy(T1::Array{T, 2}, T2::Array{T, 4}, f::Array{T,2}, Voovv::Array{T, 4}) where T <: AbstractFloat
 
@@ -277,66 +72,17 @@ function update_energy(T1::Array{T, 2}, T2::Array{T, 4}, f::Array{T,2}, Voovv::A
     return CC_energy
 end
 
-"""
-    Fermi.CoupledCluster.RCCSD.update_amp(T1::Array{T, 2}, T2::Array{T, 4}, newT1::Array{T,2}, newT2::Array{T,4}, foo::Array{T,2}, fov::Array{T,2}, fvv::Array{T,2}, moint::PhysRestrictedMOIntegrals) where T <: AbstractFloat
-
-Update amplitudes (T1, T2) to newT1 and newT2 using CTF CCSD equations.
-"""
-function update_amp(T1::Array{T, 2}, T2::Array{T, 4}, newT1::Array{T,2}, newT2::Array{T,4}, foo::Array{T,2}, fov::Array{T,2}, fvv::Array{T,2}, ints::IntegralHelper) where T <: AbstractFloat
-
-    #Voooo, Vooov, Voovv, Vovov, Vovvv, Vvvvv = moint.oooo, moint.ooov, moint.oovv, moint.ovov, moint.ovvv, moint.vvvv
-
-    fill!(newT1, 0.0)
-    fill!(newT2, 0.0)
-
-    # Get new amplitudes
-    update_T1(T1,T2,newT1,foo,fov,fvv,ints)
-    update_T2(T1,T2,newT2,foo,fov,fvv,ints)
-end
-
-function update_T1(T1::Array{T,2}, T2::Array{T,4}, newT1::Array{T,2}, foo, fov, fvv, ints::IntegralHelper) where T <: AbstractFloat
-    #Voooo, Vooov, Voovv, Vovov, Vovvv, Vvvvv = moint.oooo, moint.ooov, moint.oovv, moint.ovov, moint.ovvv, moint.vvvv
+function update_T1(T1::Array{T,2}, T2::Array{T,4}, newT1::Array{T,2}, foo, fov, fvv, ints::IntegralHelper, alg::DFCTF) where T <: AbstractFloat
     Bov = ints["BOV"]
     Bvo = ints["BVO"]
     Boo = ints["BOO"]
     Bvv = ints["BVV"]
-    #Voooo, Vooov, Voovv, Vovov, Vovvv, Vvvvv = ints["OOOO"], ints["OOOV"], ints["OOVV"], ints["OVOV"], ints["OVVVV"], ints["VVVV"]
     @tensor begin
         Voooo[i,j,k,l] := Boo[Q,i,k]*Boo[Q,j,l]
         Vooov[i,j,k,a] := Boo[Q,i,k]*Bov[Q,j,a]
         Voovv[i,j,a,b] := Bov[Q,i,a]*Bov[Q,j,b]
         Vovov[i,a,j,b] := Boo[Q,i,j]*Bvv[Q,a,b]
-    #    Vovvv[i,a,b,c] := Bov[Q,i,b]*Bvv[Q,a,c]
-    #    Vvvvv[a,b,c,d] := Bvv[Q,a,c]*Bvv[Q,b,d]
     end
-    #@tensoropt (i=>x, j=>x, k=>x, l=>x, a=>10x, b=>10x, c=>10x, d=>10x) begin
-    #    newT1[i,a] += fov[i,a]
-    #    newT1[i,a] -= foo[i,k]*T1[k,a]
-    #    newT1[i,a] += fvv[c,a]*T1[i,c]
-    #    newT1[i,a] -= fov[k,c]*T1[i,c]*T1[k,a]
-    #    newT1[i,a] += 2.0*fov[k,c]*T2[i,k,a,c]
-    #    newT1[i,a] -= fov[k,c]*T2[k,i,a,c]
-    #    newT1[i,a] -= T1[k,c]*Vovov[i,c,k,a]
-    #    newT1[i,a] += 2.0*T1[k,c]*Voovv[k,i,c,a]
-    #    newT1[i,a] -= T2[k,i,c,d]*Vovvv[k,a,d,c]
-    #    newT1[i,a] += 2.0*T2[i,k,c,d]*Vovvv[k,a,d,c]
-    #    newT1[i,a] += -2.0*T2[k,l,a,c]*Vooov[k,l,i,c]
-    #    newT1[i,a] += T2[l,k,a,c]*Vooov[k,l,i,c]
-    #    newT1[i,a] += -2.0*T1[k,c]*T1[l,a]*Vooov[l,k,i,c]
-    #    newT1[i,a] -= T1[k,c]*T1[i,d]*Vovvv[k,a,d,c]
-    #    newT1[i,a] += 2.0*T1[k,c]*T1[i,d]*Vovvv[k,a,c,d]
-    #    newT1[i,a] += T1[k,c]*T1[l,a]*Vooov[k,l,i,c]
-    #    newT1[i,a] += -2.0*T1[k,c]*T2[i,l,a,d]*Voovv[l,k,c,d]
-    #    newT1[i,a] += -2.0*T1[k,c]*T2[l,i,a,d]*Voovv[k,l,c,d]
-    #    newT1[i,a] += T1[k,c]*T2[l,i,a,d]*Voovv[l,k,c,d]
-    #    newT1[i,a] += -2.0*T1[i,c]*T2[l,k,a,d]*Voovv[l,k,c,d]
-    #    newT1[i,a] += T1[i,c]*T2[l,k,a,d]*Voovv[k,l,c,d]
-    #    newT1[i,a] += -2.0*T1[l,a]*T2[i,k,d,c]*Voovv[k,l,c,d]
-    #    newT1[i,a] += T1[l,a]*T2[i,k,c,d]*Voovv[k,l,c,d]
-    #    newT1[i,a] += T1[k,c]*T1[i,d]*T1[l,a]*Voovv[l,k,c,d]
-    #    newT1[i,a] += -2.0*T1[k,c]*T1[i,d]*T1[l,a]*Voovv[k,l,c,d]
-    #    newT1[i,a] += 4.0*T1[k,c]*T2[i,l,a,d]*Voovv[k,l,c,d]
-    #end
     @tensoropt (i=>x, j=>x, k=>x, l=>x, a=>10x, b=>10x, c=>10x, d=>10x,Q=>50x) begin
         newT1[i,a] += fov[i,a]
         newT1[i,a] -= foo[i,k]*T1[k,a]
@@ -346,16 +92,12 @@ function update_T1(T1::Array{T,2}, T2::Array{T,4}, newT1::Array{T,2}, foo, fov, 
         newT1[i,a] -= fov[k,c]*T2[k,i,a,c]
         newT1[i,a] -= T1[k,c]*Vovov[i,c,k,a]
         newT1[i,a] += 2.0*T1[k,c]*Voovv[k,i,c,a]
-        #newT1[i,a] -= T2[k,i,c,d]*Vovvv[k,a,d,c]
         newT1[i,a] -= T2[k,i,c,d]*Bov[Q,k,d]*Bvv[Q,a,c]
-        #newT1[i,a] += 2.0*T2[i,k,c,d]*Vovvv[k,a,d,c]
         newT1[i,a] += 2.0*T2[i,k,c,d]*Bov[Q,k,d]*Bvv[Q,a,c]
         newT1[i,a] += -2.0*T2[k,l,a,c]*Vooov[k,l,i,c]
         newT1[i,a] += T2[l,k,a,c]*Vooov[k,l,i,c]
         newT1[i,a] += -2.0*T1[k,c]*T1[l,a]*Vooov[l,k,i,c]
-        #newT1[i,a] -= T1[k,c]*T1[i,d]*Vovvv[k,a,d,c]
         newT1[i,a] -= T1[k,c]*T1[i,d]*Bov[Q,k,d]*Bvv[Q,a,c]
-        #newT1[i,a] += 2.0*T1[k,c]*T1[i,d]*Vovvv[k,a,c,d]
         newT1[i,a] += 2.0*T1[k,c]*T1[i,d]*Bov[Q,k,c]*Bvv[Q,a,d]
         newT1[i,a] += T1[k,c]*T1[l,a]*Vooov[k,l,i,c]
         newT1[i,a] += -2.0*T1[k,c]*T2[i,l,a,d]*Voovv[l,k,c,d]
@@ -371,26 +113,19 @@ function update_T1(T1::Array{T,2}, T2::Array{T,4}, newT1::Array{T,2}, foo, fov, 
     end
 end
 
-function update_T2(T1::Array{T,2},T2::Array{T,4},newT2::Array{T,4},foo,fov,fvv,ints::IntegralHelper) where T <: AbstractFloat
-    #Voooo, Vooov, Voovv, Vovov, Vovvv, Vvvvv = moint.oooo, moint.ooov, moint.oovv, moint.ovov, moint.ovvv, moint.vvvv
+function update_T2(T1::Array{T,2},T2::Array{T,4},newT2::Array{T,4},foo,fov,fvv,ints::IntegralHelper,alg::DFCTF) where T <: AbstractFloat
     Bov = ints["BOV"]
     Bvo = ints["BVO"]
     Boo = ints["BOO"]
     Bvv = ints["BVV"]
-    #Voooo, Vooov, Voovv, Vovov, Vovvv, Vvvvv = ints["OOOO"], ints["OOOV"], ints["OOVV"], ints["OVOV"], ints["OVVVV"], ints["VVVV"]
     @tensor begin
         Voooo[i,j,k,l] := Boo[Q,i,k]*Boo[Q,j,l]
         Vooov[i,j,k,a] := Boo[Q,i,k]*Bov[Q,j,a]
         Voovv[i,j,a,b] := Bov[Q,i,a]*Bov[Q,j,b]
         Vovov[i,a,j,b] := Boo[Q,i,j]*Bvv[Q,a,b]
-        #Vovvv[i,a,b,c] := Bov[Q,i,b]*Bvv[Q,a,c]
-        #Vvvvv[a,b,c,d] := Bvv[Q,a,c]*Bvv[Q,b,d]
     end
     dfsz,nocc,nvir = size(Bov)
-    #T2_inter = zeros(dfsz,nocc,nocc,nvir,nvir)
     @tensor _T[i,j,c,d] := T1[i,c]*T1[j,d] + T2[i,j,c,d]
-    #Fermi.contract!(T2_inter,_T,Bvv,"Qijad","ijcd","Qca")
-    #Fermi.contract!(newT2,T2_inter,Bvv,"ijab","Qijad","Qdb")
     T2_inter = zeros(dfsz,nvir,nvir)
     T2_slice = zeros(nvir,nvir)
     Tslice = zeros(nvir,nvir)
@@ -445,14 +180,12 @@ function update_T2(T1::Array{T,2},T2::Array{T,4},newT2::Array{T,4},foo,fov,fvv,i
         P_OoVv[i,j,a,b] += T1[l,b]*T2[k,i,a,c]*Vooov[l,k,j,c]
         P_OoVv[i,j,a,b] += -1.0*T1[j,c]*T2[i,k,d,b]*Bov[Q,k,c]*Bvv[Q,a,d]
         P_OoVv[i,j,a,b] += -1.0*T1[j,c]*T2[k,i,a,d]*Bov[Q,k,d]*Bvv[Q,b,c]
-        #BADBOI#P_OoVv[i,j,a,b] += (-1.0*T1[j,c]*T2[i,k,a,d] + 2.0*T1[k,c]*T2[i,j,a,d])*Bov[Q,k,c]*Bvv[Q,b,d]
         P_OoVv[i,j,a,b] += -1.0*T1[j,c]*T2[i,k,a,d]*Bov[Q,k,c]*Bvv[Q,b,d]
         P_OoVv[i,j,a,b] += 2.0*T1[k,c]*T2[i,j,a,d]*Bov[Q,k,c]*Bvv[Q,b,d]
         P_OoVv[i,j,a,b] += T1[j,c]*T2[l,k,a,b]*Vooov[l,k,i,c]
         P_OoVv[i,j,a,b] += T1[l,b]*T2[i,k,a,c]*Vooov[k,l,j,c]
         P_OoVv[i,j,a,b] += -1.0*T1[k,a]*T2[i,j,d,c]*Bov[Q,k,d]*Bvv[Q,b,c]
         P_OoVv[i,j,a,b] += T1[k,a]*T2[i,l,c,b]*Vooov[l,k,j,c]
-        #BADBOI#P_OoVv[i,j,a,b] += (2.0*T1[j,c]*T2[i,k,a,d] - 1.0*T1[k,c]*T2[i,j,a,d])*Bov[Q,k,d]*Bvv[Q,b,c]
         P_OoVv[i,j,a,b] += 2.0*T1[j,c]*T2[i,k,a,d]*Bov[Q,k,d]*Bvv[Q,b,c]
         P_OoVv[i,j,a,b] -= 1.0*T1[k,c]*T2[i,j,a,d]*Bov[Q,k,d]*Bvv[Q,b,c]
         P_OoVv[i,j,a,b] += T1[k,c]*T2[i,l,a,b]*Vooov[k,l,j,c]
@@ -467,7 +200,9 @@ function update_T2(T1::Array{T,2},T2::Array{T,4},newT2::Array{T,4},foo,fov,fvv,i
         P_OoVv[i,j,a,b] += T1[i,c]*T1[k,a]*T2[l,j,d,b]*Voovv[l,k,c,d]
         P_OoVv[i,j,a,b] += T1[i,c]*T1[l,b]*T2[k,j,a,d]*Voovv[k,l,c,d]
         P_OoVv[i,j,a,b] += -2.0*T2[i,k,d,c]*T2[l,j,a,b]*Voovv[k,l,c,d]
-        ##
         newT2[i,j,a,b] += P_OoVv[i,j,a,b] + P_OoVv[j,i,b,a]
     end
 end
+#
+#
+############# END KERNEL FUNCTIONS ###################

@@ -7,10 +7,11 @@ function CASCI{T}(Alg::SparseHamiltonian) where T <: AbstractFloat
     @output "Getting molecule...\n"
     molecule = Molecule()
     @output "Computing AO Integrals...\n"
-    aoint = ConventionalAOIntegrals()
+    #aoint = ConventionalAOIntegrals()
 
     @output "Calling RHF module...\n"
-    refwfn = Fermi.HartreeFock.RHF(molecule, aoint)
+    refwfn = Fermi.HartreeFock.RHF(molecule)
+    ints = refwfn.ints
 
     @output "Transforming Integrals for CAS computation...\n"
     # Read options
@@ -40,8 +41,8 @@ function CASCI{T}(Alg::SparseHamiltonian) where T <: AbstractFloat
     end
 
     s = 1:(frozen+active)
-    h = T.(Fermi.Integrals.transform_fock(aoint.T+aoint.V, refwfn.C[:,s], refwfn.C[:,s]))
-    V = T.(Fermi.Integrals.transform_eri(aoint.ERI, refwfn.C[:,s], refwfn.C[:,s], refwfn.C[:,s], refwfn.C[:,s]))
+    h = T.(Fermi.Integrals.transform_fock(ints["T"] + ints["V"], ints.C["C"][:,s], ints.C["C"][:,s]))
+    V = T.(Fermi.Integrals.transform_eri(ints["μ"], ints.C["C"][:,s], ints.C["C"][:,s], ints.C["C"][:,s], ints.C["C"][:,s]))
 
     aoint = nothing
     CASCI{T}(refwfn, h, V, frozen, act_elec, active, Alg)

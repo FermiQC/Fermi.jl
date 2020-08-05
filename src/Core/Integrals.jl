@@ -426,7 +426,7 @@ function IntegralHelper{T}() where T <: AbstractFloat
     bname = Dict{String,String}()
     type = T
     bname["primary"] = Fermi.CurrentOptions["basis"]
-    aux = Fermi.CurrentOptions["auxbasis"]
+    aux = Fermi.CurrentOptions["jkfit"]
     if aux == "auto"
         aux_lookup = Dict{String,String}(
                                          "cc-pvdz" => "cc-pvdz-jkfit",

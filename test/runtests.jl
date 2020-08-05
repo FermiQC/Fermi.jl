@@ -8,4 +8,12 @@ wf = @energy ccsd;
 @set basis cc-pvdz
 @set scf_alg df
 @energy rhf;
+@molecule {
+          O 0.0 0.0 0.0
+          H 1.0 0.0 0.0
+          H 0.0 1.0 0.0
+         }
+@set cc_alg CTF
+wf = @energy ecCCSD
+@test isapprox(wf.CorrelationEnergy, -76.2329543810)
 #@test wf.energy ≈
