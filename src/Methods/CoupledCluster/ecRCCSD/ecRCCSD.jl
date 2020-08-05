@@ -22,25 +22,25 @@ struct ecRCCSD{T} <: AbstractCCWavefunction
     T2::_T where _T <: Fermi.AbstractTensor
 end
 
-function select_precision(A::String)
-    implemented = Dict{Any,Any}("single" => Float32,
-                                "double" => Float64)
-    try
-        return implemented[A]
-    catch KeyError
-        throw(Fermi.InvalidFermiOptions("Invalid precision: $(A)"))
-    end
-end
-
-function select_algorithm(A::String)
-    implemented = Dict{Any,Any}("DPD" => DPD(),
-                                "CTF" => CTF())
-    try
-        return implemented[A]
-    catch KeyError
-        throw(Fermi.InvalidFermiOptions("Invalid CC algorithm: $(A)"))
-    end
-end
+#function select_precision(A::String)
+#    implemented = Dict{Any,Any}("single" => Float32,
+#                                "double" => Float64)
+#    try
+#        return implemented[A]
+#    catch KeyError
+#        throw(Fermi.InvalidFermiOptions("Invalid precision: $(A)"))
+#    end
+#end
+#
+#function select_algorithm(A::String)
+#    implemented = Dict{Any,Any}("DPD" => DPD(),
+#                                "CTF" => CTF())
+#    try
+#        return implemented[A]
+#    catch KeyError
+#        throw(Fermi.InvalidFermiOptions("Invalid CC algorithm: $(A)"))
+#    end
+#end
 
 #implementations
 include("CTF.jl")

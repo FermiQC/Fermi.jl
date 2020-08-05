@@ -30,6 +30,7 @@ _struct tree:_
 """
 abstract type AbstractHFWavefunction <: Fermi.AbstractReferenceWavefunction end
 
+#Restricted HF
 include("RHF/RHF.jl")
 
 end #module

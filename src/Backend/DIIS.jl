@@ -30,8 +30,8 @@ function push!(M::DIISManager{T1,T2}, V::Array, E::Array) where { T1 <: Abstract
         #M.vecs[end] .= deepcopy(V)
         #M.errs[end] .= deepcopy(E)
         norms = norm.(M.errs)
-        #idx = findmax(norms)[2]
-        idx = 1
+        idx = findmax(norms)[2]
+        #idx = 1
         deleteat!(M.vecs,idx)
         deleteat!(M.errs,idx)
     end

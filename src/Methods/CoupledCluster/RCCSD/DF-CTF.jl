@@ -8,52 +8,47 @@ Compute a RCCSD wave function using the Compiled time factorization algorithm (C
 """
 function RCCSD{T}(guess::RCCSD{Tb},Alg::DFCTF) where { T <: AbstractFloat,
                                                     Tb <: AbstractFloat }
-    molecule = Fermi.Geometry.Molecule()
-    aoint = Fermi.Integrals.DFAOIntegrals(molecule)
-    refwfn = Fermi.HartreeFock.RHF(molecule, aoint, Fermi.HartreeFock.DFRHF())
+    #molecule = Fermi.Geometry.Molecule()
+    #aoint = Fermi.Integrals.DFAOIntegrals(molecule)
+    #refwfn = Fermi.HartreeFock.RHF(molecule, aoint, Fermi.HartreeFock.DFRHF())
+    refwfn = Fermi.HartreeFock.RHF()
 
     drop_occ = Fermi.CurrentOptions["drop_occ"]
     drop_vir = Fermi.CurrentOptions["drop_vir"]
 
-    @output "Transforming Integrals..."
-    tint = @elapsed moint = Fermi.Integrals.DFMOIntegrals{T}(refwfn.ndocc, refwfn.nvir, drop_occ, drop_vir, refwfn.C, aoint)
-    @output " done in {} s" tint
-    RCCSD{T}(refwfn, guess, moint, Alg) 
+    ints = refwfn.ints
+    Fermi.Integrals.aux_ri!(ints)
+    RCCSD{T}(refwfn, guess, ints, Alg) 
 end
 
-"""
-    Fermi.CoupledCluster.RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, Alg::CTF)
+#"""
+#    Fermi.CoupledCluster.RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, Alg::CTF)
+#
+#Compute a RCCSD wave function using the Compiled time factorization algorithm (CTF). Precision (T), reference wavefunction (refwfn)
+#and molecular orbital integrals (moint) must be passed.
+#"""
+#function RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, Alg::DFCTF) where T <: AbstractFloat
+#    d = [i - a for i = diag(moint.oo), a = diag(moint.vv)]
+#    D = [i + j - a - b for i = diag(moint.oo), j = diag(moint.oo), a = diag(moint.vv), b = diag(moint.vv)]
+#    newT1 = moint.ov./d
+#    Bov = moint.Bov
+#    @tensor oovv[i,j,a,b] := Bov[Q,i,a]*Bov[Q,j,b]
+#    #oovv = permutedims(zeros(size(D)),(1,3,2,4))
+#    #Fermi.contract!(oovv,aoint.Bov,aoint.Bov,"pqrs","Qpq","Qrs")
+#    #oovv = permutedims(oovv,(1,3,2,4))
+#    newT2 = oovv./D
+#    RCCSD{T}(refwfn, moint, newT1, newT2, Alg)
+#end
 
-Compute a RCCSD wave function using the Compiled time factorization algorithm (CTF). Precision (T), reference wavefunction (refwfn)
-and molecular orbital integrals (moint) must be passed.
-"""
-function RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, Alg::DFCTF) where T <: AbstractFloat
-    d = [i - a for i = diag(moint.oo), a = diag(moint.vv)]
-    D = [i + j - a - b for i = diag(moint.oo), j = diag(moint.oo), a = diag(moint.vv), b = diag(moint.vv)]
-    newT1 = moint.ov./d
-    Bov = moint.Bov
-    @tensor oovv[i,j,a,b] := Bov[Q,i,a]*Bov[Q,j,b]
-    #oovv = permutedims(zeros(size(D)),(1,3,2,4))
-    #Fermi.contract!(oovv,aoint.Bov,aoint.Bov,"pqrs","Qpq","Qrs")
-    #oovv = permutedims(oovv,(1,3,2,4))
-    newT2 = oovv./D
-    RCCSD{T}(refwfn, moint, newT1, newT2, Alg)
-end
-
-function RCCSD{T}(refwfn::RHF, guess::RCCSD{Tb}, moint::Fermi.Integrals.DFMOIntegrals, Alg::DFCTF) where { T <: AbstractFloat,
+function RCCSD{T}(refwfn::RHF, guess::RCCSD{Tb}, ints::IntegralHelper, Alg::DFCTF) where { T <: AbstractFloat,
                                                                                                     Tb <: AbstractFloat }
-    d = [i - a for i = diag(moint.oo), a = diag(moint.vv)]
-    D = [i + j - a - b for i = diag(moint.oo), j = diag(moint.oo), a = diag(moint.vv), b = diag(moint.vv)]
-    newT1 = moint.ov./d
-    Bov = moint.Bov
+    d = [i - a for i = diag(ints["FOO"]), a = diag(ints["FVV"])]
+    D = [i + j - a - b for i = diag(ints["FOO"]), j = diag(ints["FOO"]), a = diag(ints["FVV"]), b = diag(ints["FVV"])]
+    newT1 = ints["FOV"]./d
+    Bov = ints["BOV"]
     @tensor oovv[i,j,a,b] := Bov[Q,i,a]*Bov[Q,j,b]
-    println(size(oovv))
-    #oovv = permutedims(zeros(size(D)),(1,3,2,4))
-    #Fermi.contract!(oovv,moint.Bov,moint.Bov,"pqrs","Qpq","Qrs")
-    #oovv = permutedims(oovv,(1,3,2,4))
     newT2 = oovv ./ D
-    @output "Here1\n"
-    RCCSD{T}(refwfn, moint, newT1, newT2, Alg)
+    RCCSD{T}(refwfn, ints, newT1, newT2, Alg)
 end
 
 """
@@ -61,23 +56,33 @@ end
 
 Base function for CTF RCCSD.
 """
-function RCCSD{T}(refwfn::RHF, moint::Fermi.Integrals.DFMOIntegrals, newT1::Array{T, 2}, newT2::Array{T,4}, Alg::DFCTF) where T <: AbstractFloat
+function RCCSD{T}(refwfn::RHF, ints::IntegralHelper, newT1::Array{T, 2}, newT2::Array{T,4}, Alg::DFCTF) where T <: AbstractFloat
 
     # Print intro
     Fermi.CoupledCluster.print_header()
-    @output "\n    • Computing CCSD with the DF-CFT algorithm .\n\n"
-    d = [i - a for i = diag(moint.oo), a = diag(moint.vv)]
-    D = [i + j - a - b for i = diag(moint.oo), j = diag(moint.oo), a = diag(moint.vv), b = diag(moint.vv)]
+    @output "\n    • Computing CCSD with the DF-CTF algorithm .\n\n"
+
+    @output repeat("-",80)*"\n"
+    @output "\nBasis: {}\n" ints.bname["primary"]
+    @output "Aux basis: {}\n" ints.bname["aux"]
+    @output "Computing and Transforming Integrals..."
+    tint = @elapsed begin
+        ints["BOV"]
+        ints["BOO"]
+        ints["BVV"]
+    end
+    @output " done in {} s\n" tint
 
     # Process Fock matrix, important for non HF cases
-    foo = similar(moint.oo)
-    foo .= moint.oo - Diagonal(moint.oo)
-    fvv = similar(moint.vv)
-    fvv .= moint.vv - Diagonal(moint.vv)
-    fov = moint.ov
+    foo = ints["FOO"] - Diagonal(ints["FOO"])
+    fvv = ints["FVV"] - Diagonal(ints["FVV"])
+    fov = ints["FOV"]
+
+    d = [i - a for i = diag(ints["FOO"]), a = diag(ints["FVV"])]
+    D = [i + j - a - b for i = diag(ints["FOO"]), j = diag(ints["FOO"]), a = diag(ints["FVV"]), b = diag(ints["FVV"])]
 
     # Compute Guess Energy
-    Bov = moint.Bov
+    Bov = ints["BOV"]
     @tensor oovv[i,j,a,b] := Bov[Q,i,a]*Bov[Q,j,b]
     Ecc = update_energy(newT1, newT2, fov, oovv)
     Eguess = Ecc+refwfn.energy
@@ -98,11 +103,11 @@ function RCCSD{T}(refwfn::RHF, moint::Fermi.Integrals.DFMOIntegrals, newT1::Arra
     do_diis ? DM_T2 = Fermi.DIIS.DIISManager{Float64,Float64}(size=8) : nothing
 
 
-    @output "    Starting CC Iterations\n\n"
     @output "Iteration Options:\n"
     @output "   cc_max_iter →  {:3.0d}\n" Int(cc_max_iter)
     @output "   cc_e_conv   →  {:2.0e}\n" cc_e_conv
     @output "   cc_max_rms  →  {:2.0e}\n\n" cc_max_rms
+    @output repeat("-",80)*"\n"
 
     r1 = 1
     r2 = 1
@@ -112,17 +117,17 @@ function RCCSD{T}(refwfn::RHF, moint::Fermi.Integrals.DFMOIntegrals, newT1::Arra
     T1 = deepcopy(newT1)
     T2 = deepcopy(newT2)
 
-    dfsz,nocc,nvir = size(moint.Bov)
-    T2_inter = zeros(T,dfsz,nocc,nocc,nvir,nvir)
+    dfsz,nocc,nvir = size(Bov)
 
 
+    @output "    Starting CC Iterations\n\n"
     preconv_T1 ? T1_time = 0 : nothing
     if preconv_T1
         @output "Preconverging T1 amplitudes\n"
         @output "Taking one T2 step\n"
         @output "{:10s}    {: 15s}    {: 12s}    {:12s}    {:10s}\n" "Iteration" "CC Energy" "ΔE" "Max RMS (T1)" "Time (s)"
         t = @elapsed begin 
-            update_amp(T1, T2, newT1, newT2, foo, fov, fvv, moint,T2_inter)
+            update_amp(T1, T2, newT1, newT2, foo, fov, fvv, ints)
 
             # Apply resolvent
             newT1 ./= d
@@ -160,7 +165,7 @@ function RCCSD{T}(refwfn::RHF, moint::Fermi.Integrals.DFMOIntegrals, newT1::Arra
             t = @elapsed begin
                 T1 .= newT1
                 T2 .= newT2
-                update_T1(T1,T2,newT1,foo,fov,fvv,moint)
+                update_T1(T1,T2,newT1,foo,fov,fvv,ints)
                 newT1 ./= d
                 if do_diis 
                     e1 = newT1 - T1
@@ -179,7 +184,8 @@ function RCCSD{T}(refwfn::RHF, moint::Fermi.Integrals.DFMOIntegrals, newT1::Arra
                 dE = Ecc - oldE
             end
             T1_time += t
-            @output "    {:<5.0d}    {:<15.10f}    {:<12.10f}    {:<12.10f}    {:<10.5f}\n" ite Ecc dE rms t
+            dE > 0 ? sign = "+" : sign = "-"
+            @output "    {:<5.0d}    {:<15.10f}    {}{:>12.10f}    {:<12.10f}    {:<10.5f}\n" ite Ecc sign abs(dE) rms t
             ite += 1
         end
         @output "\nT1 pre-convergence took {}s\n" T1_time
@@ -207,7 +213,7 @@ function RCCSD{T}(refwfn::RHF, moint::Fermi.Integrals.DFMOIntegrals, newT1::Arra
 
             T1 .= newT1
             T2 .= newT2
-            update_amp(T1, T2, newT1, newT2, foo, fov, fvv, moint,T2_inter)
+            update_amp(T1, T2, newT1, newT2, foo, fov, fvv, ints)
 
             # Apply resolvent
             newT1 ./= d
@@ -228,8 +234,6 @@ function RCCSD{T}(refwfn::RHF, moint::Fermi.Integrals.DFMOIntegrals, newT1::Arra
                 end
             end
 
-
-
             newT1 .= (1-dp)*newT1 .+ dp*T1
             newT2 .= (1-dp)*newT2 .+ dp*T2
         end
@@ -238,7 +242,8 @@ function RCCSD{T}(refwfn::RHF, moint::Fermi.Integrals.DFMOIntegrals, newT1::Arra
         Ecc = update_energy(newT1, newT2, fov, oovv)
         dE = Ecc - oldE
         main_time += t
-        @output "    {:<5.0d}    {:<15.10f}    {:<12.10f}    {:<12.10f}    {:<10.5f}\n" ite Ecc dE rms t
+        dE > 0 ? sign = "+" : sign = "-"
+        @output "    {:<5.0d}    {:<15.10f}    {}{:>12.10f}    {:<12.10f}    {:<10.5f}\n" ite Ecc sign abs(dE) rms t
         ite += 1
     end
     @output "\nMain CCSD iterations done in {}s\n" main_time
@@ -248,6 +253,7 @@ function RCCSD{T}(refwfn::RHF, moint::Fermi.Integrals.DFMOIntegrals, newT1::Arra
         @output "\n 🍾 Equations Converged!\n"
     end
     @output "\n⇒ Final CCSD Energy:     {:15.10f}\n" Ecc+refwfn.energy
+    @output repeat("-",80)*"\n"
 
     return RCCSD{T}(Eguess, Ecc+refwfn.energy, Fermi.MemTensor(newT1), Fermi.MemTensor(newT2))
 end
@@ -276,33 +282,32 @@ end
 
 Update amplitudes (T1, T2) to newT1 and newT2 using CTF CCSD equations.
 """
-function update_amp(T1::Array{T, 2}, T2::Array{T, 4}, newT1::Array{T,2}, newT2::Array{T,4}, foo::Array{T,2}, fov::Array{T,2}, fvv::Array{T,2}, moint::Fermi.Integrals.DFMOIntegrals, T2_inter) where T <: AbstractFloat
+function update_amp(T1::Array{T, 2}, T2::Array{T, 4}, newT1::Array{T,2}, newT2::Array{T,4}, foo::Array{T,2}, fov::Array{T,2}, fvv::Array{T,2}, ints::IntegralHelper) where T <: AbstractFloat
 
     #Voooo, Vooov, Voovv, Vovov, Vovvv, Vvvvv = moint.oooo, moint.ooov, moint.oovv, moint.ovov, moint.ovvv, moint.vvvv
 
     fill!(newT1, 0.0)
     fill!(newT2, 0.0)
-    fill!(T2_inter, 0.0)
 
     # Get new amplitudes
-    update_T1(T1,T2,newT1,foo,fov,fvv,moint)
-    @output "T1 done\n"
-    update_T2(T1,T2,newT2,foo,fov,fvv,moint,T2_inter)
+    update_T1(T1,T2,newT1,foo,fov,fvv,ints)
+    update_T2(T1,T2,newT2,foo,fov,fvv,ints)
 end
 
-function update_T1(T1::Array{T,2}, T2::Array{T,4}, newT1::Array{T,2}, foo, fov, fvv, moint::Fermi.Integrals.DFMOIntegrals) where T <: AbstractFloat
+function update_T1(T1::Array{T,2}, T2::Array{T,4}, newT1::Array{T,2}, foo, fov, fvv, ints::IntegralHelper) where T <: AbstractFloat
     #Voooo, Vooov, Voovv, Vovov, Vovvv, Vvvvv = moint.oooo, moint.ooov, moint.oovv, moint.ovov, moint.ovvv, moint.vvvv
-    Bov = moint.Bov
-    Bvo = moint.Bvo
-    Boo = moint.Boo
-    Bvv = moint.Bvv
+    Bov = ints["BOV"]
+    Bvo = ints["BVO"]
+    Boo = ints["BOO"]
+    Bvv = ints["BVV"]
+    #Voooo, Vooov, Voovv, Vovov, Vovvv, Vvvvv = ints["OOOO"], ints["OOOV"], ints["OOVV"], ints["OVOV"], ints["OVVVV"], ints["VVVV"]
     @tensor begin
         Voooo[i,j,k,l] := Boo[Q,i,k]*Boo[Q,j,l]
         Vooov[i,j,k,a] := Boo[Q,i,k]*Bov[Q,j,a]
         Voovv[i,j,a,b] := Bov[Q,i,a]*Bov[Q,j,b]
         Vovov[i,a,j,b] := Boo[Q,i,j]*Bvv[Q,a,b]
-        #Vovvv[i,a,b,c] := Bov[Q,i,b]*Bvv[Q,a,c]
-        #Vvvvv[a,b,c,d] := Bvv[Q,a,c]*Bvv[Q,b,d]
+    #    Vovvv[i,a,b,c] := Bov[Q,i,b]*Bvv[Q,a,c]
+    #    Vvvvv[a,b,c,d] := Bvv[Q,a,c]*Bvv[Q,b,d]
     end
     #@tensoropt (i=>x, j=>x, k=>x, l=>x, a=>10x, b=>10x, c=>10x, d=>10x) begin
     #    newT1[i,a] += fov[i,a]
@@ -313,17 +318,13 @@ function update_T1(T1::Array{T,2}, T2::Array{T,4}, newT1::Array{T,2}, foo, fov, 
     #    newT1[i,a] -= fov[k,c]*T2[k,i,a,c]
     #    newT1[i,a] -= T1[k,c]*Vovov[i,c,k,a]
     #    newT1[i,a] += 2.0*T1[k,c]*Voovv[k,i,c,a]
-    #    #newT1[i,a] -= T2[k,i,c,d]*Vovvv[k,a,d,c]
-    #    newT1[i,a] -= T2[k,i,c,d]*Bov[Q,k,d]*Bvv[Q,a,c]
-    #    #newT1[i,a] += 2.0*T2[i,k,c,d]*Vovvv[k,a,d,c]
-    #    newT1[i,a] += 2.0*T2[i,k,c,d]*Bov[Q,k,d]*Bvv[Q,a,c]
+    #    newT1[i,a] -= T2[k,i,c,d]*Vovvv[k,a,d,c]
+    #    newT1[i,a] += 2.0*T2[i,k,c,d]*Vovvv[k,a,d,c]
     #    newT1[i,a] += -2.0*T2[k,l,a,c]*Vooov[k,l,i,c]
     #    newT1[i,a] += T2[l,k,a,c]*Vooov[k,l,i,c]
     #    newT1[i,a] += -2.0*T1[k,c]*T1[l,a]*Vooov[l,k,i,c]
-    #    #newT1[i,a] -= T1[k,c]*T1[i,d]*Vovvv[k,a,d,c]
-    #    newT1[i,a] -= T1[k,c]*T1[i,d]*Bov[Q,k,d]*Bvv[Q,a,c]
-    #    #newT1[i,a] += 2.0*T1[k,c]*T1[i,d]*Vovvv[k,a,c,d]
-    #    newT1[i,a] += 2.0*T1[k,c]*T1[i,d]*Bov[Q,k,c]*Bvv[Q,a,d]
+    #    newT1[i,a] -= T1[k,c]*T1[i,d]*Vovvv[k,a,d,c]
+    #    newT1[i,a] += 2.0*T1[k,c]*T1[i,d]*Vovvv[k,a,c,d]
     #    newT1[i,a] += T1[k,c]*T1[l,a]*Vooov[k,l,i,c]
     #    newT1[i,a] += -2.0*T1[k,c]*T2[i,l,a,d]*Voovv[l,k,c,d]
     #    newT1[i,a] += -2.0*T1[k,c]*T2[l,i,a,d]*Voovv[k,l,c,d]
@@ -370,12 +371,13 @@ function update_T1(T1::Array{T,2}, T2::Array{T,4}, newT1::Array{T,2}, foo, fov, 
     end
 end
 
-function update_T2(T1::Array{T,2},T2::Array{T,4},newT2::Array{T,4},foo,fov,fvv,moint::Fermi.Integrals.DFMOIntegrals, T2_inter) where T <: AbstractFloat
+function update_T2(T1::Array{T,2},T2::Array{T,4},newT2::Array{T,4},foo,fov,fvv,ints::IntegralHelper) where T <: AbstractFloat
     #Voooo, Vooov, Voovv, Vovov, Vovvv, Vvvvv = moint.oooo, moint.ooov, moint.oovv, moint.ovov, moint.ovvv, moint.vvvv
-    Bov = moint.Bov
-    Bvo = moint.Bvo
-    Boo = moint.Boo
-    Bvv = moint.Bvv
+    Bov = ints["BOV"]
+    Bvo = ints["BVO"]
+    Boo = ints["BOO"]
+    Bvv = ints["BVV"]
+    #Voooo, Vooov, Voovv, Vovov, Vovvv, Vvvvv = ints["OOOO"], ints["OOOV"], ints["OOVV"], ints["OVOV"], ints["OVVVV"], ints["VVVV"]
     @tensor begin
         Voooo[i,j,k,l] := Boo[Q,i,k]*Boo[Q,j,l]
         Vooov[i,j,k,a] := Boo[Q,i,k]*Bov[Q,j,a]
@@ -400,7 +402,6 @@ function update_T2(T1::Array{T,2},T2::Array{T,4},newT2::Array{T,4},foo,fov,fvv,m
         Fermi.contract!(T2_slice,T2_inter,Bvv,"ab","Qad","Qdb")
         newT2[i,j,:,:] += T2_slice
     end
-
 
     @tensoropt (i=>x, j=>x, k=>x, l=>x, a=>10x, b=>10x, c=>10x, d=>10x, Q=>50x) begin
         newT2[i,j,a,b] += Voovv[i,j,a,b]
@@ -444,12 +445,16 @@ function update_T2(T1::Array{T,2},T2::Array{T,4},newT2::Array{T,4},foo,fov,fvv,m
         P_OoVv[i,j,a,b] += T1[l,b]*T2[k,i,a,c]*Vooov[l,k,j,c]
         P_OoVv[i,j,a,b] += -1.0*T1[j,c]*T2[i,k,d,b]*Bov[Q,k,c]*Bvv[Q,a,d]
         P_OoVv[i,j,a,b] += -1.0*T1[j,c]*T2[k,i,a,d]*Bov[Q,k,d]*Bvv[Q,b,c]
-        P_OoVv[i,j,a,b] += (-1.0*T1[j,c]*T2[i,k,a,d] + 2.0*T1[k,c]*T2[i,j,a,d])*Bov[Q,k,c]*Bvv[Q,b,d]
+        #BADBOI#P_OoVv[i,j,a,b] += (-1.0*T1[j,c]*T2[i,k,a,d] + 2.0*T1[k,c]*T2[i,j,a,d])*Bov[Q,k,c]*Bvv[Q,b,d]
+        P_OoVv[i,j,a,b] += -1.0*T1[j,c]*T2[i,k,a,d]*Bov[Q,k,c]*Bvv[Q,b,d]
+        P_OoVv[i,j,a,b] += 2.0*T1[k,c]*T2[i,j,a,d]*Bov[Q,k,c]*Bvv[Q,b,d]
         P_OoVv[i,j,a,b] += T1[j,c]*T2[l,k,a,b]*Vooov[l,k,i,c]
         P_OoVv[i,j,a,b] += T1[l,b]*T2[i,k,a,c]*Vooov[k,l,j,c]
         P_OoVv[i,j,a,b] += -1.0*T1[k,a]*T2[i,j,d,c]*Bov[Q,k,d]*Bvv[Q,b,c]
         P_OoVv[i,j,a,b] += T1[k,a]*T2[i,l,c,b]*Vooov[l,k,j,c]
-        P_OoVv[i,j,a,b] += (2.0*T1[j,c]*T2[i,k,a,d] - 1.0*T1[k,c]*T2[i,j,a,d])*Bov[Q,k,d]*Bvv[Q,b,c]
+        #BADBOI#P_OoVv[i,j,a,b] += (2.0*T1[j,c]*T2[i,k,a,d] - 1.0*T1[k,c]*T2[i,j,a,d])*Bov[Q,k,d]*Bvv[Q,b,c]
+        P_OoVv[i,j,a,b] += 2.0*T1[j,c]*T2[i,k,a,d]*Bov[Q,k,d]*Bvv[Q,b,c]
+        P_OoVv[i,j,a,b] -= 1.0*T1[k,c]*T2[i,j,a,d]*Bov[Q,k,d]*Bvv[Q,b,c]
         P_OoVv[i,j,a,b] += T1[k,c]*T2[i,l,a,b]*Vooov[k,l,j,c]
         P_OoVv[i,j,a,b] += -2.0*T1[k,c]*T2[i,l,a,b]*Vooov[l,k,j,c]
         P_OoVv[i,j,a,b] += T2[j,k,c,d]*T2[i,l,a,b]*Voovv[k,l,c,d]
@@ -462,7 +467,7 @@ function update_T2(T1::Array{T,2},T2::Array{T,4},newT2::Array{T,4},foo,fov,fvv,m
         P_OoVv[i,j,a,b] += T1[i,c]*T1[k,a]*T2[l,j,d,b]*Voovv[l,k,c,d]
         P_OoVv[i,j,a,b] += T1[i,c]*T1[l,b]*T2[k,j,a,d]*Voovv[k,l,c,d]
         P_OoVv[i,j,a,b] += -2.0*T2[i,k,d,c]*T2[l,j,a,b]*Voovv[k,l,c,d]
-        
+        ##
         newT2[i,j,a,b] += P_OoVv[i,j,a,b] + P_OoVv[j,i,b,a]
     end
 end

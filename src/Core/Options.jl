@@ -19,6 +19,8 @@ CurrentOptions = Dict{String,Union{Float64,Int,String,Bool,Nothing}}(
                                   H        0.9197881882      2.4580185570      0.6297938832
                                   """,
                                   "basis" => "sto-3g",
+                                  "jkfit" => "auto",
+                                  "rifit" => "auto",
                                   "charge" => 0,
                                   "multiplicity" => 1,
                                   "unit" => "angstrom",
@@ -31,7 +33,6 @@ CurrentOptions = Dict{String,Union{Float64,Int,String,Bool,Nothing}}(
                                   "quiet" => true,
                                   "mp2_type" => "conv",
                                   "precision" => "double",
-                                  "auxbasis" => "auto",
                                   "cc_alg" => "CTF",
                                   "ci_alg" => "sparse",
                                   "e_conv" => 10,
@@ -156,3 +157,8 @@ macro molecule(block)
     mol = clean_up(mol)
     CurrentOptions["molstring"] = String(mol)
 end
+
+
+#function notimplemented()
+#    @output "🚧 Not implemented yet! We're working on it 🔨 👷 \n"
+#end

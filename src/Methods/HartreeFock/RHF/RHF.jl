@@ -40,8 +40,6 @@ struct RHF <: AbstractHFWavefunction
     ints::IntegralHelper
 end
 
-# Algorithm-specific dispatches
-include("SCF.jl")
 
 function select_alg(A::String)
     implemented = Dict{String,Any}(
@@ -68,7 +66,6 @@ function select_guess(A::String)
     end
 end
 
-# General dispatches
 """
     Fermi.HartreeFock.RHF()
 
@@ -82,18 +79,18 @@ end
 function RHF(molecule::Molecule)
     Alg = select_alg(Fermi.CurrentOptions["scf_alg"])
     ints = Fermi.Integrals.IntegralHelper()
-    #aoint = aoint_type(molecule)
     guess = select_guess(Fermi.CurrentOptions["scf_guess"])
     RHF(molecule, ints, Alg, guess)
 end
 
 """
-    Fermi.HartreeFock.RHF(molecule::Molecule, aoint::ConventionalAOIntegrals, Alg::ConventionalRHF)
+    Fermi.HartreeFock.RHF(molecule::Molecule, aoint::IntegralHelper, )
 
-Conventional algorithm for to compute RHF wave function given Molecule, Integrals objects.
+Algorithm for to compute RHF wave function given Molecule, IntegralHelper objects.
 """
 function RHF(molecule::Molecule, aoint::IntegralHelper, Alg::B, guess::GWHGuess) where B <: RHFAlgorithm 
 
+    #form GWH guess
     @output "Using GWH Guess\n"
     S = Hermitian(aoint["S"])
     Λ = S^(-1/2)
@@ -121,6 +118,8 @@ end
 
 function RHF(molecule::Molecule, aoint::IntegralHelper, Alg::B, guess::CoreGuess) where B <: AbstractAOIntegrals 
 
+    #Form core guess
+    @output "Using Core Guess\n"
     S = Hermitian(aoint["S"])
     Λ = S^(-1/2)
     H = Hermitian(aoint["T"] + aoint["V"])
@@ -136,11 +135,12 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, Alg::B, guess::CoreGuess
 
     RHF(molecule, aoint, C, Alg)
 end
-"""
-    Fermi.HartreeFock.RHF(wfn::RHF, aoint::ConventionalAOIntegrals, Alg::ConventionalRHF)
 
-Conventional algorithm for to compute RHF wave function. Inital guess for orbitals is built from given RHF wfn. Integrals
-are taken from the aoint input.
+"""
+    Fermi.HartreeFock.RHF(molecule::Molecule, aoint::IntegralHelper, Alg::B) where B <: RHFAlgorithm
+
+Algorithm for to compute RHF wave function given Molecule, IntegralHelper objects. Starts from an input wavefunction,
+and performs basis set castup (or down) as needed.
 """
 function RHF(wfn::RHF, aoint::IntegralHelper, Alg::B) where B <: RHFAlgorithm 
 
@@ -156,16 +156,9 @@ function RHF(wfn::RHF, aoint::IntegralHelper, Alg::B) where B <: RHFAlgorithm
     RHF(Fermi.Geometry.Molecule(), aoint, Cb, Alg)
 end
 
-"""
-    Fermi.HartreeFock.RHF(wfn::RHF)
-
-    Compute RHF wave function using the input RHF wave function (wfn) to generate a guess for orbitals.
-"""
-function RHF(wfn::RHF)
-    aoint_type,Alg = select_algorithm(Fermi.CurrentOptions["scf_alg"])
-    RHF(wfn, Alg)
-end
-
 function RHFEnergy(D::Array{Float64,2}, H::Array{Float64,2},F::Array{Float64,2})
     return sum(D .* (H .+ F))
 end
+
+#actual HF routine is in here
+include("SCF.jl")

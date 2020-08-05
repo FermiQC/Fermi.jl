@@ -8,9 +8,6 @@ Compute a RCCSD wave function using the Compiled time factorization algorithm (C
 """
 function RCCSD{T}(guess::RCCSD{Tb},Alg::CTF) where { T <: AbstractFloat,
                                                     Tb <: AbstractFloat }
-    #molecule = Fermi.Geometry.Molecule()
-    #aoint = Fermi.Integrals.ConventionalAOIntegrals(molecule)
-    #refwfn = Fermi.HartreeFock.RHF(molecule, aoint)
     refwfn = Fermi.HartreeFock.RHF()
 
     drop_occ = Fermi.CurrentOptions["drop_occ"]
@@ -25,28 +22,13 @@ function RCCSD{T}(guess::RCCSD{Tb},Alg::CTF) where { T <: AbstractFloat,
         refwfn.ints["OVVV"]
         refwfn.ints["VVVV"]
     end
-    #tint = @elapsed moint = Fermi.Integrals.PhysRestrictedMOIntegrals{T}(refwfn.ndocc, refwfn.nvir, drop_occ, drop_vir, refwfn.C, aoint)
     @output " done in {} s" tint
     RCCSD{T}(refwfn, guess, Alg) 
 end
 
-#"""
-#    Fermi.CoupledCluster.RCCSD{T}(refwfn::RHF, moint::PhysRestrictedMOIntegrals, Alg::CTF)
-#
-#Compute a RCCSD wave function using the Compiled time factorization algorithm (CTF). Precision (T), reference wavefunction (refwfn)
-#and molecular orbital integrals (moint) must be passed.
-#"""
-#function RCCSD{T}(refwfn::RHF, Alg::CTF) where T <: AbstractFloat
-#    jjjjh
-#    d = [i - a for i = diag(moint.oo), a = diag(moint.vv)]
-#    D = [i + j - a - b for i = diag(moint.oo), j = diag(moint.oo), a = diag(moint.vv), b = diag(moint.vv)]
-#    newT1 = moint.ov./d
-#    newT2 = moint.oovv./D
-#    RCCSD{T}(refwfn, moint, newT1, newT2, Alg)
-#end
 
 function RCCSD{T}(refwfn::RHF, guess::RCCSD{Tb}, Alg::CTF) where { T <: AbstractFloat,
-                                                                                                    Tb <: AbstractFloat }
+                                                                  Tb <: AbstractFloat }
     ints = refwfn.ints
     d = [i - a for i = diag(ints["FOO"]), a = diag(ints["FVV"])]
     D = [i + j - a - b for i = diag(ints["FOO"]), j = diag(ints["FOO"]), a = diag(ints["FVV"]), b = diag(ints["FVV"])]
@@ -81,8 +63,6 @@ function RCCSD{T}(refwfn::RHF, newT1::Array{T, 2}, newT2::Array{T,4}, Alg::CTF) 
     fov = ints["FOV"]
 
     # Compute Guess Energy
-    @assert newT1 ≈ ints["FOV"] ./ d
-    @assert newT2 ≈ ints["OOVV"] ./ D
     Ecc = update_energy(newT1, newT2, fov, ints["OOVV"])
     Eguess = Ecc+refwfn.energy
     

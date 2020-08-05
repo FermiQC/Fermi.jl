@@ -355,9 +355,9 @@ function dfaoeri(molecule::Molecule, bname::String,dfbname::String)
     #                              "aug-cc-pv5z"] "Only Dunning basis sets are supported for density fitting!"
     #dfbname = bname*"-RI"
     Lints.libint2_init()
-    @output "   • Lints started\n\n"
-    @output "   Basis set: {}\n" bname
-    @output "   DF Basis set: {}\n" dfbname 
+    #@output "   • Lints started\n\n"
+    #@output "   Basis set: {}\n" bname
+    #@output "   DF Basis set: {}\n" dfbname 
     mol = Lints.Molecule("/tmp/molfile.xyz")
     bas = Lints.BasisSet(bname, mol)
     dfbas = Lints.BasisSet(dfbname,mol)
@@ -381,11 +381,10 @@ function dfaoeri(molecule::Molecule, bname::String,dfbname::String)
     Lints.make_2D(V,V_engine,bas)
     Lints.make_j(J,eri_engines[1],dfbas)
     Lints.make_b(Pqp,eri_engines,bas,dfbas)
-    println(maximum(imag.(J)))
     Jh = Array(Hermitian(J)^(-1/2)) #sometimes Jh becomes complex slightly if J is not ~~exactly~~ hermitian 💔
     B = zeros(dfsz,sz,sz)
     Fermi.contract!(B,Pqp,Jh,"Qpq","Pqp","PQ")
-    @output "Exiting Lints.\n\n"
+    #@output "Exiting Lints.\n\n"
     B,dfbas
 end
 
@@ -430,13 +429,13 @@ function IntegralHelper{T}() where T <: AbstractFloat
     aux = Fermi.CurrentOptions["auxbasis"]
     if aux == "auto"
         aux_lookup = Dict{String,String}(
-                                         "cc-pvdz" => "cc-pvdz-ri",
-                                         "cc-pvtz" => "cc-pvtz-ri",
-                                         "cc-pvqz" => "cc-pvqz-ri",
-                                         "cc-pv5z" => "cc-pv5z-ri"
+                                         "cc-pvdz" => "cc-pvdz-jkfit",
+                                         "cc-pvtz" => "cc-pvtz-jkfit",
+                                         "cc-pvqz" => "cc-pvqz-jkfit",
+                                         "cc-pv5z" => "cc-pv5z-jkfit"
                                         )
         bname["aux"] = try
-            aux_lookup[aux]
+            aux_lookup[Fermi.CurrentOptions["basis"]]
         catch KeyError #if we haven't got it programmed, use a large DF basis by default
             "aug-cc-pvqz-ri"
         end
@@ -447,6 +446,25 @@ function IntegralHelper{T}() where T <: AbstractFloat
     C = Dict{String,Array{Float64,2}}()
     basis = Dict{String,Lints.BasisSetAllocated}()
     IntegralHelper{T}(cache,bname,mol,C,basis,type)
+end
+
+function aux_ri!(I::IntegralHelper,ri=Fermi.CurrentOptions["rifit"])
+    delete!(I.cache,"B") #clear out old aux basis
+    if ri == "auto"
+        aux_lookup = Dict{String,String}(
+                                         "cc-pvdz" => "cc-pvdz-ri",
+                                         "cc-pvtz" => "cc-pvtz-ri",
+                                         "cc-pvqz" => "cc-pvqz-ri",
+                                         "cc-pv5z" => "cc-pv5z-ri"
+                                        )
+        I.bname["aux"] = try
+            aux_lookup[Fermi.CurrentOptions["basis"]]
+        catch KeyError
+            "aug-cc-pvqz-ri" # default to large DF basis
+        end
+    else
+        I.bname["aux"] = ri
+    end
 end
 
 """
@@ -526,7 +544,17 @@ function compute!(I::IntegralHelper,entry::String)
         catch
             error("")
         end
-        I.cache[entry] = transform_eri(aoint, C1, C2)
+        C = []
+        push!(C,C1)
+        push!(C,C2)
+        drop_occ = Fermi.CurrentOptions["drop_occ"]
+        drop_vir = Fermi.CurrentOptions["drop_vir"]
+
+        for i in eachindex(C)
+            C[i] == I.C["O"] ? C[i] = C[i][:, (1+drop_occ):end] : nothing
+            C[i] == I.C["V"] ? C[i] = C[i][:, 1:end-drop_vir] : nothing
+        end
+        I.cache[entry] = transform_eri(aoint, C...)
 
     elseif 'F' in entry
         df = '\'' in entry
@@ -545,7 +573,17 @@ function compute!(I::IntegralHelper,entry::String)
         catch
             error("")
         end
-        I[entry] = transform_fock(F,C1,C2)
+        C = []
+        push!(C,C1)
+        push!(C,C2)
+        drop_occ = Fermi.CurrentOptions["drop_occ"]
+        drop_vir = Fermi.CurrentOptions["drop_vir"]
+
+        for i in eachindex(C)
+            C[i] == I.C["O"] ? C[i] = C[i][:, (1+drop_occ):end] : nothing
+            C[i] == I.C["V"] ? C[i] = C[i][:, 1:end-drop_vir] : nothing
+        end
+        I[entry] = transform_fock(F,C...)
 
     else 
         aoint  = I["μ"] 
@@ -559,6 +597,7 @@ function compute!(I::IntegralHelper,entry::String)
         else
             notation = "phys"
         end
+        C = []
         C1 = try 
             I.C[entry[1+offset:1+offset]]
         catch
@@ -579,7 +618,18 @@ function compute!(I::IntegralHelper,entry::String)
         catch
             error("")
         end
-        temp = transform_eri(aoint, C1, C3, C2, C4)
+        push!(C,C1)
+        push!(C,C3)
+        push!(C,C2)
+        push!(C,C4)
+        drop_occ = Fermi.CurrentOptions["drop_occ"]
+        drop_vir = Fermi.CurrentOptions["drop_vir"]
+
+        for i in eachindex(C)
+            C[i] == I.C["O"] ? C[i] = C[i][:, (1+drop_occ):end] : nothing
+            C[i] == I.C["V"] ? C[i] = C[i][:, 1:end-drop_vir] : nothing
+        end
+        temp = transform_eri(aoint, C...)
         if notation == "phys"
             I.cache[entry] = permutedims(temp,(1,3,2,4))
         else
@@ -684,7 +734,7 @@ function transform_eri(ERI::Array{T,3},C1::Array{T,2},C2::Array{T,2}) where T <:
     Bin = zeros(naux,i,nao)
     Fermi.contract!(Bin,C1,ERI,"Qiv","ui","Quv")
     Bia = zeros(naux,i,a)
-    Fermi.contracat!(Bia,C2,Bin,"Qia","va","Qiv")
+    Fermi.contract!(Bia,C2,Bin,"Qia","va","Qiv")
     Bia
 end
 
