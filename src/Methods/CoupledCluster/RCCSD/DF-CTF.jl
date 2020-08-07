@@ -21,8 +21,9 @@ function RCCSD{T}(guess::RCCSD{Tb},Alg::DFCTF) where { T <: AbstractFloat,
     RCCSD{T}(refwfn, guess, ints, Alg) 
 end
 
-function RCCSD{T}(refwfn::RHF, guess::RCCSD{Tb}, ints::IntegralHelper, Alg::DFCTF) where { T <: AbstractFloat,
-                                                                                                    Tb <: AbstractFloat }
+function RCCSD{T}(refwfn::RHF, guess::RCCSD{Tb}, ints::IntegralHelper{Tc}, Alg::DFCTF) where { T <: AbstractFloat,
+                                                                                               Tb <: AbstractFloat,
+                                                                                              Tc <: AbstractFloat }
     d = [i - a for i = diag(ints["FOO"]), a = diag(ints["FVV"])]
     D = [i + j - a - b for i = diag(ints["FOO"]), j = diag(ints["FOO"]), a = diag(ints["FVV"]), b = diag(ints["FVV"])]
     newT1 = ints["FOV"]./d
@@ -44,6 +45,7 @@ end
 function compute_integrals(ints,Alg::DFCTF)
     @output "Aux basis: {}\n" ints.bname["aux"]
     ints["BOV"]
+    ints["BVO"]
     ints["BOO"]
     ints["BVV"]
 end
@@ -53,26 +55,8 @@ function compute_oovv(ints,alg::DFCTF)
     @tensor oovv[i,j,a,b] := Bov[Q,i,a]*Bov[Q,j,b]
     oovv
 end
-"""
-    Fermi.Coupled Cluster.update_energy(T1::Array{T, 2}, T2::Array{T, 4}, f::Array{T,2}, Voovv::Array{T, 4}) where T <: AbstractFloat
 
-Compute CC energy from amplitudes and integrals.
-"""
-function update_energy(T1::Array{T, 2}, T2::Array{T, 4}, f::Array{T,2}, Voovv::Array{T, 4}) where T <: AbstractFloat
-
-    @tensoropt (k=>x, l=>x, c=>100x, d=>100x)  begin
-        CC_energy = 2.0*f[k,c]*T1[k,c]
-        B[l,c,k,d] := -1.0*T1[l,c]*T1[k,d]
-        B[l,c,k,d] += -1.0*T2[l,k,c,d]
-        B[l,c,k,d] += 2.0*T2[k,l,c,d]
-        CC_energy += B[l,c,k,d]*Voovv[k,l,c,d]
-        CC_energy += 2.0*T1[l,c]*T1[k,d]*Voovv[l,k,c,d]
-    end
-    
-    return CC_energy
-end
-
-function update_T1(T1::Array{T,2}, T2::Array{T,4}, newT1::Array{T,2}, foo, fov, fvv, ints::IntegralHelper, alg::DFCTF) where T <: AbstractFloat
+function update_T1(T1::Array{T,2}, T2::Array{T,4}, newT1::Array{T,2}, foo, fov, fvv, ints::IntegralHelper, alg::DFCTF) where { T <: AbstractFloat }
     Bov = ints["BOV"]
     Bvo = ints["BVO"]
     Boo = ints["BOO"]
@@ -126,9 +110,9 @@ function update_T2(T1::Array{T,2},T2::Array{T,4},newT2::Array{T,4},foo,fov,fvv,i
     end
     dfsz,nocc,nvir = size(Bov)
     @tensor _T[i,j,c,d] := T1[i,c]*T1[j,d] + T2[i,j,c,d]
-    T2_inter = zeros(dfsz,nvir,nvir)
-    T2_slice = zeros(nvir,nvir)
-    Tslice = zeros(nvir,nvir)
+    T2_inter = zeros(T,dfsz,nvir,nvir)
+    T2_slice = zeros(T,nvir,nvir)
+    Tslice = zeros(T,nvir,nvir)
     for i=1:nocc, j=1:nocc
         T2_inter .= 0
         T2_slice .= 0

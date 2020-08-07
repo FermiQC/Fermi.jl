@@ -3,7 +3,7 @@
 
 Compute CC energy from amplitudes and integrals.
 """
-function update_energy(T1::Array{T, 2}, T2::Array{T, 4}, f::Array{T,2}, Voovv::Array{T, 4}) where T <: AbstractFloat
+function update_energy(T1::Array{T, 2}, T2::Array{T, 4}, f::Array{T,2}, Voovv::Array{T, 4}) where { T <: AbstractFloat }
 
     @tensoropt (k=>x, l=>x, c=>100x, d=>100x)  begin
         CC_energy = 2.0*f[k,c]*T1[k,c]
@@ -22,7 +22,7 @@ end
 
 Update amplitudes (T1, T2) to newT1 and newT2 using CTF CCSD equations.
 """
-function update_amp(T1::Array{T, 2}, T2::Array{T, 4}, newT1::Array{T,2}, newT2::Array{T,4}, foo::Array{T,2}, fov::Array{T,2}, fvv::Array{T,2}, ints::IntegralHelper{T}, alg::A) where { T <: AbstractFloat,
+function update_amp(T1::Array{T, 2}, T2::Array{T, 4}, newT1::Array{T,2}, newT2::Array{T,4}, foo::Array{T,2}, fov::Array{T,2}, fvv::Array{T,2}, ints::IntegralHelper, alg::A) where { T <: AbstractFloat,
                                                                                                                                                                                      A <: CCAlgorithm }
 
     fill!(newT1, 0.0)
@@ -33,9 +33,13 @@ function update_amp(T1::Array{T, 2}, T2::Array{T, 4}, newT1::Array{T,2}, newT2::
     update_T2(T1,T2,newT2,foo,fov,fvv,ints,alg)
 end
 
-function RCCSD{T}(refwfn::RHF, ints::IntegralHelper, newT1::Array{T, 2}, newT2::Array{T,4}, alg::A; ecT1 = Array{Float64}(undef,0,0), ecT2 = Array{Float64}(undef,0,0,0,0)) where { T <: AbstractFloat,
+function RCCSD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2::Array{Tc,4}, alg::A; ecT1 = Array{Float64}(undef,0,0), ecT2 = Array{Float64}(undef,0,0,0,0)) where { Ta <: AbstractFloat,
+                                                                                                                                                                                      Tb <: AbstractFloat,
+                                                                                                                                                                                      Tc <: AbstractFloat,
                                        A <: CCAlgorithm }
  
+    newT1 = convert(Array{Ta},newT1)
+    newT2 = convert(Array{Ta},newT2)
     # Print intro
     Fermi.CoupledCluster.print_header()
     Fermi.CoupledCluster.print_alg(alg)
@@ -45,17 +49,20 @@ function RCCSD{T}(refwfn::RHF, ints::IntegralHelper, newT1::Array{T, 2}, newT2::
     @output "\nBasis: {}\n" ints.bname["primary"]
     tint = @elapsed Fermi.CoupledCluster.compute_integrals(ints,alg)
     @output " done in {} s\n" tint
+    for key in keys(ints.cache)
+        ints[key] = convert(Array{Ta},ints[key])
+    end
 
     # Process Fock matrix, important for non HF cases
-    foo = ints["FOO"] - Diagonal(ints["FOO"])
-    fvv = ints["FVV"] - Diagonal(ints["FVV"])
-    fov = ints["FOV"]
+    foo = convert(Array{Ta},ints["FOO"] - Diagonal(ints["FOO"]))
+    fvv = convert(Array{Ta},ints["FVV"] - Diagonal(ints["FVV"]))
+    fov = convert(Array{Ta},ints["FOV"])
 
-    d = [i - a for i = diag(ints["FOO"]), a = diag(ints["FVV"])]
-    D = [i + j - a - b for i = diag(ints["FOO"]), j = diag(ints["FOO"]), a = diag(ints["FVV"]), b = diag(ints["FVV"])]
+    d = Ta[i - a for i = diag(ints["FOO"]), a = diag(ints["FVV"])]
+    D = Ta[i + j - a - b for i = diag(ints["FOO"]), j = diag(ints["FOO"]), a = diag(ints["FVV"]), b = diag(ints["FVV"])]
 
     # Compute Guess Energy
-    oovv = Fermi.CoupledCluster.compute_oovv(ints,alg)
+    oovv = convert(Array{Ta},Fermi.CoupledCluster.compute_oovv(ints,alg))
     Ecc = update_energy(newT1, newT2, fov, oovv)
     Eguess = Ecc+refwfn.energy
     
@@ -71,8 +78,9 @@ function RCCSD{T}(refwfn::RHF, ints::IntegralHelper, newT1::Array{T, 2}, newT2::
     preconv_T1 = Fermi.CurrentOptions["preconv_T1"]
     dp = Fermi.CurrentOptions["cc_damp_ratio"]
     do_diis = Fermi.CurrentOptions["diis"]
-    do_diis ? DM_T1 = Fermi.DIIS.DIISManager{Float64,Float64}(size=6) : nothing
-    do_diis ? DM_T2 = Fermi.DIIS.DIISManager{Float64,Float64}(size=6) : nothing
+    ndiis = Fermi.CurrentOptions["ndiis"]
+    do_diis ? DM_T1 = Fermi.DIIS.DIISManager{Ta,Ta}(size=6) : nothing
+    do_diis ? DM_T2 = Fermi.DIIS.DIISManager{Ta,Ta}(size=6) : nothing
 
     @output " Dropped Occupied Orbitals →  {:3.0f}\n" Int(Fermi.CurrentOptions["drop_occ"])
     @output " Dropped Virtual Orbitals  →  {:3.0f}\n\n" Int(Fermi.CurrentOptions["drop_vir"])
@@ -104,7 +112,7 @@ function RCCSD{T}(refwfn::RHF, ints::IntegralHelper, newT1::Array{T, 2}, newT2::
             update_amp(T1, T2, newT1, newT2, foo, fov, fvv, ints, alg)
 
             #apply external correction
-            apply_ec(newT1,zeros(T,size(newT2)),ecT1,ecT2)
+            apply_ec(newT1,zeros(Ta,size(newT2)),ecT1,ecT2)
 
             # Apply resolvent
             newT1 ./= d
@@ -141,7 +149,7 @@ function RCCSD{T}(refwfn::RHF, ints::IntegralHelper, newT1::Array{T, 2}, newT2::
                 T1 .= newT1
                 T2 .= newT2
                 update_T1(T1,T2,newT1,foo,fov,fvv,ints,alg)
-                apply_ec(newT1,zeros(T,size(newT2)),ecT1,ecT2)
+                apply_ec(newT1,zeros(Ta,size(newT2)),ecT1,ecT2)
                 newT1 ./= d
                 if do_diis 
                     e1 = newT1 - T1
@@ -171,8 +179,8 @@ function RCCSD{T}(refwfn::RHF, ints::IntegralHelper, newT1::Array{T, 2}, newT2::
     rms = 1
     ite = 1
 
-    do_diis ? DM_T1 = Fermi.DIIS.DIISManager{Float64,Float64}(size=6) : nothing
-    do_diis ? DM_T2 = Fermi.DIIS.DIISManager{Float64,Float64}(size=6) : nothing
+    do_diis ? DM_T1 = Fermi.DIIS.DIISManager{Ta,Ta}(size=ndiis) : nothing
+    do_diis ? DM_T2 = Fermi.DIIS.DIISManager{Ta,Ta}(size=ndiis) : nothing
     if preconv_T1
         @output "Including T2 update\n"
     end
@@ -233,7 +241,7 @@ function RCCSD{T}(refwfn::RHF, ints::IntegralHelper, newT1::Array{T, 2}, newT2::
     @output "\n⇒ Final CCSD Energy:     {:15.10f}\n" Ecc+refwfn.energy
     @output repeat("-",80)*"\n"
 
-    return RCCSD{T}(Eguess, Ecc+refwfn.energy, Fermi.MemTensor(newT1), Fermi.MemTensor(newT2))
+    return RCCSD{Ta}(Eguess, Ecc+refwfn.energy, Fermi.MemTensor(newT1), Fermi.MemTensor(newT2))
 end
 
 function apply_ec(T1,T2,ecT1,ecT2)

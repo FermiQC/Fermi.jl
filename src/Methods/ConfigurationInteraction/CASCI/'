@@ -1,5 +1,4 @@
 using Combinatorics
-using Serialization
 using SparseArrays
 using TensorOperations
 using LinearAlgebra
@@ -303,219 +302,136 @@ end
     fois = collect(fois)
     return fois end
 
-#lexicographic premutations generation, By Donald Knuth
-function lpermutations(a::BitArray)
-  b=BitArray[]
-  sort!(a)
-  n=length(a)
-  while(true)
-    push!(b,copy(a))
-    j=n-1
-    while(a[j]>=a[j+1])
-      j-=1
-      j==0 && return(b)
-    end
-    l=n
-    while(a[j]>=a[l])
-      l-=1
-    end
-    tmp=a[l]
-    a[l]=a[j]
-    a[j]=tmp
-    k=j+1
-    l=n
-    while(k<l)
-      tmp=a[k]
-      a[k]=a[l]
-      a[l]=tmp
-      k+=1
-      l-=1
-    end
-  end
-end
-
-function ϵI(Fdets, P::Array{Determinant,1}, Pcoef::Array{Float64,1}, Ep::T, h::Array{T,2}, V::Array{T,4},act_elec,active) where T <: AbstractFloat
+@fastmath @inbounds function ϵI(Fdets, P::Array{Determinant,1}, Pcoef::Array{Float64,1}, Ep::T, h::Array{T,2}, V::Array{T,4},act_elec,active) where T <: AbstractFloat
+    N = count_ones(P[1].α) #number of electrons (assumes RHF)
+    Ne = N*2
     Fe = zeros(length(Fdets))
-    #
-    #
-    #
-    #
-    if length(Fdets)*length(P) > (271945^2)
-        @output "Using Residue Array algorithm\n"
-        N = count_ones(P[1].α) #number of electrons (assumes RHF)
-        Ne = N*2
-        Vints = zeros(length(Fdets))
-        αind = zeros(Int64,N)
-        βind = zeros(Int64,N)
-        for i in eachindex(Fdets)
-            αindex!(Fdets[i], αind)
-            βindex!(Fdets[i], βind)
-            Ei = Hd0(αind, βind, h, V)
-            Fe[i] = Ei - Ep #Δ
-        end
-        mask = BitArray(undef,active)
-        mask[1:2] .= 1
-        masks_ss = lpermutations(mask)
-        mask[2:2] .= 0
-        masks_os = lpermutations(mask)
-        A = BitArray(undef,active)
-        ae2 = Int(act_elec/2)
-        A[1:ae2] .= 1
-        oo = lpermutations(A)
-        A[ae2-1:ae2] .= 0
-        ss = lpermutations(A)
-        aa = reshape(collect(Base.product(ss,oo)),(1,:))
-        bb = reshape(collect(Base.product(oo,ss)),(1,:))
-        A[ae2-1:ae2-1] .= 1
-        os = (lpermutations(A))
-        ab = reshape(collect(Base.product(os,os)),(1,:))
-        ba = reshape(collect(Base.product(os,os)),(1,:))
-        residues = hcat(aa,bb,ab,ba)
-        residues = collect(Set(residues))
-        resP = Dict(residues .=> [Set(Int64[]) for i in (residues)])
-
-        # bit arrays for Fdet info
-        DFa = BitArray(undef,active)
-        DFb = BitArray(undef,active)
-        DF1 = BitArray(undef,active)
-        DF2 = BitArray(undef,active)
-
-        ncore = Int((Ne - act_elec)/2)
-        core = BitArray(undef,ncore)
-        core[:] .= 1
-        ct = 1
-        for i in eachindex(P)
-            dF = P[i]
-            DFa.chunks[1] = dF.α >> (ncore )
-            DFb.chunks[1] = dF.β >> (ncore )
-            for mask in masks_ss
-                nua = DFa.chunks[1] & (~mask.chunks[1])
-                nub = DFb.chunks[1] & (~mask.chunks[1])
-                DF1.chunks[1] = nua
-                DF2.chunks[1] = nub
-                nua = DF1
-                nub = DF2
-                if (sum(DF1) == 2)
-                    push!(resP[(nua,DFb)],i)
-                end
-                if (sum(DF2) == 2)
-                    push!(resP[(DFa,nub)],i)
-                end
-            end
-            for mask1 in masks_os
-                for mask2 in masks_os
-                    nua = DFa.chunks[1] & (~mask1.chunks[1])
-                    nub = DFb.chunks[1] & (~mask2.chunks[1])
-                    DF1.chunks[1] = nua
-                    DF2.chunks[1] = nub
-                    nua = DF1
-                    nub = DF2
-                    if sum(DF1) == 3 && sum(DF2) == 3
-                        push!(resP[(nua,nub)],i)
-                    end
-                end
-            end
-        end
-        resF = Dict(residues .=> [Set(Int64[]) for i in (residues)])
-        for i in eachindex(Fdets)
-            dF = Fdets[i]
-            DFa.chunks[1] = (dF.α >> (ncore))
-            DFb.chunks[1] = (dF.β >> (ncore))
-            for mask in masks_ss
-                nua = DFa.chunks[1] & (~mask.chunks[1])
-                nub = DFb.chunks[1] & (~mask.chunks[1])
-                DF1.chunks[1] = nua
-                DF2.chunks[1] = nub
-                nua = DF1
-                nub = DF2
-                if (sum(DF1) == 2)
-                    push!(resF[(nua,DFb)],i)
-                end
-                if (sum(DF2) == 2)
-                    push!(resF[(DFa,nub)],i)
-                end
-            end
-            for mask1 in masks_os
-                for mask2 in masks_os
-                    nua = DFa.chunks[1] & (~mask1.chunks[1])
-                    nub = DFb.chunks[1] & (~mask2.chunks[1])
-                    DF1.chunks[1] = nua
-                    DF2.chunks[1] = nub
-                    nua = DF1
-                    nub = DF2
-                    if sum(DF1) == 3 && sum(DF2) == 3
-                        push!(resF[(nua,nub)],i)
-                    end
-                end
-            end
-        end
-        detpairs = []
-        for i in eachindex(residues)
-            res = residues[i]
-            push!(detpairs,collect(Base.product(resF[res],resP[res])))
-        end
-        detpairs = [reshape(dp,1,:) for dp in detpairs]
-        detpairs = hcat(detpairs...)
-        detpairs = collect(Set(detpairs))
-        for detpair in detpairs
-            i = detpair[1]
-            j = detpair[2]
-            D1 = Fdets[i]
-            D2 = P[j]
-            αindex!(D1, αind)
-            βindex!(D1, βind)
-            αexc = αexcitation_level(D1,D2)
-            βexc = βexcitation_level(D1,D2)
-            el = αexc + βexc
-            if el == 2
-                Vints[i] += Pcoef[j]*Hd2(D1, D2, V, αexc)
-            elseif el == 1
-                Vints[i] += Pcoef[j]*Hd1(αind, βind, D1, D2, h, V, αexc)
-            end
-        end
-        for i in eachindex(Fe)
-            Fe[i] = Fe[i]/2 - √((Fe[i]^2)/4 + Vints[i]^2)
-        end
-        return Fe
-    else
-        @output "Using double loop algorithm\n"
-        N = sum(αlist(P[1]))
-        αinds = [Array{Int64,1}(undef,N) for i=1:Threads.nthreads()]
-        βinds = [Array{Int64,1}(undef,N) for i=1:Threads.nthreads()]
-        @sync for i in eachindex(Fdets)
-            begin
-            D1 = Fdets[i]
-            id = Threads.threadid()
-            αind = αinds[id]
-            βind = βinds[id]
-            αindex!(D1, αind)
-            βindex!(D1, βind)
-            Ei = Hd0(αind, βind, h, V)
-            Δ = Ei - Ep
-            Vint = 0.0
-            for j in eachindex(P)
-                D2 = P[j]
-                αexc = αexcitation_level(D1,D2)
-                βexc = βexcitation_level(D1,D2)
-                el = αexc + βexc
-                if el > 2
-                    continue 
-                elseif el == 2
-                    Vint += Pcoef[j]*Hd2(D1, D2, V, αexc)
-                elseif el == 1
-                    Vint += Pcoef[j]*Hd1(αind, βind, D1, D2, h, V, αexc)
-                end
-            end
-            
-            @fastmath Fe[i] = Δ/2 - √((Δ^2)/4 + Vint^2)
-            end #Threads.@spawn
-        end
-
-        #if length(P) == 1
-        #    serialize("Fe.dat",Fe)
-        #end
-        return Fe
+    Vints = zeros(length(Fdets))
+    αind = zeros(Int64,N)
+    βind = zeros(Int64,N)
+    for i in eachindex(Fdets)
+        αindex!(Fdets[i], αind)
+        βindex!(Fdets[i], βind)
+        Ei = Hd0(αind, βind, h, V)
+        Fe[i] = Ei - Ep #Δ
     end
+    #Ne = count_ones(Fdets[1].α)
+    A = BitArray(undef,active)
+    ae2 = Int(act_elec/2)
+    A[1:ae2] .= 1
+    oo = permutations(A)
+    A[ae2-1:ae2] .= 0
+    ss = permutations(A)
+    aa = (Base.product(ss,oo))
+    bb = (Base.product(oo,ss))
+    A[ae2-1:ae2-1] .= 1
+    os = permutations(A)
+    ab = (Base.product(os,os))
+    ba = (Base.product(os,os))
+    #aa = Base.Iterators.flatten(aa)
+    #bb = Base.Iterators.flatten(bb)
+    #ab = Base.Iterators.flatten(ab)
+    #ba = Base.Iterators.flatten(ba)
+    aa = collect(aa)
+    bb = collect(bb)
+    ab = collect(ab)
+    ba = collect(ba)
+    #residues = Set(vcat(aa,bb,ab,ba))
+    residues = Set((BitArray(res[1]),BitArray(res[2])) for res in aa)
+    resF = Dict(residues .=> Set(Int64[] for i in length((residues))))
+    resP = Dict(residues .=> Set(Int64[] for i in length((residues))))
+
+    # bit arrays for Fdet info
+    DFa = BitArray(undef,active)
+    DFb = BitArray(undef,active)
+    ncore = Ne - act_elec
+    core = BitArray(undef,ncore)
+    core[:] .= 1
+    for i in eachindex(Fdets)
+        dF = Fdets[i]
+        DFa.chunks[1] = (dF.α >> (ncore))
+        DFb.chunks[1] = (dF.β >> (ncore))
+        for res in keys(resF)
+            if count_ones(DFa.chunks[1] ⊻ res[1].chunks[1]) + count_ones(DFb.chunks[1] ⊻ res[2].chunks[1]) == 4
+                push!(resF[res],i)
+            end
+        end
+    end
+    for i in eachindex(P)
+        dF = Fdets[i]
+        DFa.chunks[1] = dF.α >> (Ne-act_elec )
+        DFb.chunks[1] = dF.β >> (Ne-act_elec )
+        for res in keys(resP)
+            if count_ones(DFa.chunks[1] ⊻ res[1].chunks[1]) + count_ones(DFb.chunks[1] ⊻ res[2].chunks[1]) == 4
+                push!(resP[res],i)
+            end
+        end
+    end
+    detpairs = []
+    println("At detpairs")
+    println(resF)
+    for i in eachindex(residues)
+        #detpairs = union(detpairs,Base.product(resF[res],resP[res]))
+        res = residues[i]
+        #prod = collect(Base.product(resF[res],resP[res]))
+        push!(detpairs,Base.product(resF[res],resP[res]))
+    end
+    println("forming union")
+    detpairs = Set(detpairs)
+    println("After detpairs")
+    for detpair in detpairs
+        #D1a = (detpair[1][1].chunks[1] << ncore) & core
+        #D1b = (detpair[1][2].chunks[1] << ncore) & core
+        #D2a = (detpair[2][1].chunks[1] << ncore) & core
+        #D2b = (detpair[2][2].chunks[1] << ncore) & core
+        #D1 = Determinant(D1a,D1b)
+        #D2 = Determinant(D2a,D2b)
+        D1 = Fdets[detpair[1]]
+        D2 = P[detpair[2]]
+        αexc = αexcitation_level(D1,D2)
+        βexc = βexcitation_level(D1,D2)
+        el = αexc + βexc
+        if el == 2
+            Vints[detpair[1]] += Pcoef[j]*Hd2(D1, D2, V, αexc)
+        elseif el == 1
+            Vints[detpair[1]] += Pcoef[j]*Hd1(αind, βind, D1, D2, h, V, αexc)
+        end
+    end
+    Fe .= Fe./2 .- .√((Fe.^2)./4 .+ Vints.^2)
+        
+
+    #N = sum(αlist(P[1]))
+    #αinds = [Array{Int64,1}(undef,N) for i=1:Threads.nthreads()]
+    #βinds = [Array{Int64,1}(undef,N) for i=1:Threads.nthreads()]
+    #@sync for i in eachindex(Fdets)
+    #    Threads.@spawn begin
+    #    D1 = Fdets[i]
+    #    id = Threads.threadid()
+    #    αind = αinds[id]
+    #    βind = βinds[id]
+    #    αindex!(D1, αind)
+    #    βindex!(D1, βind)
+    #    Ei = Hd0(αind, βind, h, V)
+    #    Δ = Ei - Ep
+    #    Vint = 0.0
+    #    for j in eachindex(P)
+    #        D2 = P[j]
+    #        αexc = αexcitation_level(D1,D2)
+    #        βexc = βexcitation_level(D1,D2)
+    #        el = αexc + βexc
+    #        if el > 2
+    #            continue 
+    #        elseif el == 2
+    #            Vint += Pcoef[j]*Hd2(D1, D2, V, αexc)
+    #        elseif el == 1
+    #            Vint += Pcoef[j]*Hd1(αind, βind, D1, D2, h, V, αexc)
+    #        end
+    #    end
+    #    
+    #    @fastmath Fe[i] = Δ/2 - √((Δ^2)/4 + Vint^2)
+    #    end #Threads.@spawn
+    #end
+    #return Fe
 end
 
 function update_model_space(M::Array{Determinant,1}, h::Array{T,2}, V::Array{T,4}) where T <: AbstractFloat
