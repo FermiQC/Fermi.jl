@@ -19,8 +19,8 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI
     Dtol  = Fermi.CurrentOptions["scf_max_rms"]
     do_diis = Fermi.CurrentOptions["diis"]
     oda = Fermi.CurrentOptions["oda"]
-    oda_cutoff = 1E-1 #hardcoded for now
-    oda_shutoff = 20
+    oda_cutoff = Fermi.CurrentOptions["oda_cutoff"]
+    oda_shutoff = Fermi.CurrentOptions["oda_shutoff"]
 
     #variables that will get updated iteration-to-iteration
     ite = 1
@@ -98,9 +98,9 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI
             #branch for ODA vs DIIS convergence aids
             if oda && Drms > oda_cutoff && ite < oda_shutoff
                 diis = false
-                dD = D̃ - D
-                s = -tr(F̃ * dD)
-                c = -tr((F - F̃) * (dD))
+                dD = D - D̃
+                s = tr(F̃ * dD)
+                c = tr((F - F̃) * (dD))
                 if c <= -s/2
                     λ = 1.0
                 else
