@@ -10,8 +10,9 @@ struct DFRHF <: RHFAlgorithm end
 
 # Define Guesses
 abstract type RHFGuess end
-struct CoreGuess <: RHFGuess end
-struct GWHGuess  <: RHFGuess end
+struct CoreGuess   <: RHFGuess end
+struct GWHGuess    <: RHFGuess end
+struct HuckelGuess <: RHFGuess end
 
 """
     Fermi.HartreeFock.RHF
@@ -98,9 +99,11 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, Alg::B, guess::GWHGuess)
     ndocc = molecule.Nα#size(S,1)
     nvir = size(S,1) - ndocc
     F = Array{Float64,2}(undef, ndocc+nvir, ndocc+nvir)
+    Hmax = maximum(diag(H))
+    Hmin = minimum(diag(H))
     for i = 1:ndocc+nvir
         F[i,i] = H[i,i]
-        for j = 1:ndocc+nvir
+        for j = i+1:ndocc+nvir
             F[i,j] = 0.875*S[i,j]*(H[i,i] + H[j,j])
             F[j,i] = F[i,j]
         end
@@ -112,6 +115,10 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, Alg::B, guess::GWHGuess)
 
     # Reverse transformation to get MO coefficients
     C = Λ*Ct
+    Co = C[:,1:ndocc]
+    D = Fermi.contract(Co,Co,"um","vm")
+    Eguess = RHFEnergy(D,Array(H),F)
+    @output "Guess energy: {}\n" Eguess
 
     RHF(molecule, aoint, C, Alg)
 end

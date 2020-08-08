@@ -2,6 +2,8 @@ export @energy
 
 energy_dict = Dict{String, Expr}(
     "rhf" => :(Fermi.HartreeFock.RHF()),
+    "rmp2" => :(Fermi.MollerPlesset.RMP2()),
+    "rmp3" => :(Fermi.MollerPlesset.RMP3()),
     "ccsd" => :(Fermi.CoupledCluster.RCCSD()),
     "ecccsd" => :(Fermi.CoupledCluster.ecRCCSD()),
     "ccsdpt"=> :(Fermi.CoupledCluster.RCCSDpT()),

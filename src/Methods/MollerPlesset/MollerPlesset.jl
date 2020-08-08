@@ -10,7 +10,6 @@ module MollerPlesset
 
 using Fermi
 #using Fermi.Direct
-using Fermi.IntegralTransformation
 using Fermi.Output
 using TensorOperations
 
@@ -20,8 +19,6 @@ export do_direct_rmp2
 export do_df_rmp2
 export RMP2
 
-abstract type AbstractMPWavefunction <: Fermi.AbstractCorrelatedWavefunction end
-
 function print_header()
     @output "================================================================================\n" 
     @output "|   Moller-Plesset Perturbation Theory                                         |\n"
@@ -29,9 +26,15 @@ function print_header()
     @output "================================================================================\n" 
 end
 
+abstract type MP2Algorithm end
+
+struct Conventional <: MP2Algorithm end
+struct DF           <: MP2Algorithm end
+struct Direct       <: MP2Algorithm end
+
+abstract type AbstractMPWavefunction <: Fermi.AbstractCorrelatedWavefunction end
+
 include("RMP2.jl")
-#include("UMP2.jl")
-#include("DirectRMP2.jl")
-#include("DF-RMP2.jl")
+include("RMP3.jl")
 
 end #module

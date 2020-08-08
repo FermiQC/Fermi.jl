@@ -38,11 +38,11 @@ function RCCSD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2
                                                                                                                                                                                       Tc <: AbstractFloat,
                                        A <: CCAlgorithm }
  
-    newT1 = convert(Array{Ta},newT1)
-    newT2 = convert(Array{Ta},newT2)
     # Print intro
     Fermi.CoupledCluster.print_header()
     Fermi.CoupledCluster.print_alg(alg)
+    newT1 = convert(Array{Ta},newT1)
+    newT2 = convert(Array{Ta},newT2)
 
     @output repeat("-",80)*"\n"
     @output "Computing and Transforming Integrals..."
