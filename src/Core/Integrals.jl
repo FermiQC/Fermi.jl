@@ -711,18 +711,22 @@ function transform_eri(ERI::Array{T,4}, C1::Array{Float64,2}, C2::Array{Float64,
     _,j   = size(C3)
     _,b   = size(C4)
 
-    Q1 = zeros(i,nmo,nmo,nmo)
+    C1 = T.(C1)
+    C2 = T.(C2)
+    C3 = T.(C3)
+    C4 = T.(C4)
+    Q1 = zeros(T,i,nmo,nmo,nmo)
     Fermi.contract!(Q1,C1,ERI,"ivls","ui","uvls")
 
-    Q2 = zeros(i,a,nmo,nmo)
+    Q2 = zeros(T,i,a,nmo,nmo)
     Fermi.contract!(Q2,C2,Q1,"ials","va","ivls")
     Q1 = nothing
 
-    Q3 = zeros(i,a,j,nmo)
+    Q3 = zeros(T,i,a,j,nmo)
     Fermi.contract!(Q3,C3,Q2,"iajs","lj","ials")
     Q2 = nothing
 
-    Q4 = zeros(i,a,j,b)
+    Q4 = zeros(T,i,a,j,b)
     Fermi.contract!(Q4,C4,Q3,"iajb","sb","iajs")
     Q4
 end

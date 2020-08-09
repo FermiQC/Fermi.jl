@@ -45,8 +45,8 @@ function RCCSD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2
     newT2 = convert(Array{Ta},newT2)
 
     @output repeat("-",80)*"\n"
-    @output "Computing and Transforming Integrals..."
-    @output "\nBasis: {}\n" ints.bname["primary"]
+    @output "\tBasis: {}\n" ints.bname["primary"]
+    @output "\tComputing and Transforming Integrals..."
     tint = @elapsed Fermi.CoupledCluster.compute_integrals(ints,alg)
     @output " done in {} s\n" tint
     for key in keys(ints.cache)
@@ -67,29 +67,58 @@ function RCCSD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2
     Eguess = Ecc+refwfn.energy
     
     #@output "Initial Amplitudes Guess: MP2\n"
-    @output "Guess Energy:   {:15.10f}\n\n" Ecc
-    @output "Guess Total Energy:   {:15.10f}\n\n" Ecc+refwfn.energy
+    @output "\tGuess Energy:   {:15.10f}\n\n" Ecc
+    @output "\tGuess Total Energy:   {:15.10f}\n\n" Ecc+refwfn.energy
     
     # Start CC iterations
     
     cc_max_iter = Fermi.CurrentOptions["cc_max_iter"]
     cc_e_conv = Fermi.CurrentOptions["cc_e_conv"]
     cc_max_rms = Fermi.CurrentOptions["cc_max_rms"]
+    precision_override = Fermi.CurrentOptions["precision_override"]
+
     preconv_T1 = Fermi.CurrentOptions["preconv_T1"]
     dp = Fermi.CurrentOptions["cc_damp_ratio"]
-    do_diis = Fermi.CurrentOptions["diis"]
-    ndiis = Fermi.CurrentOptions["ndiis"]
-    do_diis ? DM_T1 = Fermi.DIIS.DIISManager{Ta,Ta}(size=6) : nothing
-    do_diis ? DM_T2 = Fermi.DIIS.DIISManager{Ta,Ta}(size=6) : nothing
+    do_diis = Fermi.CurrentOptions["cc_diis"]
+    ndiis = Fermi.CurrentOptions["cc_ndiis"]
+    diis_start = Fermi.CurrentOptions["diis_start"]
+    diis_relax = Fermi.CurrentOptions["cc_diis_relax"]
+    prec_selector = Dict{String,Any}(
+                                     "half" => Float16,
+                                     "single" => Float32,
+                                     "double" => Float64
+                                    )
+    diis_prec = prec_selector[Fermi.CurrentOptions["diis_prec"]]
+    do_diis ? DM_T1 = Fermi.DIIS.DIISManager{Ta,diis_prec}(size=ndiis) : nothing
+    do_diis ? DM_T2 = Fermi.DIIS.DIISManager{Ta,diis_prec}(size=ndiis) : nothing
 
-    @output " Dropped Occupied Orbitals →  {:3.0f}\n" Int(Fermi.CurrentOptions["drop_occ"])
-    @output " Dropped Virtual Orbitals  →  {:3.0f}\n\n" Int(Fermi.CurrentOptions["drop_vir"])
-
-    @output "Iteration Options:\n"
-    @output "   cc_max_iter →  {:3.0d}\n" Int(cc_max_iter)
-    @output "   cc_e_conv   →  {:2.0e}\n" cc_e_conv
-    @output "   cc_max_rms  →  {:2.0e}\n\n" cc_max_rms
-    @output repeat("-",80)*"\n"
+    @output "\tDropped Occupied Orbitals →  {:3.0f}\n" Int(Fermi.CurrentOptions["drop_occ"])
+    @output "\tDropped Virtual Orbitals  →  {:3.0f}\n\n" Int(Fermi.CurrentOptions["drop_vir"])
+    @output "\n"*repeat("-",80)*"\n"
+    @output "\tOptions:\n"
+    @output "\tPrecision? {}\n" Ta
+    @output "\tDIIS? {}\n" do_diis
+    @output "\tDIIS Vectors? {}\n" (do_diis ? ndiis : 0)
+    @output "\tDIIS Precision? {}\n" diis_prec
+    @output "\tPreconverge T1 amplitudes? {}\n" preconv_T1
+    @output "\tDamping percentage ? {}\n" dp
+    @output "\t\tcc_max_iter →  {:3.0d}\n" Int(cc_max_iter)
+    @output "\t\tcc_e_conv   →  {:2.0e}\n" cc_e_conv
+    @output "\t\tcc_max_rms  →  {:2.0e}\n" cc_max_rms
+    if (cc_e_conv < eps(Ta)) && !(precision_override)
+        @output "\t⚠ WARNING⚠   cc_e_conv set to less than ϵ ({}) for precision {}\n" eps(Ta) Ta
+        @output "\t             CCSD is unlikely to converge to your standards.\n"
+        @output "\t             OVERRIDING set convergence criterion.\n"
+        @output "\t             Use @set precision_override true to perform the computation as entered.\n"
+        cc_e_conv = eps(Ta)
+    end
+    if (cc_max_rms < eps(Ta)) && !(precision_override)
+        @output "\t⚠ WARNING⚠   cc_max_rms set to less than ϵ ({}) for precision {}\n" eps(Ta) Ta
+        @output "\t             CCSD is unlikely to converge to your standards.\n"
+        @output "\t             OVERRIDING set convergence criterion.\n"
+        @output "\t             Use @set precision_override true to perform the computation as entered.\n"
+        cc_max_rms = eps(Ta)
+    end
 
     r1 = 1
     r2 = 1
@@ -102,6 +131,7 @@ function RCCSD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2
     #dfsz,nocc,nvir = size(Bov)
 
 
+    @output repeat("-",80)*"\n"
     @output "    Starting CC Iterations\n\n"
     preconv_T1 ? T1_time = 0 : nothing
     if preconv_T1
@@ -179,14 +209,15 @@ function RCCSD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2
     rms = 1
     ite = 1
 
-    do_diis ? DM_T1 = Fermi.DIIS.DIISManager{Ta,Ta}(size=ndiis) : nothing
-    do_diis ? DM_T2 = Fermi.DIIS.DIISManager{Ta,Ta}(size=ndiis) : nothing
+    do_diis ? DM_T1 = Fermi.DIIS.DIISManager{Ta,diis_prec}(size=ndiis) : nothing
+    do_diis ? DM_T2 = Fermi.DIIS.DIISManager{Ta,diis_prec}(size=ndiis) : nothing
     if preconv_T1
         @output "Including T2 update\n"
     end
 
     main_time = 0
     @output "{:10s}    {: 15s}    {: 12s}    {:12s}    {:10s}\n" "Iteration" "CC Energy" "ΔE" "Max RMS" "Time (s)"
+    relax = 1
 
     while (abs(dE) > cc_e_conv || rms > cc_max_rms) 
         if ite > cc_max_iter
@@ -209,14 +240,16 @@ function RCCSD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2
             r1 = sqrt(sum((newT1 .- T1).^2))/length(T1)
             r2 = sqrt(sum((newT2 .- T2).^2))/length(T2)
 
-            if do_diis 
+            if do_diis && ite > 2
+                relax -= 1
                 e1 = (newT1 - T1)
                 e2 = (newT2 - T2)
                 push!(DM_T1,newT1,e1) 
                 push!(DM_T2,newT2,e2) 
-                if length(DM_T2) > DM_T2.max_vec
-                    newT2 = Fermi.DIIS.extrapolate(DM_T2)
-                    newT1 = Fermi.DIIS.extrapolate(DM_T1)
+                if relax == 0 
+                    newT2 = Fermi.DIIS.extrapolate(DM_T2;add_res=true)
+                    newT1 = Fermi.DIIS.extrapolate(DM_T1;add_res=true)
+                    relax = diis_relax
                 end
             end
 

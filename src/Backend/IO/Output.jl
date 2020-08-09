@@ -5,13 +5,22 @@ using Formatting
 
 #printstyle = Fermi.Options.printstyle
 if !isdefined(Fermi.Output,:printstyle)
-    printstyle = ["stdout"]
+    if isinteractive()
+        printstyle = ["none"]
+    else
+        printstyle = ["file"]
+    end
 end
 
 export output
-
 export @output
 
+"""
+    set_print(pstyle)
+
+Used to set the print style for @output and output calls. 
+Options are "none","file","stdout","both"
+"""
 function set_print(pstyle)
     if pstyle in ["none","file","stdout","both"]
         Fermi.Output.printstyle[1] = pstyle

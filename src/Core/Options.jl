@@ -48,16 +48,21 @@ CurrentOptions = Dict{String,Union{Float64,Int,String,Bool,Nothing}}(
                                   "drop_occ" => 0,
                                   "drop_vir" => 0,
                                   "diis" => true,
+                                  "cc_diis" => true,
                                   "ndiis" => 8,
+                                  "cc_ndiis" => 3,
+                                  "diis_prec" => "single",
                                   "diis_start" => 3,
                                   "cc_damp_ratio" => 0.0,
+                                  "cc_diis_relax" => 3,
                                   "num_frozen" => 0,
                                   "aci_print_screen" => nothing,
                                   "cas_frozen" => 0,
                                   "cas_active" => -1,
                                   "cas_cutoff" => 10^-9,
                                   "cas_nroot" => 1,
-                                  "min_matrix_elem" => 10^-9
+                                  "min_matrix_elem" => 10^-9,
+                                  "precision_override" => false
                                  )
 
 struct InvalidFermiOption <: Exception

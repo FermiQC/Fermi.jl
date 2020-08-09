@@ -43,6 +43,7 @@ function print_alg(Alg::DFCTF)
 end
 
 function compute_integrals(ints,Alg::DFCTF)
+    Fermi.Integrals.aux_ri!(ints)
     @output "Aux basis: {}\n" ints.bname["aux"]
     ints["BOV"]
     ints["BVO"]

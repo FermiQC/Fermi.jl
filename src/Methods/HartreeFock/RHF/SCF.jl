@@ -117,7 +117,10 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI
                 D̃ = D
                 do_diis ? err = transpose(Λ)*(F*D*aoint["S"] - aoint["S"]*D*F)*Λ : nothing
                 do_diis ? push!(DM, F, err) : nothing
-                do_diis && ite > diis_start ? F = Fermi.DIIS.extrapolate(DM) : nothing
+                #do_diis && ite > diis_start ? F,_ = Fermi.DIIS.extrapolate(DM) : nothing
+                if do_diis && ite > diis_start
+                    F = Fermi.DIIS.extrapolate(DM)
+                end
             end
 
             # Compute the Density RMS
