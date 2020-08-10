@@ -134,13 +134,6 @@ function first_αexclusive(D1::Determinant, D2::Determinant)
 
     x = D1.α ⊻ D2.α & D1.α
     return 64 - leading_zeros(x&(~(x-1)))
-    #i = 1
-    #while 1<<((i-1)) ≤ αexcl
-    #    if 1<<((i-1)) & αexcl ≠ 0
-    #        return i
-    #    end
-    #    i += 1
-    #end
 end
 
 """
@@ -155,22 +148,6 @@ function second_αexclusive(D1::Determinant, D2::Determinant)
     y = 64 - leading_zeros(x&(~(x-1)))
     x = x &(~(2^(y-1)))
     w = 64 - leading_zeros(x&(~(x-1)))
-    #y+w
-    #i = 1
-    #sec = false
-    ## Save betas exclusives, in crescent order
-    #while 1<<(i-1) ≤ αexcl
-    #    if 1<<(i-1) & αexcl ≠ 0
-    #        if sec
-    #            println("$y $w $i")
-    #            return i
-    #        else
-    #            sec = true
-    #        end
-    #    end
-    #    i += 1
-    #end
-    #return out
 end
 
 """
@@ -205,17 +182,6 @@ function first_βexclusive(D1::Determinant, D2::Determinant)
 
     x = D1.β ⊻ D2.β & D1.β
     return 64 - leading_zeros(x&(~(x-1)))
-
-    #i = 1
-    ## Save betas exclusives, in crescent order
-    #while 1<<((i-1)) ≤ βexcl
-    #    if 1<<((i-1)) & βexcl ≠ 0
-    #        return i
-    #    end
-    #    i += 1
-    #end
-
-    #return out
 
 end
 
