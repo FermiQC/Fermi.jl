@@ -1,4 +1,5 @@
 using Combinatorics
+using Serialization
 using SparseArrays
 using TensorOperations
 using LinearAlgebra
@@ -7,20 +8,20 @@ using ArnoldiMethod
 function CASCI{T}(Alg::ACI) where T <: AbstractFloat
     # we need this implementation
     @output "Getting molecule...\n"
-    molecule = Molecule()
+    #molecule = Molecule()
     @output "Computing AO Integrals...\n"
-    aoint = ConventionalAOIntegrals()
+    #aoint = ConventionalAOIntegrals()
 
     @output "Calling RHF module...\n"
-    refwfn = Fermi.HartreeFock.RHF(molecule, aoint)
+    refwfn = Fermi.HartreeFock.RHF()
     CASCI{T}(refwfn, Alg)
 end
 
 function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, Alg::ACI; ci = nothing) where T <: AbstractFloat
     @output "Generating Integrals for CAS computation...\n"
-    aoint = ConventionalAOIntegrals()
+    #aoint = ConventionalAOIntegrals()
+    ints = refwfn.ints
     @output "Transforming Integrals for CAS computation...\n"
-    # Read options
     frozen = Fermi.CurrentOptions["cas_frozen"]
 
     nmo = refwfn.ndocc + refwfn.nvir
@@ -48,34 +49,10 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, Alg::ACI; ci = nothing) where T
 
     s = 1:(frozen+active)
 
-    h = T.(Fermi.Integrals.transform_fock(aoint.T+aoint.V, refwfn.C[:,s], refwfn.C[:,s]))
-    V = T.(Fermi.Integrals.transform_eri(aoint.ERI, refwfn.C[:,s], refwfn.C[:,s], refwfn.C[:,s], refwfn.C[:,s]))
+    h = T.(Fermi.Integrals.transform_fock(ints["T"] + ints["V"], ints.C["C"][:,s], ints.C["C"][:,s]))
+    V = T.(Fermi.Integrals.transform_eri(ints["μ"], ints.C["C"][:,s], ints.C["C"][:,s], ints.C["C"][:,s], ints.C["C"][:,s]))
 
     aoint = nothing
-
-    #if Fermi.CurrentOptions["cas_use_no"]
-    #    eps = refwfn.eps
-    #    ndocc = refwfn.ndocc
-    #    nvir = refwfn.nvir
-    #    den = [i + j - a - b for i in eps[1:ndocc], j in eps[1:ndocc], a in eps[ndocc+1:end], b in eps[ndocc+1:end]]
-    #    o = 1:ndocc
-    #    v = ndocc+1:ndocc+nvir
-    #    VV = T.(Fermi.Integrals.transform_eri(aoint.ERI, refwfn.C[:,o], refwfn.C[:,v], refwfn.C[:,o], refwfn.C[:,v]))
-    #    VV = permutedims(VV,(1,3,2,4))
-    #    Dn = Array{T}(undef,size(nvir,nvir))
-    #    Dd = Array{T}(undef,size(nvir,nvir))
-    #    println(size(VV))
-    #    @tensor begin 
-    #        Dn[a,b] := VV[i,i,c,b]*VV[i,i,c,a]
-    #        Dd[a,b] := (den[i,i,c,b]*den[i,i,c,a])
-    #    end
-    #    D = Dn ./ Dd
-    #    refwfn.C[:,v] .= refwfn.C[:,v]*D
-    #    display(refwfn.C)
-    #    h = T.(Fermi.Integrals.transform_fock(aoint.T+aoint.V, refwfn.C[:,s], refwfn.C[:,s]))
-    #    V = T.(Fermi.Integrals.transform_eri(aoint.ERI, refwfn.C[:,s], refwfn.C[:,s], refwfn.C[:,s], refwfn.C[:,s]))
-    #end
-
 
     aoint = nothing
     CASCI{T}(refwfn, h, V, frozen, act_elec, active, Alg, ci=ci)
@@ -135,7 +112,7 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
 
         @output "   • F ⇒ Q\n"
         @output "Screening FOIS using 2-D Hamiltonian\n" σ
-        t = @elapsed Fe = ϵI(F, P, Pcoef, E, h, V)
+        t = @elapsed Fe = ϵI(F, P, Pcoef, E, h, V, act_elec, active)
         @output "Screen complete in {:5.5} s.\n" t
         @output "Sorting F space...\n"
         _t = @elapsed begin
@@ -324,41 +301,306 @@ end
     fois = Set(fois)
     setdiff!(fois, dets)
     fois = collect(fois)
-    return fois
+    return fois end
+
+#lexicographic premutations generation, By Donald Knuth
+function lpermutations(a::BitArray)
+  b=BitArray[]
+  sort!(a)
+  n=length(a)
+  while(true)
+    push!(b,copy(a))
+    j=n-1
+    while(a[j]>=a[j+1])
+      j-=1
+      j==0 && return(b)
+    end
+    l=n
+    while(a[j]>=a[l])
+      l-=1
+    end
+    tmp=a[l]
+    a[l]=a[j]
+    a[j]=tmp
+    k=j+1
+    l=n
+    while(k<l)
+      tmp=a[k]
+      a[k]=a[l]
+      a[l]=tmp
+      k+=1
+      l-=1
+    end
+  end
 end
 
-@fastmath @inbounds function ϵI(Fdets, P::Array{Determinant,1}, Pcoef::Array{Float64,1}, Ep::T, h::Array{T,2}, V::Array{T,4}) where T <: AbstractFloat
+function ϵI(Fdets, P::Array{Determinant,1}, Pcoef::Array{Float64,1}, Ep::T, h::Array{T,2}, V::Array{T,4},act_elec,active) where T <: AbstractFloat
     Fe = zeros(length(Fdets))
-    N = sum(αlist(P[1]))
-    αinds = [Array{Int64,1}(undef,N) for i=1:Threads.nthreads()]
-    βinds = [Array{Int64,1}(undef,N) for i=1:Threads.nthreads()]
-    @sync for i in eachindex(Fdets)
-        Threads.@spawn begin
-        D1 = Fdets[i]
-        id = Threads.threadid()
-        αind = αinds[id]
-        βind = βinds[id]
-        αindex!(D1, αind)
-        βindex!(D1, βind)
-        Ei = Hd0(αind, βind, h, V)
-        Δ = Ei - Ep
-        Vint = 0.0
-        for j in eachindex(P)
+    #
+    #
+    #
+    #
+    #if length(Fdets)*length(P) > (271945^2)
+    if true
+        @output "Using Residue Array algorithm\n"
+        N = count_ones(P[1].α) #number of electrons (assumes RHF)
+        Ne = N*2
+        Vints = zeros(length(Fdets))
+        αind = zeros(Int64,N)
+        βind = zeros(Int64,N)
+        t = @elapsed for i in eachindex(Fdets)
+            αindex!(Fdets[i], αind)
+            βindex!(Fdets[i], βind)
+            Ei = Hd0(αind, βind, h, V)
+            Fe[i] = Ei - Ep #Δ
+        end
+        @output "time making Δ {}\n" t
+        t = @elapsed begin
+        mask = BitArray(undef,active)
+        mask[1:2] .= 1
+        masks_ss = lpermutations(mask)
+        mask[2:2] .= 0
+        masks_os = lpermutations(mask)
+        for i in eachindex(masks_os)
+            masks_os[i] = .~masks_os[i]
+        end
+        for i in eachindex(masks_ss)
+            masks_ss[i] = .~masks_ss[i]
+        end
+
+        A = BitArray(undef,active)
+        ae2 = Int(act_elec/2)
+        A[1:ae2] .= 1
+        oo = lpermutations(A)
+        A[ae2-1:ae2] .= 0
+        ss = lpermutations(A)
+        aa = reshape(collect(Base.product(ss,oo)),(1,:))
+        bb = reshape(collect(Base.product(oo,ss)),(1,:))
+        A[ae2-1:ae2-1] .= 1
+        os = (lpermutations(A))
+        ab = reshape(collect(Base.product(os,os)),(1,:))
+        ba = reshape(collect(Base.product(os,os)),(1,:))
+        residues = hcat(aa,bb,ab,ba)
+        residues = collect(Set(residues))
+        end
+        @output "time making perms {}\n" t
+
+        # bit arrays for Fdet info
+        DFa = BitArray(undef,active)
+        DFb = BitArray(undef,active)
+        DF1 = BitArray(undef,active)
+        DF2 = BitArray(undef,active)
+
+        ncore = Int((Ne - act_elec)/2)
+        core = BitArray(undef,ncore)
+        core[:] .= 1
+        ct = 1
+        E2 = Int(Ne/2 - 2)
+        E1 = Int(Ne/2 - 1)
+
+        t = @elapsed begin
+        #resP = Dict(residues .=> [Set(Int64[]) for i in (residues)])
+        resP = Array{Tuple}(undef,0)
+        for i in eachindex(P)
+            dF = P[i]
+            DFa.chunks[1] = dF.α >> (ncore )
+            DFb.chunks[1] = dF.β >> (ncore )
+            for mask in masks_ss
+                nua = DFa .& mask
+                nub = DFb .& mask
+                if (sum(nua) == E2 )#|| sum(nua) == E1)
+                    push!(resP,((nua,DFb),i))
+                    push!(resP,((DFb,nua),i))
+                end
+                if (sum(nub) == E2 )#|| sum(nub) == E1)
+                    push!(resP,(((DFa),nub),i))
+                    push!(resP,((nub,(DFa)),i))
+                end
+            end
+            for mask1 in masks_os
+                for mask2 in masks_os
+                    nua = DFa .& mask1
+                    nub = DFb .& mask2
+                    if sum(nua) == E1 || sum(nub) == E1
+                        push!(resP,((nua,nub),i))
+                        push!(resP,((nub,nua),i))
+                        push!(resP,((nua,nua),i))
+                        push!(resP,((nub,nub),i))
+                    end
+                end
+            end
+        end
+        end
+        @output "time in P loop {}\n" t
+        t = @elapsed begin
+        resF = Array{Tuple}(undef,0)
+        for i in eachindex(Fdets)
+            dF = Fdets[i]
+            DFa.chunks[1] = (dF.α >> (ncore))
+            DFb.chunks[1] = (dF.β >> (ncore))
+            for mask in masks_ss
+                nua = DFa .& mask
+                nub = DFb .& mask
+                if (sum(nua) == E2 )#|| sum(nua) == E)
+                    push!(resF,((nua,(DFb)),i))
+                    push!(resF,(((DFb),nua),i))
+                end
+                if (sum(nub) == E2 )#|| sum(nub) == E2)
+                    #push!(resP[(DFa,nub)],i)
+                    push!(resF,(((DFa),nub),i))
+                    push!(resF,((nub,(DFa)),i))
+                end
+            end
+            for mask1 in masks_os
+                for mask2 in masks_os
+                    nua = DFa .& mask1
+                    nub = DFb .& mask2
+                    if sum(nua) == E1 || sum(nub) == E1
+                        push!(resF,((nua,nub),i))
+                        push!(resF,((nub,nua),i))
+                        push!(resF,((nua,nua),i))
+                        push!(resF,((nub,nub),i))
+                    end
+                end
+            end
+        end
+        end
+        @output "time in F loop {}\n" t
+        t = @elapsed begin
+        resP = collect(Set(resP))
+        resF = collect(Set(resF))
+        sort!(resP,by=first)
+        sort!(resF,by=first)
+        lastP,lastF = resP[1][1],resF[1][1]
+        Fstart = 1
+        Pstart = 1
+        Fend = 1
+        Fs = nothing
+        detpairs = []
+        end
+        @output "setup time {}\n" t
+        t = @elapsed begin
+        pd = Dict()
+        fd = Dict()
+        for respair in resP
+            try
+                push!(pd[respair[1]],respair[2])
+            catch KeyError
+                pd[respair[1]] = []
+                push!(pd[respair[1]],respair[2])
+            end
+        end
+        for respair in resF
+            try
+                push!(fd[respair[1]],respair[2])
+            catch KeyError
+                fd[respair[1]] = []
+                push!(fd[respair[1]],respair[2])
+            end
+        end
+
+        #println(pd)
+        #println(fd)
+
+        for key in keys(pd)
+            try
+                push!(detpairs,collect(Base.product(fd[key],pd[key])))
+            catch KeyError
+                continue
+            end
+        end
+
+        for idxF in eachindex(resF)
+            if resF[idxF][1] != lastF
+                Fs = last.(resF[Fstart:idxF-1])
+                Fstart = idxF
+                for idxP in Pstart:length(resP)
+                    if resP[idxP][1] != lastP
+                        Ps = last.(resP[Pstart:idxP-1])
+                        Pstart = idxP
+                        prod = collect(Base.product(Fs,Ps))
+                        if length(prod) != 0
+                            push!(detpairs,collect(Base.product(Fs,Ps)))
+                        end
+                        lastP = resP[idxP][1]
+                        Ps = nothing
+                        break
+                    end
+                end
+                lastF = resF[idxF][1]
+            end
+            Fs = nothing
+        end
+        end
+        @output "time spent pairing {}\n" t
+
+        t = @elapsed begin 
+        detpairs = [reshape(dp,1,:) for dp in detpairs]
+        detpairs = hcat(detpairs...)
+        detpairs = collect(Set(detpairs))
+        println(length(detpairs))
+        #perm = sortperm(detpairs,by=first)
+        #detpairs = detpairs[perm]
+        sort!(detpairs,by=first)
+        end
+        @output "cleanup time {}\n" t
+        ct = 0
+        t = @elapsed for detpair in detpairs
+            i = detpair[1]
+            j = detpair[2]
+            D1 = Fdets[i]
+            αindex!(D1, αind)
+            βindex!(D1, βind)
             D2 = P[j]
             αexc = αexcitation_level(D1,D2)
             βexc = βexcitation_level(D1,D2)
             el = αexc + βexc
-            if el > 2
-                continue 
-            elseif el == 2
-                Vint += Pcoef[j]*Hd2(D1, D2, V, αexc)
+            if el == 2
+                Vints[i] += Pcoef[j]*Hd2(D1, D2, V, αexc)
             elseif el == 1
-                Vint += Pcoef[j]*Hd1(αind, βind, D1, D2, h, V, αexc)
+                Vints[i] += Pcoef[j]*Hd1(αind, βind, D1, D2, h, V, αexc)
+            else
+                ct += 1
             end
         end
-        
-        @fastmath Fe[i] = Δ/2 - √((Δ^2)/4 + Vint^2)
-        end #Threads.@spawn
+        @output "time in P space {}\n" t
+        @output "There were {} false positives\n" ct
+        for i in eachindex(Fe)
+            Fe[i] = Fe[i]/2 - √((Fe[i]^2)/4 + Vints[i]^2)
+        end
+    else
+        @output "Using double loop algorithm\n"
+        N = sum(αlist(P[1]))
+        αinds = [Array{Int64,1}(undef,N) for i=1:Threads.nthreads()]
+        βinds = [Array{Int64,1}(undef,N) for i=1:Threads.nthreads()]
+        @sync for i in eachindex(Fdets)
+            begin
+            D1 = Fdets[i]
+            id = Threads.threadid()
+            αind = αinds[id]
+            βind = βinds[id]
+            αindex!(D1, αind)
+            βindex!(D1, βind)
+            Ei = Hd0(αind, βind, h, V)
+            Δ = Ei - Ep
+            Vint = 0.0
+            for j in eachindex(P)
+                D2 = P[j]
+                αexc = αexcitation_level(D1,D2)
+                βexc = βexcitation_level(D1,D2)
+                el = αexc + βexc
+                if el > 2
+                    continue 
+                elseif el == 2
+                    Vint += Pcoef[j]*Hd2(D1, D2, V, αexc)
+                elseif el == 1
+                    Vint += Pcoef[j]*Hd1(αind, βind, D1, D2, h, V, αexc)
+                end
+            end
+            
+            @fastmath Fe[i] = Δ/2 - √((Δ^2)/4 + Vint^2)
+            end #Threads.@spawn
+        end
     end
     return Fe
 end
@@ -433,4 +675,31 @@ function complete_set(dets::Array{Determinant,1})
     end
     newdets = vcat(newdets...)
     return unique(vcat(dets,newdets))
+end
+
+function woz(A::Vector{T}, sentinel::T) where T
+         p = sortperm(A)
+         q = A[p]
+         res = Vector{Vector{T}}()
+         grp = Vector{T}()
+         first = true
+         last = sentinel
+         for (i,v) in enumerate(q)
+           if !first && last != v
+             push!(res, grp)
+             grp = [p[i]]
+           else
+             push!(grp, p[i])
+           end
+           last = v
+           first = false
+         end
+         push!(res, grp)
+         res
+       end
+groupby(f, list::Array) = begin
+  foldl(list; init = Dict()) do dict, v
+    push!(get!(dict, f(v), []), v)
+    dict
+  end
 end

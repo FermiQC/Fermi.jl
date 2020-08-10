@@ -22,35 +22,12 @@ struct ecRCCSD{T} <: AbstractCCWavefunction
     T2::_T where _T <: Fermi.AbstractTensor
 end
 
-function select_precision(A::String)
-    implemented = Dict{Any,Any}("single" => Float32,
-                                "double" => Float64)
-    try
-        return implemented[A]
-    catch KeyError
-        throw(Fermi.InvalidFermiOptions("Invalid precision: $(A)"))
-    end
-end
-
-function select_algorithm(A::String)
-    implemented = Dict{Any,Any}("DPD" => DPD(),
-                                "CTF" => CTF())
-    try
-        return implemented[A]
-    catch KeyError
-        throw(Fermi.InvalidFermiOptions("Invalid CC algorithm: $(A)"))
-    end
-end
-
-#implementations
-include("CTF.jl")
-
 # Most general function. It defines the precision and call a precision-specific function
-"""
-    Fermi.CoupledCluster.RCCSD()
-
-Compute a RCCSD wave function using Fermi.CurrentOptions data.
-"""
+#"""
+#    Fermi.CoupledCluster.RCCSD()
+#
+#Compute a RCCSD wave function using Fermi.CurrentOptions data.
+#"""
 function ecRCCSD()
     @output "Selecting precision...\n"
     prec = select_precision(Fermi.CurrentOptions["precision"])
@@ -67,3 +44,9 @@ function ecRCCSD{T}() where T <: AbstractFloat
     alg = select_algorithm(Fermi.CurrentOptions["cc_alg"])
     ecRCCSD{T}(alg)
 end
+
+# kernel (loop logic) from main RCCSD
+include("../RCCSD/kernel.jl")
+
+#implementations
+include("CTF.jl")

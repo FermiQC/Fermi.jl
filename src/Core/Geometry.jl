@@ -38,7 +38,7 @@ Object storing information about an atom.
 struct Atom
     AtomicSymbol::String
     Z::Int
-    xyz::Array{Float64,1}
+    xyz::Tuple{Float64,Float64,Float64}
 end
 
 """
@@ -56,7 +56,7 @@ Object storing information about a molecule (group of atoms).
     Vnuc         Nuclear repulsion energy
 """
 struct Molecule
-    atoms::Array{Atom,1}
+    atoms::Tuple
     charge::Int
     multiplicity::Int
     Nα::Int
@@ -135,17 +135,19 @@ function Molecule(atoms::Array{Atom,1}, charge::Int, multiplicity::Int)
     Nβ = (nelec - αexcess)/2
     Nα = nelec - Nβ
     
-    out =  Molecule(atoms, charge, multiplicity, Nα, Nβ, Vnuc)
-    @output "   • Molecule:\n\n"
-    output(get_xyz(out))
-    @output "\n"
-    @output "\nCharge: {}   " out.charge 
-    @output "Multiplicity: {}   \n" out.multiplicity
-    @output "Nuclear repulsion: {:15.10f}\n\n" out.Vnuc
+    out =  Molecule(Tuple(atoms), charge, multiplicity, Nα, Nβ, Vnuc)
 
     return out
 end
 
+function print_out(M::Molecule)
+    @output "   • Molecule:\n\n"
+    output(get_xyz(M))
+    @output "\n"
+    @output "\nCharge: {}   " out.charge 
+    @output "Multiplicity: {}   \n" out.multiplicity
+    @output "Nuclear repulsion: {:15.10f}\n\n" out.Vnuc
+end
 """
     Fermi.Geometry.nuclear_repulsion(A::Atom, B::Atom)
 
@@ -192,7 +194,7 @@ function get_atoms(molstring::String; unit::String="angstrom")
                 throw(InvalidMolecule("Failed to process XYZ string"))
             end
 
-            push!(atoms, Atom(AtomicSymbol, Z, xyz))
+            push!(atoms, Atom(AtomicSymbol, Z, Tuple(xyz)))
         end
     end
     return atoms

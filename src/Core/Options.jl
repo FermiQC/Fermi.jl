@@ -19,6 +19,8 @@ CurrentOptions = Dict{String,Union{Float64,Int,String,Bool,Nothing}}(
                                   H        0.9197881882      2.4580185570      0.6297938832
                                   """,
                                   "basis" => "sto-3g",
+                                  "jkfit" => "auto",
+                                  "rifit" => "auto",
                                   "charge" => 0,
                                   "multiplicity" => 1,
                                   "unit" => "angstrom",
@@ -26,11 +28,17 @@ CurrentOptions = Dict{String,Union{Float64,Int,String,Bool,Nothing}}(
                                   "scf_max_iter" => 50,
                                   "scf_max_rms" => 10^-10,
                                   "scf_alg" => "conventional",
+                                  "oda" => true,
+                                  "oda_cutoff" => 1E-1,
+                                  "oda_shutoff" => 20,
+                                  "scf_guess" => "gwh",
                                   "quiet" => true,
                                   "mp2_type" => "conv",
                                   "precision" => "double",
                                   "cc_alg" => "CTF",
                                   "ci_alg" => "sparse",
+                                  "σ"      => 0.05,
+                                  "γ"      => 1.0,
                                   "e_conv" => 10,
                                   "d_conv" => 8,
                                   "cc_max_iter" => 50,
@@ -40,14 +48,21 @@ CurrentOptions = Dict{String,Union{Float64,Int,String,Bool,Nothing}}(
                                   "drop_occ" => 0,
                                   "drop_vir" => 0,
                                   "diis" => true,
+                                  "cc_diis" => true,
+                                  "ndiis" => 8,
+                                  "cc_ndiis" => 3,
+                                  "diis_prec" => "single",
+                                  "diis_start" => 3,
                                   "cc_damp_ratio" => 0.0,
+                                  "cc_diis_relax" => 3,
                                   "num_frozen" => 0,
                                   "aci_print_screen" => nothing,
                                   "cas_frozen" => 0,
                                   "cas_active" => -1,
                                   "cas_cutoff" => 10^-9,
                                   "cas_nroot" => 1,
-                                  "min_matrix_elem" => 10^-9
+                                  "min_matrix_elem" => 10^-9,
+                                  "precision_override" => false
                                  )
 
 struct InvalidFermiOption <: Exception
@@ -151,3 +166,8 @@ macro molecule(block)
     mol = clean_up(mol)
     CurrentOptions["molstring"] = String(mol)
 end
+
+
+#function notimplemented()
+#    @output "🚧 Not implemented yet! We're working on it 🔨 👷 \n"
+#end
