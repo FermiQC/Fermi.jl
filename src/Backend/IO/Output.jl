@@ -6,7 +6,7 @@ using Formatting
 #printstyle = Fermi.Options.printstyle
 if !isdefined(Fermi.Output,:printstyle)
     if isinteractive()
-        printstyle = ["none"]
+        printstyle = ["stdout"]
     else
         printstyle = ["file"]
     end
