@@ -136,12 +136,6 @@ function Molecule(atoms::Array{Atom,1}, charge::Int, multiplicity::Int)
     Nα = nelec - Nβ
     
     out =  Molecule(Tuple(atoms), charge, multiplicity, Nα, Nβ, Vnuc)
-    #@output "   • Molecule:\n\n"
-    #output(get_xyz(out))
-    #@output "\n"
-    #@output "\nCharge: {}   " out.charge 
-    #@output "Multiplicity: {}   \n" out.multiplicity
-    #@output "Nuclear repulsion: {:15.10f}\n\n" out.Vnuc
 
     return out
 end
