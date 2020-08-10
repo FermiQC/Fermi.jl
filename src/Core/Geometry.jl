@@ -38,7 +38,7 @@ Object storing information about an atom.
 struct Atom
     AtomicSymbol::String
     Z::Int
-    xyz::Tuple
+    xyz::Tuple{Float64,Float64,Float64}
 end
 
 """
