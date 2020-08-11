@@ -65,11 +65,12 @@ function extrapolate(M::DIISManager{T1,T2};add_res=false) where { T1 <: Abstract
         end
     end 
     E = size(B,1)
-    B[1:E-1,1:E-1] ./= maximum(abs.(B[1:E-1,1:E-1]))
+    #B[1:E-1,1:E-1] ./= maximum(abs.(B[1:E-1,1:E-1]))
     resid = zeros(T1,diis_size+1)
     resid[end] = 1
-    LAPACK.gesv!(B,resid)
-    ci = resid
+    display(B)
+    #LAPACK.gesv!(B,resid)
+    ci = svd(B)\resid
     out = zeros(T1,size(M.vecs[1]))
     outw = zeros(T1,size(M.vecs[1]))
     for num in 1:diis_size
