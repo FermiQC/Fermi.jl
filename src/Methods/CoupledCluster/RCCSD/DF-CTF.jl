@@ -46,7 +46,6 @@ function compute_integrals(ints,Alg::DFCTF)
     Fermi.Integrals.aux_ri!(ints)
     @output "Aux basis: {}\n" ints.bname["aux"]
     ints["BOV"]
-    ints["BVO"]
     ints["BOO"]
     ints["BVV"]
 end
@@ -59,7 +58,6 @@ end
 
 function update_T1(T1::Array{T,2}, T2::Array{T,4}, newT1::Array{T,2}, foo, fov, fvv, ints::IntegralHelper, alg::DFCTF) where { T <: AbstractFloat }
     Bov = ints["BOV"]
-    Bvo = ints["BVO"]
     Boo = ints["BOO"]
     Bvv = ints["BVV"]
     @tensor begin
@@ -100,7 +98,6 @@ end
 
 function update_T2(T1::Array{T,2},T2::Array{T,4},newT2::Array{T,4},foo,fov,fvv,ints::IntegralHelper,alg::DFCTF) where T <: AbstractFloat
     Bov = ints["BOV"]
-    Bvo = ints["BVO"]
     Boo = ints["BOO"]
     Bvv = ints["BVV"]
     @tensor begin
@@ -117,7 +114,7 @@ function update_T2(T1::Array{T,2},T2::Array{T,4},newT2::Array{T,4},foo,fov,fvv,i
     for i=1:nocc, j=1:nocc
         T2_inter .= 0
         T2_slice .= 0
-        Tslice .= _T[i,j,:,:]
+        @views Tslice .= _T[i,j,:,:]
         Fermi.contract!(T2_inter,Tslice,Bvv,"Qad","cd","Qca")
         Fermi.contract!(T2_slice,T2_inter,Bvv,"ab","Qad","Qdb")
         newT2[i,j,:,:] += T2_slice
@@ -125,8 +122,6 @@ function update_T2(T1::Array{T,2},T2::Array{T,4},newT2::Array{T,4},foo,fov,fvv,i
 
     @tensoropt (i=>x, j=>x, k=>x, l=>x, a=>10x, b=>10x, c=>10x, d=>10x, Q=>50x) begin
         newT2[i,j,a,b] += Voovv[i,j,a,b]
-        #newT2[i,j,a,b] += Bvv[Q,c,a]*T1[i,c]*T1[j,d]*Bvv[Q,d,b]
-        #newT2[i,j,a,b] += Bvv[Q,c,a]*T2[i,j,c,d]*Bvv[Q,d,b]
         newT2[i,j,a,b] += T1[k,a]*T1[l,b]*Voooo[i,j,k,l]
         newT2[i,j,a,b] += T2[k,l,a,b]*Voooo[i,j,k,l]
         newT2[i,j,a,b] -= T1[i,c]*T1[j,d]*T1[k,a]*Bov[Q,k,c]*Bvv[Q,b,d]

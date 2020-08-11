@@ -1,6 +1,5 @@
 struct RMP3{T} <: AbstractMPWavefunction# where T <: AbstractFloat
     CorrelationEnergy::T
-    D::_T2 where _T2 <: Fermi.AbstractTensor
     T2::_T2 where _T2 <: Fermi.AbstractTensor
 end
 

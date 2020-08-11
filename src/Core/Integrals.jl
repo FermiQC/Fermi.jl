@@ -8,6 +8,7 @@ module Integrals
 using Fermi
 using Fermi.Output
 using Fermi.Geometry: Molecule
+using Fermi.Orbitals: AbstractOrbitals
 using Lints
 using LinearAlgebra
 using TensorOperations
@@ -408,11 +409,12 @@ struct PhysRestrictedMOIntegrals{T} <: AbstractMOIntegrals where T <: AbstractFl
    vv::Array{T,2}
 end
 
-struct IntegralHelper{T}
+mutable struct IntegralHelper{T}
     cache::Dict{String,Array} 
     bname::Dict{String,String}
     mol::Molecule
-    C::Dict{String,Array{Float64,2}}
+    orbs::Dict{String,O} where O <: AbstractOrbitals
+    #C::Dict{String,Array{Float64,2}}
     basis::Dict{String,Lints.BasisSetAllocated} 
     type::DataType
 end
@@ -443,9 +445,9 @@ function IntegralHelper{T}() where T <: AbstractFloat
         bname["aux"] = aux
     end
     mol = Molecule()
-    C = Dict{String,Array{Float64,2}}()
+    orbs = Dict{String,AbstractOrbitals}()
     basis = Dict{String,Lints.BasisSetAllocated}()
-    IntegralHelper{T}(cache,bname,mol,C,basis,type)
+    IntegralHelper{T}(cache,bname,mol,orbs,basis,type)
 end
 
 function aux_ri!(I::IntegralHelper,ri=Fermi.CurrentOptions["rifit"])
@@ -501,6 +503,7 @@ function setindex!(I::IntegralHelper,val,entry)
 end
 
 function compute!(I::IntegralHelper,entry::String)
+    o = I.orbs
     if entry == "μ" #AO basis eri. 4 index
         I.cache["μ"],I.basis["primary"] = aoeri(I.mol,I.bname["primary"])  
 
@@ -535,12 +538,12 @@ function compute!(I::IntegralHelper,entry::String)
     elseif 'B' in entry #MO basis eri. 3 index. DF
         aoint = I["B"]
         C1 = try 
-            I.C[entry[2:2]]
+            o[entry[2:2]]
         catch
             error("")
         end
         C2 = try
-            I.C[entry[3:3]]
+            o[entry[3:3]]
         catch
             error("")
         end
@@ -551,8 +554,8 @@ function compute!(I::IntegralHelper,entry::String)
         drop_vir = Fermi.CurrentOptions["drop_vir"]
 
         for i in eachindex(C)
-            C[i] == I.C["O"] ? C[i] = C[i][:, (1+drop_occ):end] : nothing
-            C[i] == I.C["V"] ? C[i] = C[i][:, 1:end-drop_vir] : nothing
+            C[i] == o["O"] ? C[i] = C[i][(1+drop_occ):end] : nothing
+            C[i] == o["V"] ? C[i] = C[i][1:end-drop_vir] : nothing
         end
         I.cache[entry] = transform_eri(aoint, C...)
 
@@ -564,12 +567,12 @@ function compute!(I::IntegralHelper,entry::String)
             F = I["F"]
         end
         C1 = try 
-            I.C[entry[2:2]]
+            o[entry[2:2]]
         catch
             error("")
         end
         C2 = try
-            I.C[entry[3:3]]
+            o[entry[3:3]]
         catch
             error("")
         end
@@ -580,8 +583,8 @@ function compute!(I::IntegralHelper,entry::String)
         drop_vir = Fermi.CurrentOptions["drop_vir"]
 
         for i in eachindex(C)
-            C[i] == I.C["O"] ? C[i] = C[i][:, (1+drop_occ):end] : nothing
-            C[i] == I.C["V"] ? C[i] = C[i][:, 1:end-drop_vir] : nothing
+            C[i] == o["O"] ? C[i] = C[i][(1+drop_occ):end] : nothing
+            C[i] == o["V"] ? C[i] = C[i][1:end-drop_vir] : nothing
         end
         I[entry] = transform_fock(F,C...)
 
@@ -599,22 +602,22 @@ function compute!(I::IntegralHelper,entry::String)
         end
         C = []
         C1 = try 
-            I.C[entry[1+offset:1+offset]]
+            o[entry[1+offset:1+offset]]
         catch
             error("")
         end
         C2 = try
-            I.C[entry[2+offset:2+offset]]
+            o[entry[2+offset:2+offset]]
         catch
             error("")
         end
         C3 = try
-            I.C[entry[3+offset:3+offset]]
+            o[entry[3+offset:3+offset]]
         catch
             error("")
         end
         C4 = try
-            I.C[entry[4+offset:4+offset]]
+            o[entry[4+offset:4+offset]]
         catch
             error("")
         end
@@ -626,8 +629,8 @@ function compute!(I::IntegralHelper,entry::String)
         drop_vir = Fermi.CurrentOptions["drop_vir"]
 
         for i in eachindex(C)
-            C[i] == I.C["O"] ? C[i] = C[i][:, (1+drop_occ):end] : nothing
-            C[i] == I.C["V"] ? C[i] = C[i][:, 1:end-drop_vir] : nothing
+            C[i] == o["O"] ? C[i] = C[i][(1+drop_occ):end] : nothing
+            C[i] == o["V"] ? C[i] = C[i][1:end-drop_vir] : nothing
         end
         temp = transform_eri(aoint, C...)
         if notation == "phys"
@@ -690,6 +693,12 @@ function PhysRestrictedMOIntegrals{T}(ndocc::Int, nvir::Int, drop_occ::Int, drop
     return PhysRestrictedMOIntegrals{T}(oooo, ooov, oovv, ovov, ovvv, vvvv, oo, ov, vv)
 end
 
+function transform_fock(F::Array{Float64,2}, O1::O, O2::O) where O <: AbstractOrbitals
+    C1 = hcat([orb.C for orb in O1.orbs]...)
+    C2 = hcat([orb.C for orb in O2.orbs]...)
+    transform_fock(F,C1,C2)
+end
+
 function transform_fock(F::Array{Float64,2}, C1::Array{Float64,2}, C2::Array{Float64,2})
 
     nmo,p = size(C1)
@@ -702,6 +711,22 @@ function transform_fock(F::Array{Float64,2}, C1::Array{Float64,2}, C2::Array{Flo
     Fermi.contract!(Q2,C2,Q1,"pq","vq","pv")
 
     return Q2
+end
+
+function transform_eri(ERI::Array{T,4}, O1::O, O2::O, O3::O, O4::O) where { O <: AbstractOrbitals,
+                                                                            T <: AbstractFloat }
+    C1 = hcat([orb.C for orb in O1.orbs]...)
+    C2 = hcat([orb.C for orb in O2.orbs]...)
+    C3 = hcat([orb.C for orb in O3.orbs]...)
+    C4 = hcat([orb.C for orb in O4.orbs]...)
+    transform_eri(ERI,C1,C2,C3,C4)
+end
+
+function transform_eri(ERI::Array{T,3}, O1::O, O2::O) where { O <: AbstractOrbitals,
+                                                              T <: AbstractFloat }
+    C1 = hcat([orb.C for orb in O1.orbs]...)
+    C2 = hcat([orb.C for orb in O2.orbs]...)
+    transform_eri(ERI,C1,C2)
 end
 
 function transform_eri(ERI::Array{T,4}, C1::Array{Float64,2}, C2::Array{Float64,2}, C3::Array{Float64,2}, C4::Array{Float64,2}) where T <: AbstractFloat

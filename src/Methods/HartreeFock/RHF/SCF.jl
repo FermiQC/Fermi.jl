@@ -67,7 +67,7 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI
 
     @output "\n Iter.   {:>15} {:>10} {:>10} {:>8} {:>8} {:>8}\n" "E[RHF]" "ΔE" "√|ΔD|²" "t" "DIIS" "damp"
     @output repeat("-",80)*"\n"
-    t = @elapsed while ite ≤ maxit
+    t = @elapsed @fastmath while ite ≤ maxit
         t_iter = @elapsed begin
             # Produce Ft
             if !oda || Drms < oda_cutoff
@@ -81,11 +81,12 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI
 
             # Reverse transformation to get MO coefficients
             C = Λ*Ct
-            Ct = real.(Ct)
+            #Ct = real.(Ct)
 
             # Produce new Density Matrix
             Co = C[:,1:ndocc]
-            D = Fermi.contract(Co,Co,"um","vm")
+            #D = Fermi.contract(Co,Co,"um","vm")
+            Fermi.contract!(D,Co,Co,0.0,1.0,1.0,"uv","um","vm")
 
             # Build the Fock Matrix
             build_fock!(F, T + V, D, ERI)
@@ -157,11 +158,19 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI
     end
     @output repeat("-",80)*"\n"
 
-    aoint.C["C"] = C
-    aoint.C["O"] = C[:,1:ndocc]
-    aoint.C["o"] = C[:,1:ndocc]
-    aoint.C["V"] = C[:,ndocc+1:ndocc+nvir]
-    aoint.C["v"] = C[:,ndocc+1:ndocc+nvir]
+    occ = CanonicalOrbitals([CanonicalOrbital(Array{Float64,1}(C[:,i])) for i in 1:ndocc])
+    vir = CanonicalOrbitals([CanonicalOrbital(Array{Float64,1}(C[:,i])) for i in ndocc+1:ndocc+nvir])
+    all = CanonicalOrbitals([CanonicalOrbital(Array{Float64,1}(C[:,i])) for i in 1:ndocc+nvir])
+    aoint.orbs["O"] = occ
+    aoint.orbs["o"] = occ
+    aoint.orbs["V"] = vir
+    aoint.orbs["v"] = vir 
+    aoint.orbs["*"] = all
+    #aoint.C["C"] = C
+    #aoint.C["O"] = C[:,1:ndocc]
+    #aoint.C["o"] = C[:,1:ndocc]
+    #aoint.C["V"] = C[:,ndocc+1:ndocc+nvir]
+    #aoint.C["v"] = C[:,ndocc+1:ndocc+nvir]
     aoint["F"]   = F
 
     return RHF(molecule, E, ndocc, nvir, eps, aoint)

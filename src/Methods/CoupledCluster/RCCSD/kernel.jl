@@ -43,6 +43,8 @@ function RCCSD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2
     Fermi.CoupledCluster.print_alg(alg)
     newT1 = convert(Array{Ta},newT1)
     newT2 = convert(Array{Ta},newT2)
+    ecT1 = convert(Array{Ta},ecT1)
+    ecT2 = convert(Array{Ta},ecT2)
 
     @output repeat("-",80)*"\n"
     @output "\tBasis: {}\n" ints.bname["primary"]
@@ -134,6 +136,7 @@ function RCCSD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2
     @output repeat("-",80)*"\n"
     @output "    Starting CC Iterations\n\n"
     preconv_T1 ? T1_time = 0 : nothing
+    dummyT2 = zeros(Ta,size(newT2))
     if preconv_T1
         @output "Preconverging T1 amplitudes\n"
         @output "Taking one T2 step\n"
@@ -142,7 +145,7 @@ function RCCSD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2
             update_amp(T1, T2, newT1, newT2, foo, fov, fvv, ints, alg)
 
             #apply external correction
-            apply_ec(newT1,zeros(Ta,size(newT2)),ecT1,ecT2)
+            apply_ec(newT1,dummyT2,ecT1,ecT2)
 
             # Apply resolvent
             newT1 ./= d
@@ -179,7 +182,7 @@ function RCCSD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2
                 T1 .= newT1
                 T2 .= newT2
                 update_T1(T1,T2,newT1,foo,fov,fvv,ints,alg)
-                apply_ec(newT1,zeros(Ta,size(newT2)),ecT1,ecT2)
+                apply_ec(newT1,dummyT2,ecT1,ecT2)
                 newT1 ./= d
                 if do_diis 
                     e1 = newT1 - T1
@@ -219,7 +222,7 @@ function RCCSD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2
     @output "{:10s}    {: 15s}    {: 12s}    {:12s}    {:10s}\n" "Iteration" "CC Energy" "ΔE" "Max RMS" "Time (s)"
     relax = 1
 
-    while (abs(dE) > cc_e_conv || rms > cc_max_rms) 
+    while (abs(dE) > cc_e_conv || rms > cc_max_rms) || ite < 10
         if ite > cc_max_iter
             @output "\n⚠️  CC Equations did not converge in {:1.0d} iterations.\n" cc_max_iter
             break

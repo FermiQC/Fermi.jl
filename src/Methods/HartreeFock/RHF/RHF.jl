@@ -2,6 +2,7 @@ using TensorOperations
 using Lints
 using Fermi.DIIS
 using Fermi.Integrals: ConventionalAOIntegrals, DFAOIntegrals, IntegralHelper
+using Fermi.Orbitals: CanonicalOrbital, CanonicalOrbitals
 
 # Define Algorithims
 abstract type RHFAlgorithm end

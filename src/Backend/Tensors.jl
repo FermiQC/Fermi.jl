@@ -20,11 +20,22 @@ struct PackedTensor{T} <: AbstractTensor where T <: Number
     dims::Array{UInt16,1}
 end
 
-struct MemTensor{T} <: AbstractTensor where T <: Number
-    data::Array{T}
+## Generated Tensor ##
+struct GeneratedTensor{T} <: AbstractTensor where T <: Number
+    generator::Function
+    data::Dict{String,Any}
     ndim::Int8
     dims::Array{UInt16,1}
 end
+
+function getindex(g::GeneratedTensor,I::Vararg{Int,N}) where N
+    try
+        g.generator(g,I...)
+    catch
+        error("Incorrect number of arguments passed to getindex(::GeneratedTensor) 😦")
+    end
+end
+
 
 struct DiskTensor{T} <: AbstractTensor where T <: Number
     fname::String
@@ -40,6 +51,12 @@ struct DistributedTensor{T} <: AbstractTensor where T <: Number
 end
 
 ## MemTensor ##
+struct MemTensor{T} <: AbstractTensor where T <: Number
+    data::Array{T}
+    ndim::Int8
+    dims::Array{UInt16,1}
+end
+
 function MemTensor(data::Array)
     @assert eltype(data) <: Number "MemTensor was passed an array of non-numeric values."
     MemTensor{eltype(data)}(data)
