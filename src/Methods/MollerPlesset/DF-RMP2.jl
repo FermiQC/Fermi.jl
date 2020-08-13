@@ -1,3 +1,4 @@
+using LinearAlgebra
 function RMP2{T}(refwfn::Fermi.HartreeFock.RHF,alg::Fermi.MollerPlesset.DF) where T <: AbstractFloat
     Fermi.MollerPlesset.print_header()
     ints = refwfn.ints
@@ -17,28 +18,41 @@ function RMP2{T}(refwfn::Fermi.HartreeFock.RHF,alg::Fermi.MollerPlesset.DF) wher
     @output "\tBasis: {}\n" ints.bname["primary"] 
     @output "\tDF basis: {}\n\n" ints.bname["aux"]
     @output " done in {:>5.2f} s\n" t
-    Bi = zeros(T,size(Bov[:,1,:]))
-    Bj = zeros(T,size(Bi))
-    BAB = zeros(T,nvir,nvir)
+    Bis = [zeros(T,size(Bov[:,1,:])) for i=1:Threads.nthreads()]
+    Bjs = [zeros(T,size(Bis[1])) for i =1:Threads.nthreads()]
+    BABs = [zeros(T,nvir,nvir) for i=1:Threads.nthreads()]
+    BBAs = [zeros(T,nvir,nvir) for i=1:Threads.nthreads()]
 
-    for i in 1:(nocc-drop_occ)
-        for j in 1:(nocc-drop_occ)
-            Bi[:,:] = Bov[:,i,:]
-            Bj[:,:] = Bov[:,j,:]
+    ΔMP2s = zeros(T,Threads.nthreads())
+    Threads.@threads for i in 1:(nocc-drop_occ)
+        Bi = Bis[Threads.threadid()]
+        Bj = Bjs[Threads.threadid()]
+        @views Bi[:,:] = Bov[:,i,:]
+        BAB = BABs[Threads.threadid()]
+        BBA = BBAs[Threads.threadid()]
+        for j in i:(nocc-drop_occ)
+            if i != j
+                fac = 2
+            else
+                fac = 1
+            end
+            @views Bj[:,:] = Bov[:,j,:]
             @tensoropt begin
                 BAB[a,b] = Bi[Q,a]*Bj[Q,b]
             end
-            BBA = transpose(BAB)
+            #BBA = transpose(BAB)
+            transpose!(BBA,BAB)
             for b in 1:nvir-drop_vir
                 for a in 1:nvir-drop_vir
                     iajb = BAB[a,b]
                     ibja = BBA[a,b]
-                    ΔMP2 += iajb*(2*iajb - ibja)/(eps[i+drop_occ] + eps[j+drop_occ] - eps[a+nocc] - eps[b+nocc])
+                    ΔMP2s[Threads.threadid()] += fac*iajb*(2*iajb - ibja)/(eps[i+drop_occ] + eps[j+drop_occ] - eps[a+nocc] - eps[b+nocc])
                 end
             end
         end
     end
     end
+    ΔMP2 = sum(ΔMP2s)
 
     # generator function for T2 amplitudes, given ijab indices
     function gen(g::Fermi.GeneratedTensor,i,j,a,b)

@@ -1,3 +1,4 @@
+
 function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, Alg::ConventionalRHF)
     RHF(molecule,aoint,C,aoint["μ"])
 end
@@ -61,7 +62,7 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI
     eps = zeros(Float64,ndocc+nvir)
     # Build the inital Fock Matrix and diagonalize
     F = zeros(Float64,ndocc+nvir,ndocc+nvir)
-    build_fock!(F, T + V, D, ERI)
+    build_fock!(F, T + V, D, ERI, Co)
     F̃ = deepcopy(F)
     D̃ = deepcopy(D)
 
@@ -89,7 +90,7 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI
             Fermi.contract!(D,Co,Co,0.0,1.0,1.0,"uv","um","vm")
 
             # Build the Fock Matrix
-            build_fock!(F, T + V, D, ERI)
+            build_fock!(F, T + V, D, ERI, Co)
             Eelec = RHFEnergy(D, T + V, F)
 
             # Compute Energy
@@ -176,20 +177,37 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI
     return RHF(molecule, E, ndocc, nvir, eps, aoint)
 end
 
-function build_fock!(F::Array{Float64,2}, H::Array{Float64,2}, D::Array{Float64,2}, ERI::Array{Float64,4})
+function build_fock!(F::Array{Float64,2}, H::Array{Float64,2}, D::Array{Float64,2}, ERI::Array{Float64,4}, Co)
     F .= H
     Fermi.contract!(F,D,ERI,1.0,1.0,2.0,"mn","rs","mnrs")
     Fermi.contract!(F,D,ERI,1.0,1.0,-1.0,"mn","rs","mrns")
 end
 
-function build_fock!(F::Array{Float64,2}, H::Array{Float64,2}, D::Array{Float64,2}, ERI::Array{Float64,3})
+function build_fock!(F::Array{Float64,2}, H::Array{Float64,2}, D::Array{Float64,2}, ERI::Array{Float64,3}, Co;build_K=true)
     F .= H
     sz = size(F,1)
     dfsz = size(ERI,1)
+    no = size(Co,2)
     Fp = zeros(dfsz)
     Fermi.contract!(Fp,D,ERI,1.0,1.0,2.0,"Q","rs","Qrs")
     Fermi.contract!(F,Fp,ERI,1.0,1.0,1.0,"mn","Q","Qmn")
+    ρ = zeros(dfsz,sz,no)
+    Fermi.contract!(ρ,Co,ERI,"Qmc","rc","Qmr")
+    Fermi.contract!(F,ρ,ρ,1.0,1.0,-1.0,"mn","Qmc","Qnc")
+end
+
+function build_J!(J::Array{Float64,2},D::Array{Float64,2},ERI::Array{Float64,3})
+    sz = size(ERI,2)
+    dfsz = size(ERI,1)
+    Fp = zeros(dfsz)
+    Fermi.contract!(Fp,D,ERI,1.0,1.0,2.0,"Q","rs","Qrs")
+    Fermi.contract!(J,Fp,ERI,1.0,1.0,1.0,"mn","Q","Qmn")
+end
+
+function build_K!(K::Array{Float64,2},D::Array{Float64,2},ERI::Array{Float64,3})
+    sz = size(ERI,2)
+    dfsz = size(ERI,1)
     Fp = zeros(dfsz,sz,sz)
     Fermi.contract!(Fp,D,ERI,0.0,1.0,-1.0,"Qrn","rs","Qns")
-    Fermi.contract!(F,ERI,Fp,1.0,1.0,1.0,"mn","Qmr","Qrn")
+    Fermi.contract!(K,ERI,Fp,1.0,1.0,1.0,"mn","Qmr","Qrn")
 end

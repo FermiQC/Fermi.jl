@@ -49,8 +49,8 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, Alg::ACI; ci = nothing) where T
 
     s = 1:(frozen+active)
 
-    h = T.(Fermi.Integrals.transform_fock(ints["T"] + ints["V"], ints.C["C"][:,s], ints.C["C"][:,s]))
-    V = T.(Fermi.Integrals.transform_eri(ints["μ"], ints.C["C"][:,s], ints.C["C"][:,s], ints.C["C"][:,s], ints.C["C"][:,s]))
+    h = T.(Fermi.Integrals.transform_fock(ints["T"] + ints["V"], ints.orbs["*"][s], ints.orbs["*"][s]))
+    V = T.(Fermi.Integrals.transform_eri(ints["μ"], ints.orbs["*"][s], ints.orbs["*"][s], ints.orbs["*"][s], ints.orbs["*"][s]))
 
     aoint = nothing
 
@@ -336,12 +336,7 @@ end
 
 function ϵI(Fdets, P::Array{Determinant,1}, Pcoef::Array{Float64,1}, Ep::T, h::Array{T,2}, V::Array{T,4},act_elec,active) where T <: AbstractFloat
     Fe = zeros(length(Fdets))
-    #
-    #
-    #
-    #
-    #if length(Fdets)*length(P) > (271945^2)
-    if true
+    if false
         @output "Using Residue Array algorithm\n"
         N = count_ones(P[1].α) #number of electrons (assumes RHF)
         Ne = N*2
