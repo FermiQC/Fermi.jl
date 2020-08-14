@@ -163,55 +163,17 @@ function get_cas_data(cas::Fermi.ConfigurationInteraction.CASCI)
         acf += x
     end
 
-    #Fermi.ConfigurationInteraction.showdet(ref)
-
-    # The reference determinant is takan as the dominant configuration
-    # If the reference is not the RHF determinant the C matrix has to be modified
-    # such that all orbitals occupied in the new reference comes first.
     ref = dets[1]
     zeroth = repeat('1', cas.ref.ndocc)*repeat('0', cas.ref.nvir)
     hf = Fermi.ConfigurationInteraction.Determinant(zeroth, zeroth)
     if ref == hf
         @output "Dominant configuration is the RHF determinant.\n"
     else
-        if ref.α ≢ ref.β
-            error("Dominant determinant is not spin symmetric.")
-        end
-        @output "!! Dominant configuration is NOT the RHF determinant. Adapting hole-particle spaces\n"
-        holes = Fermi.ConfigurationInteraction.αexclusive(hf, ref)
-        particles = Fermi.ConfigurationInteraction.αexclusive(ref, hf)
-        for (h,p) in zip(holes,particles)
-            @inbounds for k = 1:size(cas.ref.C,1)
-               cas.ref.C[k,h], cas.ref.C[k,p] = cas.ref.C[k,p], cas.ref.C[k,h]
-            end
-
-            for id in eachindex(dets)
-                α = dets[id].α
-                β = dets[id].β
-                hbit = 1 << (h-1)
-                pbit = 1 << (p-1)
-                # If the bits are different, invert them
-                if (α & hbit == 0) && (α & pbit != 0) 
-                    α = (α | hbit) ⊻ pbit
-                elseif (α & hbit != 0) && (α & pbit == 0) 
-                    α = (α | pbit) ⊻ hbit
-                end
-
-                if (β & hbit == 0) && (β & pbit != 0) 
-                    β = (β | hbit) ⊻ pbit
-                elseif (β & hbit != 0) && (β & pbit == 0)
-                    β = (β | pbit) ⊻ hbit
-                end
-
-                dets[id] = Fermi.ConfigurationInteraction.Determinant(α, β)
-            end
-        end
-        ref = dets[1]
+        error("Dominant determinant is not the RHF.")
     end
     C0 = Ccas[1]
 
     # Intermediate Normalization
-    abs(C0) > 1e-8 ? nothing : error("Reference coefficient is too small ($(C0)) to perform intermediate normalization")
     Ccas = Ccas ./ C0
 
     # Split the Cas data into excitation level
@@ -244,58 +206,6 @@ function get_cas_data(cas::Fermi.ConfigurationInteraction.CASCI)
 
     return ref, Ccas_ex1or2, dets_ex1or2, Ccas_ex3, dets_ex3, Ccas_ex4, dets_ex4
 end
-
-#function get_casT1!(T1::Array{Float64,2}, Ccas::Array{Float64,1}, dets::Array{Determinant,1}, ref::Determinant, frozen::Int, ndocc::Int)
-#
-#    for id in eachindex(dets)
-#
-#        @inbounds D = dets[id]
-#        αexc = αexcitation_level(ref, D)
-#        βexc = βexcitation_level(ref, D)
-#
-#        if αexc == 1 & βexc == 0
-#            i, = αexclusive(ref, D)     
-#            a, = αexclusive(D, ref) 
-#
-#            p = phase(ref, D)
-#            # i is absolute. Take out the frozen orbitals to match the T arrays.
-#            # a is abolute. Take out the occupied orbitals to get relative index.
-#            @inbounds T1[i-frozen,a-ndocc] = Ccas[id]*p
-#        end
-#    end
-#end
-#
-#function get_casT2!(T1::Array{Float64,2}, T2::Array{Float64,4}, Ccas::Array{Float64,1}, dets::Array{Determinant,1}, ref::Determinant, frozen::Int, ndocc::Int)
-#    
-#    for id in eachindex(dets)
-#
-#        @inbounds D = dets[id]
-#        αexc = αexcitation_level(ref, D)
-#        βexc = βexcitation_level(ref, D)
-#
-#        if αexc == 1 & βexc == 1
-#            elseif βexc == 1
-#
-#                i, = αexclusive(ref, D) 
-#                j, = βexclusive(ref, D)
-#                a, = αexclusive(D, ref) 
-#                b, = βexclusive(D, ref) 
-#
-#                p = phase(ref, D)
-#
-#                # i and j are absolute. Take out the frozen orbitals to match the T arrays.
-#                # a and b are abolute. Take out the occupied orbitals to get relative index.
-#                @inbounds T2[i-frozen,j-frozen,a-ndocc,b-ndocc] = Ccas[id]*p
-#            end
-#
-#        elseif (αexc + βexc) > 2
-#            # This line relies on the fact the dets are ordered by excitation level
-#            break
-#        end
-#    end
-#
-#    @tensor T2[i,j,a,b] -= T1[i,a]*T1[j,b] 
-#end
 
 function get_casT1_casT2!(T1::Array{Float64,2}, T2::Array{Float64,4}, Ccas::Array{Float64,1}, dets::Array{Determinant,1}, ref::Determinant, frozen::Int, ndocc::Int)
     

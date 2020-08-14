@@ -82,8 +82,12 @@ Fermi.HartreeFock.RHF(molecule::Molecule, aoint::ConventionalAOIntegrals)
 Compute RHF wave function using the given Molecule and Integral objects.
 """
 function RHF(molecule::Molecule, aoint::ConventionalAOIntegrals)
+    truebasis = Fermi.CurrentOptions["basis"]
+    Fermi.CurrentOptions["basis"] = "cc-pvdz"
+    guess = RHF(molecule)
+    Fermi.CurrentOptions["basis"] = truebasis
     Alg = select_algorithm(Fermi.CurrentOptions["scf_alg"])
-    RHF(molecule, aoint, Alg)
+    RHF(guess, aoint, Alg)
 end
 
 """

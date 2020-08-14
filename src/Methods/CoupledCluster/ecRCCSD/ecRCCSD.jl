@@ -44,6 +44,7 @@ end
 
 #implementations
 include("CTF.jl")
+#include("ClusterDecomposition.jl")
 
 # Most general function. It defines the precision and call a precision-specific function
 """

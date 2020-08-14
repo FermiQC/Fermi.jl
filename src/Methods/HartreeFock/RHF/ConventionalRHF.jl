@@ -36,6 +36,9 @@ end
 
 Conventional algorithm for to compute RHF wave function. Inital guess for orbitals is built from given RHF wfn.
 """
+function RHF(wfn::RHF)
+    RHF(wfn, ConventionalRHF())
+end
 function RHF(wfn::RHF, Alg::ConventionalRHF)
 
     aoint = ConventionalAOIntegrals(Fermi.Geometry.Molecule())
