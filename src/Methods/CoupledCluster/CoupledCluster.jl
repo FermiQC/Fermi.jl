@@ -5,7 +5,7 @@ Module for running CoupledCluster computations in Fermi.
 module CoupledCluster
 
 using Fermi
-using Fermi.Integrals: ConventionalAOIntegrals, PhysRestrictedMOIntegrals, IntegralHelper
+using Fermi.Integrals: IntegralHelper
 using Fermi.HartreeFock: RHF
 using Fermi.Output
 using TensorOperations

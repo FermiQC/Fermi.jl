@@ -3,6 +3,16 @@ using LinearAlgebra
 import Base.push!
 import Base.length
 
+"""
+    DIISManager{T1<:AbstractFloat,
+                T2<:AbstractFloat}
+
+# Fields
+
+    vecs::Array{Array{T1},1} vectors to extrapolate from.
+    errs::Array{Array{T2},1} error vectors to build B matrix from.
+    max_vec::Int64           max number of vectors to hold
+"""
 struct DIISManager{T1<:AbstractFloat,
                   T2 <: AbstractFloat }# where T <: AbstractFloat
     vecs::Array{Array{T1},1}
@@ -54,6 +64,15 @@ function push!(M::DIISManager{T1,T2}, V::Array, E::Array) where { T1 <: Abstract
     push!(M.errs,convert(Array{T2},deepcopy(E)))
 end
 
+"""
+    extrapolate(M::DIISManager{T1,T2}; add_res=false) where { T1 <: AbstractFloat,
+                                                              T2 <: AbstractFloat }
+
+Takes current state of M and produces an optimal (within subspace) trial vector.
+
+# kwargs
+    add_res=false      Do add estimated residual to trial vector? 
+"""
 function extrapolate(M::DIISManager{T1,T2};add_res=false) where { T1 <: AbstractFloat,
                                                     T2 <: AbstractFloat }
     diis_size = length(M)

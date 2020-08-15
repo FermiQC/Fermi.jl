@@ -6,7 +6,7 @@ Module for running Hartree--Fock computations in Fermi.
 module HartreeFock
 
 using Fermi
-using Fermi.Integrals: AbstractAOIntegrals, ConventionalAOIntegrals
+using Fermi.Integrals: IntegralHelper
 using Fermi.Geometry: Molecule
 using Fermi.Output
 using Lints

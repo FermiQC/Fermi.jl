@@ -13,11 +13,8 @@ using Fermi
 using Fermi.Output
 using TensorOperations
 
-export do_rmp2
-export do_ump2
-export do_direct_rmp2
-export do_df_rmp2
 export RMP2
+export RMP3
 
 function print_header()
     @output "================================================================================\n" 

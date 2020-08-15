@@ -1,7 +1,7 @@
 using TensorOperations
 using Lints
 using Fermi.DIIS
-using Fermi.Integrals: ConventionalAOIntegrals, DFAOIntegrals, IntegralHelper
+using Fermi.Integrals: IntegralHelper
 using Fermi.Orbitals: CanonicalOrbital, CanonicalOrbitals
 
 # Define Algorithims
@@ -124,7 +124,7 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, Alg::B, guess::GWHGuess)
     RHF(molecule, aoint, C, Alg)
 end
 
-function RHF(molecule::Molecule, aoint::IntegralHelper, Alg::B, guess::CoreGuess) where B <: AbstractAOIntegrals 
+function RHF(molecule::Molecule, aoint::IntegralHelper, Alg::B, guess::CoreGuess) where B <: RHFAlgorithm
 
     #Form core guess
     @output "Using Core Guess\n"

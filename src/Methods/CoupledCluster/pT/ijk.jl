@@ -4,36 +4,33 @@ function RCCSDpT()
 end
 
 function RCCSDpT{T}() where T <: AbstractFloat
-    molecule = Fermi.Geometry.Molecule()
-    aoint = Fermi.Integrals.ConventionalAOIntegrals(molecule)
-    refwfn = Fermi.HartreeFock.RHF(molecule, aoint)
+    refwfn = Fermi.HartreeFock.RHF()
 
     drop_occ = Fermi.CurrentOptions["drop_occ"]
     drop_vir = Fermi.CurrentOptions["drop_vir"]
 
     @output "Transforming Integrals..."
-    moint = Fermi.Integrals.PhysRestrictedMOIntegrals{T}(refwfn.ndocc, refwfn.nvir, drop_occ, drop_vir, refwfn.C, aoint)
 
-    ccsd_wfn = RCCSD{T}(refwfn, moint, Fermi.CoupledCluster.CTF())
-    RCCSDpT{T}(ccsd_wfn, moint)
+    ccsd_wfn = RCCSD{T}(refwfn, refwfn.ints, Fermi.CoupledCluster.CTF())
+    RCCSDpT{T}(ccsd_wfn, ints)
 end
 
-function RCCSDpT{T}(ccsd::RCCSD, moint::PhysRestrictedMOIntegrals) where T <: AbstractFloat
+function RCCSDpT{T}(ccsd::RCCSD, ints::IntegralHelper) where T <: AbstractFloat
 
     @output "\n   • Perturbative Triples Started\n\n"
 
     T1 = ccsd.T1.data
     T2 = ccsd.T2.data
 
-    Vvvvo = permutedims(moint.ovvv, (4,2,3,1))
-    Vvooo = permutedims(moint.ooov, (4,2,1,3))
-    Vvovo = permutedims(moint.oovv, (3,1,4,2))
+    Vvvvo = permutedims(ints["OVVV"], (4,2,3,1))
+    Vvooo = permutedims(ints["OOOV"], (4,2,1,3))
+    Vvovo = permutedims(ints["OOVV"], (3,1,4,2))
 
     o,v = size(T1)
     Et::T = 0.0
 
-    fo = diag(moint.oo)
-    fv = diag(moint.vv)
+    fo = diag(ints["FOO"])
+    fv = diag(ints["FVV"])
 
     # Pre-allocate Intermediate arrays
     W  = Array{T}(undef, v,v,v)
