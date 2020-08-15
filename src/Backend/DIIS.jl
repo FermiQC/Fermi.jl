@@ -88,10 +88,10 @@ function extrapolate(M::DIISManager{T1,T2};add_res=false) where { T1 <: Abstract
     resid[end] = 1
     ci = svd(B)\resid
     out = zeros(T1,size(M.vecs[1]))
-    outw = zeros(T1,size(M.vecs[1]))
+    add_res ? outw = zeros(T1,size(M.vecs[1])) : nothing
     for num in 1:diis_size
         out += ci[num]*M.vecs[num]
-        outw += ci[num]*M.errs[num]
+        add_res ? outw += ci[num]*M.errs[num] : nothing
     end
     add_res ? out += outw : nothing
     out

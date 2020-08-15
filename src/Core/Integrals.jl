@@ -77,7 +77,7 @@ function IntegralHelper{T}() where T <: AbstractFloat
         bname["aux"] = try
             aux_lookup[Fermi.CurrentOptions["basis"]]
         catch KeyError #if we haven't got it programmed, use a large DF basis by default
-            "aug-cc-pvqz-ri"
+            "aug-cc-pvqz-rifit"
         end
     else
         bname["aux"] = aux
@@ -125,6 +125,27 @@ function aooverlap(molecule::Molecule, basis::String)#, interconnect::Fermi.Envi
     nprim = Lints.max_nprim(bas)
     l = Lints.max_l(bas)
     S_engine = Lints.OverlapEngine(nprim,l)
+    sz = Lints.nao(bas)
+    S = zeros(sz,sz)
+    Lints.make_2D(S,S_engine,bas)
+    S,bas
+end
+function aodipole(molecule::Molecule, basis::String)#, interconnect::Fermi.Environments.No_IC,
+                                                     #   communicator::Fermi.Environments.NoCommunicator,
+                                                     #   accelerator::Fermi.Environments.NoAccelerator)
+
+    open("/tmp/molfile.xyz","w") do molfile
+        natom = length(molecule.atoms)
+        write(molfile,"$natom\n\n")
+        write(molfile,Fermi.Geometry.get_xyz(molecule))
+    end
+
+    Lints.libint2_init()
+    mol = Lints.Molecule("/tmp/molfile.xyz")
+    bas = Lints.BasisSet(basis, mol)
+    nprim = Lints.max_nprim(bas)
+    l = Lints.max_l(bas)
+    S_engine = Lints.DipoleEngine(nprim,l)
     sz = Lints.nao(bas)
     S = zeros(sz,sz)
     Lints.make_2D(S,S_engine,bas)
@@ -196,8 +217,8 @@ function dfaoeri(molecule::Molecule, bname::String,dfbname::String)
     T_engine = Lints.KineticEngine(nprim,l)
     V_engine = Lints.NuclearEngine(nprim,l,mol)
     eri_engines = [Lints.DFEngine(nprim,l) for i=1:Threads.nthreads()]
-    sz = Lints.getsize(S_engine,bas)
-    dfsz = Lints.getsize(S_engine,dfbas)
+    sz = Lints.nao(bas)
+    dfsz = Lints.nao(dfbas)
     S = zeros(sz,sz)
     T = zeros(sz,sz)
     V = zeros(sz,sz)
@@ -218,15 +239,15 @@ function aux_ri!(I::IntegralHelper,ri=Fermi.CurrentOptions["rifit"])
     delete!(I.cache,"B") #clear out old aux basis
     if ri == "auto"
         aux_lookup = Dict{String,String}(
-                                         "cc-pvdz" => "cc-pvdz-ri",
-                                         "cc-pvtz" => "cc-pvtz-ri",
-                                         "cc-pvqz" => "cc-pvqz-ri",
-                                         "cc-pv5z" => "cc-pv5z-ri"
+                                         "cc-pvdz" => "cc-pvdz-rifit",
+                                         "cc-pvtz" => "cc-pvtz-rifit",
+                                         "cc-pvqz" => "cc-pvqz-rifit",
+                                         "cc-pv5z" => "cc-pv5z-rifit"
                                         )
         I.bname["aux"] = try
             aux_lookup[Fermi.CurrentOptions["basis"]]
         catch KeyError
-            "aug-cc-pvqz-ri" # default to large DF basis
+            "aug-cc-pvqz-rifit" # default to large DF basis
         end
     else
         I.bname["aux"] = ri
@@ -244,7 +265,7 @@ function aux_jk!(I::IntegralHelper,jk=Fermi.CurrentOptions["jkfit"])
         I.bname["aux"] = try
             aux_lookup[Fermi.CurrentOptions["basis"]]
         catch KeyError
-            "aug-cc-pvqz-jkfit" # default to large DF basis
+            "aug-cc-pvqz-rifit" # default to large DF basis
         end
     else
         I.bname["aux"] = jk
