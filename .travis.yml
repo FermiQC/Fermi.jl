@@ -1,12 +1,34 @@
 language: julia
 
-arch:
-    - amd64
-    - arch64
-dist:
-    - bionic
-    - xenial
-    - focal
-os:
-    - linux
-    - osx
+jobs:
+    include:
+        - arch: amd64
+          dist: bionic
+          julia: nightly
+          os: linux
+        - arch: amd64
+          dist: xenial
+          julia: nightly
+          os: linux
+        - arch: amd64
+          dist: focal
+          julia: nightly
+          os: linux
+        - arch: amd64
+          julia: nightly
+          os: osx
+        - arch: amd64
+          dist: bionic
+          julia: 1.5.0
+          os: linux
+        - arch: amd64
+          dist: xenial
+          julia: 1.5.0
+          os: linux
+        - arch: amd64
+          dist: focal
+          julia: 1.5.0
+          os: linux
+        - arch: amd64
+          os: osx
+          julia: 1.5.0
