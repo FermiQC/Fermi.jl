@@ -1,40 +1,30 @@
 # Fermi
-## Overview and Motivations
 
-Fermi is a programming environment for writing arbitrary electronic structure and quantum chemical computations in the Julia programming language. Julia shows a lot of promise as a language for scientific computing, with many fields writing domain-specific applications in Julia. This project is intended to demonstrate some ways of working in this language, and showcase a proposed style of programming for expansion into a complete set of electronic structure programs.
+Fermi is a quantum chemistry program written in (nearly) pure Julia. This code is developed at
+the Center for Computational Quantum Chemistry at the University of Georgia. 
 
-In the benchmark and test folders, there are some files that act as examples for using the program. 
+Fermi focuses on post Hartree--Fock methods. Currently, only restricted HF references are supported.
+This is intended as a research code with an ever growing collection of methods implemented in
+the package itself. However, the Fermi API is designed to make high performance pilot implementations
+of methods achievable. 
 
-## Installing Fermi
-These instructions are lifted from [this helpful site](https://tlienart.github.io/pub/julia/dev-pkg.html). 
-Currently, Fermi is unregistered, thus we use it with the `dev` mode.
-In addition to the instructions below, there are some dependencies required. Please raise an issue if there is any difficulty with dependencies.
-Make a directory where you will be placing Fermi. I'll use `<DEVDIR>` to represent that directory. Clone Fermi.
+## Contribute
+PR's, issues, and suggestions are very welcome! You might consider reaching out before starting
+work so that we can avoid duplication of efforts.
 
-### Making Julia aware of Fermi
-First, clone Fermi
+## Install
+Install Fermi by running,
 ```
-mkdir <DEVDIR>
-cd <DEVDIR>
-git clone https://github.com/mdav2/Fermi.jl.git
+pkg> add https://github.com/FermiQC/Fermi.jl.git
 ```
-Now make the package manager Pkg aware of Fermi's presence.
-```
-julia> ]
-(v1.3) pkg> dev <DEVDIR>/Fermi.jl
-```
-Now Fermi should be visible to Julia! To test this, `cd` and run,
-```
-$ julia
-julia> using Fermi
-```
-You should see,
-```
-[ Info: Precompiling Fermi [9237668d-08c8-4784-b8dd-383aa52fcf74]
-```
+Everything should work automatically on x86 architechtures for Linux and macOS. Windows is not
+supported. You may run into issues when building Lints, the interface software between the
+Libint2 integral code and Fermi. These errors can be a bit cryptic, so please reach out 
+if you encounter any.
 
 ## Running single point energies
-A minimal example of a computation is provided here. For more info check the doccumentation (TODO)
+A minimal example of a computation is provided here. For more info check the doccumentation.
+
 First, define a molecule
 ```
 @molecule {
