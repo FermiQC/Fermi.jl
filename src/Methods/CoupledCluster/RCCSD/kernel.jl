@@ -233,15 +233,15 @@ function RCCSD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2
             T2 .= newT2
             update_amp(T1, T2, newT1, newT2, foo, fov, fvv, ints, alg)
 
-    #        apply_ec(newT1,newT2,ecT1,ecT2)
+            apply_ec(newT1,newT2,ecT1,ecT2)
 
             # Apply resolvent
             newT1 ./= d
             newT2 ./= D
 
             # Compute residues 
-            #r1 = sqrt(sum((newT1 .- T1).^2))/length(T1)
-            #r2 = sqrt(sum((newT2 .- T2).^2))/length(T2)
+            r1 = sqrt(sum((newT1 .- T1).^2))/length(T1)
+            r2 = sqrt(sum((newT2 .- T2).^2))/length(T2)
 
             if do_diis && ite > 2
                 relax -= 1
@@ -256,10 +256,10 @@ function RCCSD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2
                 end
             end
 
-            #newT1 .= (1-dp)*newT1 .+ dp*T1
-            #newT2 .= (1-dp)*newT2 .+ dp*T2
+            newT1 .= (1-dp)*newT1 .+ dp*T1
+            newT2 .= (1-dp)*newT2 .+ dp*T2
         end
-        rms = 0.0#max(r1,r2)
+        rms = max(r1,r2)
         oldE = Ecc
         Ecc = update_energy(newT1, newT2, fov, oovv)
         dE = Ecc - oldE
