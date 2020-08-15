@@ -7,14 +7,6 @@ jobs:
           julia: nightly
           os: linux
         - arch: amd64
-          dist: xenial
-          julia: nightly
-          os: linux
-        - arch: amd64
-          dist: focal
-          julia: nightly
-          os: linux
-        - arch: amd64
           julia: nightly
           os: osx
         - arch: amd64
@@ -22,13 +14,12 @@ jobs:
           julia: 1.5.0
           os: linux
         - arch: amd64
-          dist: xenial
+          os: osx
           julia: 1.5.0
-          os: linux
         - arch: amd64
-          dist: focal
-          julia: 1.5.0
+          dist: bionic
+          julia: 1.4.2
           os: linux
         - arch: amd64
           os: osx
-          julia: 1.5.0
+          julia: 1.4.2
