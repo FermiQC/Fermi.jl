@@ -3,6 +3,16 @@ using LinearAlgebra
 import Base.push!
 import Base.length
 
+"""
+    DIISManager{T1<:AbstractFloat,
+                T2<:AbstractFloat}
+
+# Fields
+
+    vecs::Array{Array{T1},1} vectors to extrapolate from.
+    errs::Array{Array{T2},1} error vectors to build B matrix from.
+    max_vec::Int64           max number of vectors to hold
+"""
 struct DIISManager{T1<:AbstractFloat,
                   T2 <: AbstractFloat }# where T <: AbstractFloat
     vecs::Array{Array{T1},1}
@@ -54,6 +64,15 @@ function push!(M::DIISManager{T1,T2}, V::Array, E::Array) where { T1 <: Abstract
     push!(M.errs,convert(Array{T2},deepcopy(E)))
 end
 
+"""
+    extrapolate(M::DIISManager{T1,T2}; add_res=false) where { T1 <: AbstractFloat,
+                                                              T2 <: AbstractFloat }
+
+Takes current state of M and produces an optimal (within subspace) trial vector.
+
+# kwargs
+    add_res=false      Do add estimated residual to trial vector? 
+"""
 function extrapolate(M::DIISManager{T1,T2};add_res=false) where { T1 <: AbstractFloat,
                                                     T2 <: AbstractFloat }
     diis_size = length(M)
@@ -65,16 +84,14 @@ function extrapolate(M::DIISManager{T1,T2};add_res=false) where { T1 <: Abstract
         end
     end 
     E = size(B,1)
-    B[1:E-1,1:E-1] ./= maximum(abs.(B[1:E-1,1:E-1]))
     resid = zeros(T1,diis_size+1)
     resid[end] = 1
-    LAPACK.gesv!(B,resid)
-    ci = resid
+    ci = svd(B)\resid
     out = zeros(T1,size(M.vecs[1]))
-    outw = zeros(T1,size(M.vecs[1]))
+    add_res ? outw = zeros(T1,size(M.vecs[1])) : nothing
     for num in 1:diis_size
         out += ci[num]*M.vecs[num]
-        outw += ci[num]*M.errs[num]
+        add_res ? outw += ci[num]*M.errs[num] : nothing
     end
     add_res ? out += outw : nothing
     out

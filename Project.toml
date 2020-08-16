@@ -1,7 +1,7 @@
 name = "Fermi"
 uuid = "9237668d-08c8-4784-b8dd-383aa52fcf74"
 authors = ["mdav2 <matthew.mcallister.davis@gmail.com>"]
-version = "0.1.0"
+version = "0.0.1"
 
 [deps]
 ArnoldiMethod = "ec485272-7323-5ecc-a04f-4719b315124d"
@@ -18,9 +18,23 @@ Lints = "969b4477-8239-4824-a7ce-fb2a72cbc115"
 LoopVectorization = "bdcacae8-1622-11e9-2a5c-532679323890"
 MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195"
 PrettyTables = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
-Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 SharedArrays = "1a1011a3-84de-559e-8e89-a11a2f7dc383"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 TBLIS = "48530278-0828-4a49-9772-0f3830dfa1e9"
 TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[compat]
+ArnoldiMethod = "0.0.4"
+Combinatorics = "1.0.2"
+CuArrays      = "2.2.2"
+DistributedArrays = "0.6.5"
+Formatting = "0.4.1"
+HDF5 = "0.13.3"
+IterativeSolvers = "0.8.4"
+Lints = "0.2.0"
+LoopVectorization = "0.8.23"
+MPI = "0.15.1"
+PrettyTables = "0.9.1"
+TBLIS = "0.1.0"
+TensorOperations = "3.0.0"

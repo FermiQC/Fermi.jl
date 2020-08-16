@@ -17,8 +17,9 @@ function ecRCCSDpT{T}() where T <: AbstractFloat
     # Get MO Integrals
     drop_occ = Fermi.CurrentOptions["drop_occ"]
     drop_vir = Fermi.CurrentOptions["drop_vir"]
-    aoint = Fermi.Integrals.ConventionalAOIntegrals() 
-    moint = Fermi.Integrals.PhysRestrictedMOIntegrals{T}(refwfn.ndocc, refwfn.nvir, drop_occ, drop_vir, refwfn.C, aoint)
+    #aoint = Fermi.Integrals.ConventionalAOIntegrals() 
+    #moint = Fermi.Integrals.PhysRestrictedMOIntegrals{T}(refwfn.ndocc, refwfn.nvir, drop_occ, drop_vir, refwfn.C, aoint)
+    ints = refwfn.ints
     # Delete AO Integrals
     aoint = nothing
 
@@ -39,24 +40,24 @@ function ecRCCSDpT{T}() where T <: AbstractFloat
     @output "Active Occupied Orbitals: {}\n" actocc
     @output "Active Virtual Orbitals:  {}\n" actvir
 
-    T1, T2, ecT1, ecT2 = cas_decomposition(Casdata, refwfn.ndocc, drop_occ, actocc, actvir, moint.ov, moint.oovv, moint.ovvv, moint.ooov)
+    T1, T2, ecT1, ecT2 = cas_decomposition(Casdata, refwfn.ndocc, drop_occ, actocc, actvir, ints["FOV"], ints["OOVV"], ints["OVVV"], ints["OOOV"])
     refdet = Casdata[1]
     cast3 = Casdata[5]
     Casdata = nothing
 
-    d = [i - a for i = diag(moint.oo), a = diag(moint.vv)]
-    D = [i + j - a - b for i = diag(moint.oo), j = diag(moint.oo), a = diag(moint.vv), b = diag(moint.vv)]
+    d = [i - a for i = diag(ints["FOO"]), a = diag(ints["FVV"])]
+    D = [i + j - a - b for i = diag(ints["FOO"]), j = diag(ints["FOO"]), a = diag(ints["FVV"]), b = diag(ints["FVV"])]
 
-    ecccsd = ecRCCSD{T}(refwfn, moint, T1, T2, ecT1, ecT2, d, D, CTF())
+    ecccsd = ecRCCSD{T}(refwfn, ints, T1, T2, ecT1, ecT2, d, D, CTF())
     ecT1 = nothing
     ecT2 = nothing
     d = nothing
     D = nothing
 
-    ecRCCSDpT{T}(ecccsd, moint, refdet, cast3, refwfn.ndocc, drop_occ)
+    ecRCCSDpT{T}(ecccsd, ints, refdet, cast3, refwfn.ndocc, drop_occ)
 end
 
-function ecRCCSDpT{T}(ecccsd::ecRCCSD, moint::PhysRestrictedMOIntegrals, ref::Determinant, casT3::Array{Determinant,1}, ndocc::Int, fcn::Int) where T <: AbstractFloat
+function ecRCCSDpT{T}(ecccsd::ecRCCSD, ints::IntegralHelper, ref::Determinant, casT3::Array{Determinant,1}, ndocc::Int, fcn::Int) where T <: AbstractFloat
 
     @output "\n   • Perturbative Triples Started\n\n"
     @output "T3 within EC active space are going to be skipped\n\n"
@@ -64,15 +65,15 @@ function ecRCCSDpT{T}(ecccsd::ecRCCSD, moint::PhysRestrictedMOIntegrals, ref::De
     T1 = ecccsd.T1.data
     T2 = ecccsd.T2.data
 
-    Vvvvo = permutedims(moint.ovvv, (4,2,3,1))
-    Vvooo = permutedims(moint.ooov, (4,2,1,3))
-    Vvovo = permutedims(moint.oovv, (3,1,4,2))
+    Vvvvo = permutedims(ints["OVVV"], (4,2,3,1))
+    Vvooo = permutedims(ints["OOOV"], (4,2,1,3))
+    Vvovo = permutedims(ints["OOVV"], (3,1,4,2))
 
     o,v = size(T1)
     Et::T = 0.0
 
-    fo = diag(moint.oo)
-    fv = diag(moint.vv)
+    fo = diag(ints["FOO"])
+    fv = diag(ints["FVV"])
 
     # Pre-allocate Intermediate arrays
     W  = Array{T}(undef, v,v,v)

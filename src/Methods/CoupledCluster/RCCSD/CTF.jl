@@ -101,6 +101,7 @@ end
 function update_T2(T1::Array{T,2},T2::Array{T,4},newT2::Array{T,4},foo,fov,fvv,ints::IntegralHelper, alg::CTF) where T <: AbstractFloat
     fill!(newT2, 0.0)
     Voooo, Vooov, Voovv, Vovov, Vovvv, Vvvvv = ints["OOOO"], ints["OOOV"], ints["OOVV"], ints["OVOV"], ints["OVVVV"], ints["VVVV"]
+
     @tensoropt (i=>x, j=>x, k=>x, l=>x, a=>10x, b=>10x, c=>10x, d=>10x) begin
         newT2[i,j,a,b] += Voovv[i,j,a,b]
         newT2[i,j,a,b] += T1[i,c]*T1[j,d]*Vvvvv[c,d,a,b]

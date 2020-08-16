@@ -2,7 +2,7 @@ module FocalPointAnalysis
 
 using Fermi
 using Fermi.Output
-using Fermi.Integrals: ConventionalAOIntegrals, PhysRestrictedMOIntegrals
+using Fermi.Integrals: IntegralHelper
 using Fermi.HartreeFock: RHF
 using Fermi.Geometry: Molecule
 using Fermi.CoupledCluster: RCCSD, RCCSDpT

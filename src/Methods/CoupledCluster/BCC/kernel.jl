@@ -1,46 +1,12 @@
-"""
-    Fermi.Coupled Cluster.update_energy(T1::Array{T, 2}, T2::Array{T, 4}, f::Array{T,2}, Voovv::Array{T, 4}) where T <: AbstractFloat
-
-Compute CC energy from amplitudes and integrals.
-"""
-function update_energy(T1::Array{T, 2}, T2::Array{T, 4}, f::Array{T,2}, Voovv::Array{T, 4}) where { T <: AbstractFloat }
-
-    @tensoropt (k=>x, l=>x, c=>100x, d=>100x)  begin
-        CC_energy = 2.0*f[k,c]*T1[k,c]
-        B[l,c,k,d] := -1.0*T1[l,c]*T1[k,d]
-        B[l,c,k,d] += -1.0*T2[l,k,c,d]
-        B[l,c,k,d] += 2.0*T2[k,l,c,d]
-        CC_energy += B[l,c,k,d]*Voovv[k,l,c,d]
-        CC_energy += 2.0*T1[l,c]*T1[k,d]*Voovv[l,k,c,d]
-    end
-    
-    return CC_energy
-end
-
-"""
-    Fermi.CoupledCluster.RCCSD.update_amp(T1::Array{T, 2}, T2::Array{T, 4}, newT1::Array{T,2}, newT2::Array{T,4}, foo::Array{T,2}, fov::Array{T,2}, fvv::Array{T,2}, moint::PhysRestrictedMOIntegrals) where T <: AbstractFloat
-
-Update amplitudes (T1, T2) to newT1 and newT2 using CTF CCSD equations.
-"""
-function update_amp(T1::Array{T, 2}, T2::Array{T, 4}, newT1::Array{T,2}, newT2::Array{T,4}, foo::Array{T,2}, fov::Array{T,2}, fvv::Array{T,2}, ints::IntegralHelper, alg::A) where { T <: AbstractFloat,
-                                                                                                                                                                                     A <: CCAlgorithm }
-
-    fill!(newT1, 0.0)
-    fill!(newT2, 0.0)
-
-    # Get new amplitudes
-    update_T1(T1,T2,newT1,foo,fov,fvv,ints,alg)
-    update_T2(T1,T2,newT2,foo,fov,fvv,ints,alg)
-end
-
-function RCCSD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2::Array{Tc,4}, alg::A; ecT1 = Array{Float64}(undef,0,0), ecT2 = Array{Float64}(undef,0,0,0,0)) where { Ta <: AbstractFloat,
+using Fermi.Orbitals
+function BCCD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2::Array{Tc,4}, alg::A; ecT1 = Array{Float64}(undef,0,0), ecT2 = Array{Float64}(undef,0,0,0,0)) where { Ta <: AbstractFloat,
                                                                                                                                                                                       Tb <: AbstractFloat,
                                                                                                                                                                                       Tc <: AbstractFloat,
                                        A <: CCAlgorithm }
  
     # Print intro
     Fermi.CoupledCluster.print_header()
-    Fermi.CoupledCluster.print_alg(alg)
+    Fermi.CoupledCluster.print_bcc_alg(alg)
     newT1 = convert(Array{Ta},newT1)
     newT2 = convert(Array{Ta},newT2)
     ecT1 = convert(Array{Ta},ecT1)
@@ -93,7 +59,11 @@ function RCCSD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2
     diis_prec = prec_selector[Fermi.CurrentOptions["diis_prec"]]
     do_diis ? DM_T1 = Fermi.DIIS.DIISManager{Ta,diis_prec}(size=ndiis) : nothing
     do_diis ? DM_T2 = Fermi.DIIS.DIISManager{Ta,diis_prec}(size=ndiis) : nothing
+    nocc = size(oovv,1)
+    nvir = size(oovv,3)
 
+    drop_occ = Fermi.CurrentOptions["drop_occ"]
+    drop_vir = Fermi.CurrentOptions["drop_vir"]
     @output "\tDropped Occupied Orbitals →  {:3.0f}\n" Int(Fermi.CurrentOptions["drop_occ"])
     @output "\tDropped Virtual Orbitals  →  {:3.0f}\n\n" Int(Fermi.CurrentOptions["drop_vir"])
     @output "\n"*repeat("-",80)*"\n"
@@ -208,6 +178,11 @@ function RCCSD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2
         @output "\nT1 pre-convergence took {}s\n" T1_time
     end
 
+    ints.orbs["BCC"] = deepcopy(ints.orbs["FU"])
+    Fermi.Orbitals.activate!(ints.orbs,"BCC") 
+    ints.orbs.frozencore = drop_occ
+    ints.orbs.frozenvir = drop_vir
+
     dE = 1
     rms = 1
     ite = 1
@@ -219,7 +194,7 @@ function RCCSD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2
     end
 
     main_time = 0
-    @output "{:10s}    {: 15s}    {: 12s}    {:12s}    {:10s}\n" "Iteration" "CC Energy" "ΔE" "Max RMS" "Time (s)"
+    @output "{:10s}    {: 15s}    {: 12s}    {:12s}    {:10s} {:3s}\n" "Iteration" "CC Energy" "ΔE" "Max RMS" "Time (s)" "BCC"
     relax = 1
 
     while (abs(dE) > cc_e_conv || rms > cc_max_rms) || ite < 10
@@ -229,8 +204,24 @@ function RCCSD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2
         end
         t = @elapsed begin
 
+            bcc = false
             T1 .= newT1
             T2 .= newT2
+            X = Array([ I(nocc) zeros(size(T1)); T1' I(nvir) ])
+            U = exp(X - X')
+            #display(U)
+            ndocc = nocc
+
+            #if there's no significant rotation, lets just skip the integral transform
+            if !isapprox(tr(U.^2), sum(U.^2); atol=1E-10)
+                bcc = true
+                Fermi.Orbitals.rotate!(ints.orbs,U,fc=drop_occ,fv=drop_vir)
+                delete_integrals(ints,alg)
+                foo = convert(Array{Ta},ints["FOO"] - Diagonal(ints["FOO"]))
+                fvv = convert(Array{Ta},ints["FVV"] - Diagonal(ints["FVV"]))
+                fov = convert(Array{Ta},ints["FOV"])
+                oovv = convert(Array{Ta},Fermi.CoupledCluster.compute_oovv(ints,alg))
+            end
             update_amp(T1, T2, newT1, newT2, foo, fov, fvv, ints, alg)
 
             apply_ec(newT1,newT2,ecT1,ecT2)
@@ -250,8 +241,8 @@ function RCCSD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2
                 push!(DM_T1,newT1,e1) 
                 push!(DM_T2,newT2,e2) 
                 if relax == 0 
-                    newT2 = Fermi.DIIS.extrapolate(DM_T2;add_res=true)
-                    newT1 = Fermi.DIIS.extrapolate(DM_T1;add_res=true)
+                    newT2 = Fermi.DIIS.extrapolate(DM_T2)
+                    newT1 = Fermi.DIIS.extrapolate(DM_T1)
                     relax = diis_relax
                 end
             end
@@ -265,16 +256,17 @@ function RCCSD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2
         dE = Ecc - oldE
         main_time += t
         dE > 0 ? sign = "+" : sign = "-"
-        @output "    {:<5.0d}    {:<15.10f}    {}{:>12.10f}    {:<12.10f}    {:<10.5f}\n" ite Ecc sign abs(dE) rms t
+        @output "    {:<5.0d}    {:<15.10f}    {}{:>12.10f}    {:<12.10f}    {:<10.5f} {:3s}\n" ite Ecc sign abs(dE) rms t bcc
         ite += 1
     end
-    @output "\nMain CCSD iterations done in {}s\n" main_time
+    @output "\nMain BCC iterations done in {}s\n" main_time
 
     # Converged?
     if abs(dE) < cc_e_conv && rms < cc_max_rms 
         @output "\n 🍾 Equations Converged!\n"
     end
-    @output "\n⇒ Final CCSD Energy:     {:15.10f}\n" Ecc+refwfn.energy
+    @output "\n⇒ Final BCCD Energy:     {:15.10f}\n" Ecc+refwfn.energy
+    @output "\n  Final T1 norm:         {:15.10f}\n" sqrt(sum(newT1.^2))
     @output repeat("-",80)*"\n"
 
     return RCCSD{Ta}(Eguess, Ecc+refwfn.energy, Fermi.MemTensor(newT1), Fermi.MemTensor(newT2))

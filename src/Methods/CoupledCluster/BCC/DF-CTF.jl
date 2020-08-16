@@ -9,7 +9,7 @@ using Fermi.DIIS
 
 Compute a RCCSD wave function using the Compiled time factorization algorithm (CTF)
 """
-function RCCSD{T}(guess::RCCSD{Tb},Alg::DFCTF) where { T <: AbstractFloat,
+function BCCD{T}(guess::BCCD{Tb},Alg::DFCTF) where { T <: AbstractFloat,
                                                     Tb <: AbstractFloat }
     refwfn = Fermi.HartreeFock.RHF()
 
@@ -18,10 +18,10 @@ function RCCSD{T}(guess::RCCSD{Tb},Alg::DFCTF) where { T <: AbstractFloat,
 
     ints = refwfn.ints
     Fermi.Integrals.aux_ri!(ints)
-    RCCSD{T}(refwfn, guess, ints, Alg) 
+    BCCD{T}(refwfn, guess, ints, Alg) 
 end
 
-function RCCSD{T}(refwfn::RHF, guess::RCCSD{Tb}, ints::IntegralHelper{Tc}, Alg::DFCTF) where { T <: AbstractFloat,
+function BCCD{T}(refwfn::RHF, guess::BCCD{Tb}, ints::IntegralHelper{Tc}, Alg::DFCTF) where { T <: AbstractFloat,
                                                                                                Tb <: AbstractFloat,
                                                                                               Tc <: AbstractFloat }
     d = [i - a for i = diag(ints["FOO"]), a = diag(ints["FVV"])]
@@ -30,7 +30,7 @@ function RCCSD{T}(refwfn::RHF, guess::RCCSD{Tb}, ints::IntegralHelper{Tc}, Alg::
     Bov = ints["BOV"]
     @tensor oovv[i,j,a,b] := Bov[Q,i,a]*Bov[Q,j,b]
     newT2 = oovv ./ D
-    RCCSD{T}(refwfn, ints, newT1, newT2, Alg)
+    BCCD{T}(refwfn, ints, newT1, newT2, Alg)
 end
 ############ END PREPROCESSING ################
 #
@@ -38,7 +38,7 @@ end
 #
 ############# KERNEL FUNCTIONS ###################
 
-function print_alg(Alg::DFCTF)
+function print_bcc_alg(Alg::DFCTF)
     @output "\n    • Computing CCSD with the DF-CTF algorithm .\n\n"
 end
 
@@ -49,6 +49,16 @@ function compute_integrals(ints,Alg::DFCTF)
     ints["BOO"]
     ints["BVV"]
 end
+
+function delete_integrals(ints,alg::DFCTF)
+    delete!(ints.cache,"BOV")
+    delete!(ints.cache,"BOO")
+    delete!(ints.cache,"BVV")
+    delete!(ints.cache,"FOO")
+    delete!(ints.cache,"FVV")
+    delete!(ints.cache,"FOV")
+end
+
 
 function compute_oovv(ints,alg::DFCTF)
     Bov = ints["BOV"]

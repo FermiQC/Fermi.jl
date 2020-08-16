@@ -1,0 +1,25 @@
+language: julia
+
+jobs:
+    include:
+        - arch: amd64
+          dist: bionic
+          julia: nightly
+          os: linux
+        - arch: amd64
+          julia: nightly
+          os: osx
+        - arch: amd64
+          dist: bionic
+          julia: 1.5.0
+          os: linux
+        - arch: amd64
+          os: osx
+          julia: 1.5.0
+        - arch: amd64
+          dist: bionic
+          julia: 1.4.2
+          os: linux
+        - arch: amd64
+          os: osx
+          julia: 1.4.2
