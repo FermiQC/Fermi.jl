@@ -2,6 +2,8 @@ module Orbitals
 
 import Base.getindex
 import Base.lastindex
+import Base.setindex!
+import Base.length
 
 abstract type AbstractOrbital end
 
@@ -34,40 +36,90 @@ struct BruecknerOrbitals <: AbstractOrbitals
     orbs::Array{BruecknerOrbital}
 end
 
-function getindex(orb::O,i) where O <: AbstractOrbitals
+function CanonicalOrbitals(C::Array{Float64,2})
+    return CanonicalOrbitals([CanonicalOrbital(Array{Float64,1}(C[:,i])) for i in 1:size(C,2)])
+end
+
+function toarray(orbs::O) where O <: AbstractOrbitals
+    C = hcat([orb.C for orb in orbs.orbs]...)
+end
+
+function Base.getindex(orb::O,i) where O <: AbstractOrbitals
     return orb.orbs[i]
 end
-function getindex(orb::O,R::UnitRange) where O <: AbstractOrbitals
+function Base.getindex(orb::O,R::UnitRange) where O <: AbstractOrbitals
     return O([orb.orbs[i] for i in R])
 end
 
-function lastindex(orb::O) where O <: AbstractOrbitals
+function Base.lastindex(orb::O) where O <: AbstractOrbitals
     return length(orb.orbs)
 end
 
-function rotate!(orbs::O,U::Array{Float64,2}) where O <: AbstractOrbitals
-    C = hcat([orb.C for orb in orbs.orbs]...)
+function Base.length(orb::O) where O <: AbstractOrbitals
+    return length(orb.orbs)
+end
+
+
+mutable struct OrbDict
+    current::String
+    ndocc::Int
+    nvir::Int
+    frozencore::Int
+    frozenvir::Int
+    cache::Dict{String,O} where O <: AbstractOrbitals
+end
+
+function rotate!(orbs::OrbDict,U::Array{Float64,2};fc=0,fv=0) where O <: AbstractOrbitals
+    C = hcat([orb.C for orb in orbs["OV"].orbs]...)
     C = C*U
-    for i in eachindex(orbs.orbs)
-        orbs[i].C[:] .= C[:,i]
+    for i=1:length(orbs["OV"])
+        _i = i+fc
+        orbs.cache[orbs.current].orbs[_i].C[:] .= C[:,i]
     end
 end
 
-#mutable struct OrbDict
-#    all::O where O <: AbstractOrbitals
-#    ndocc::Int
-#    nvir::Int
-#end
-#
-#function getindex(OD::OrbDict,entry::String)
-#    if entry == "*"
-#        return OD.all
-#    elseif entry = "O" || entry = "o"
-#        return CanonicalOrbitals([CanonicalOrbital(Array{Float64,1}(C[:,i])) for i in 1:ndocc])
-#    elseif entry = "V" || entry = "v"
-#        return CanonicalOrbitals([CanonicalOrbital(Array{Float64,1}(C[:,i])) for i in ndocc+1:ndocc+nvir])
-#    end
-#end
+function OrbDict()
+    OrbDict("canonical",0,0,0,0,Dict{String,AbstractOrbitals}())
+end
 
+function activate!(OD::OrbDict,entry::String)
+    if !(entry in keys(OD.cache))
+        error("OrbDict tried to activate a non-existent basis!")
+    else
+        OD.current = entry
+    end
+end
+
+function Base.getindex(OD::OrbDict,entry::String)
+    gather = occursin("[",entry)
+    s = strip(entry,['[',']'])
+    all = OD.cache[OD.current]
+    type = typeof(all)
+    fc = OD.frozencore
+    fv = OD.frozenvir
+    lookup = Dict{Char,type}( 
+                             'F' => all[1:OD.ndocc],
+                             'O' => all[fc+1:OD.ndocc],
+                             'U' => all[OD.ndocc+1:OD.ndocc+OD.nvir],
+                             'V' => all[OD.ndocc+1:OD.ndocc+OD.nvir-fv]
+                            )
+    out = []
+    for i in eachindex(s)
+        _s = lookup[s[i]]
+        if length(_s) != 0
+            push!(out,lookup[s[i]])
+        end
+    end
+    out = type(hcat([toarray(o) for o in out]...))
+    if gather
+        return toarray(out)
+    else
+        return out
+    end
+end
+
+function Base.setindex!(OD::OrbDict,val,entry::String)
+    OD.cache[entry] = val
+end
 
 end #module

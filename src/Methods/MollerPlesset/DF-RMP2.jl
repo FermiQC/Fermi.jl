@@ -6,6 +6,8 @@ function RMP2{T}(refwfn::Fermi.HartreeFock.RHF,alg::Fermi.MollerPlesset.DF) wher
     nvir    = refwfn.nvir
     drop_occ = Fermi.CurrentOptions["drop_occ"]
     drop_vir = Fermi.CurrentOptions["drop_vir"]
+    ints.orbs.frozencore = drop_occ
+    ints.orbs.frozenvir = drop_vir
     eps = refwfn.eps
     ΔMP2 = 0.0
     @output "\tComputing MP2 with DF algorithm\n\n"

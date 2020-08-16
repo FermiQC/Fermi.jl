@@ -6,7 +6,7 @@ function BCCD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2:
  
     # Print intro
     Fermi.CoupledCluster.print_header()
-    Fermi.CoupledCluster.print_alg(alg)
+    Fermi.CoupledCluster.print_bcc_alg(alg)
     newT1 = convert(Array{Ta},newT1)
     newT2 = convert(Array{Ta},newT2)
     ecT1 = convert(Array{Ta},ecT1)
@@ -62,6 +62,8 @@ function BCCD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2:
     nocc = size(oovv,1)
     nvir = size(oovv,3)
 
+    drop_occ = Fermi.CurrentOptions["drop_occ"]
+    drop_vir = Fermi.CurrentOptions["drop_vir"]
     @output "\tDropped Occupied Orbitals →  {:3.0f}\n" Int(Fermi.CurrentOptions["drop_occ"])
     @output "\tDropped Virtual Orbitals  →  {:3.0f}\n\n" Int(Fermi.CurrentOptions["drop_vir"])
     @output "\n"*repeat("-",80)*"\n"
@@ -176,7 +178,10 @@ function BCCD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2:
         @output "\nT1 pre-convergence took {}s\n" T1_time
     end
 
-    ints.orbs["BCC"] = deepcopy(ints.orbs["*"])
+    ints.orbs["BCC"] = deepcopy(ints.orbs["FU"])
+    Fermi.Orbitals.activate!(ints.orbs,"BCC") 
+    ints.orbs.frozencore = drop_occ
+    ints.orbs.frozenvir = drop_vir
 
     dE = 1
     rms = 1
@@ -208,13 +213,9 @@ function BCCD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2:
             ndocc = nocc
 
             #if there's no significant rotation, lets just skip the integral transform
-            if !isapprox(tr(U.^2), sum(U.^2); rtol=1E-10)
+            if !isapprox(tr(U.^2), sum(U.^2); atol=1E-10)
                 bcc = true
-                Fermi.Orbitals.rotate!(ints.orbs["BCC"],U)
-                occ = Fermi.Orbitals.CanonicalOrbitals([ints.orbs["BCC"][i] for i in 1:ndocc])
-                vir = Fermi.Orbitals.CanonicalOrbitals([ints.orbs["BCC"][i] for i in ndocc+1:ndocc+nvir])
-                ints.orbs["O"] = occ
-                ints.orbs["V"] = vir
+                Fermi.Orbitals.rotate!(ints.orbs,U,fc=drop_occ,fv=drop_vir)
                 delete_integrals(ints,alg)
                 foo = convert(Array{Ta},ints["FOO"] - Diagonal(ints["FOO"]))
                 fvv = convert(Array{Ta},ints["FVV"] - Diagonal(ints["FVV"]))
@@ -258,13 +259,14 @@ function BCCD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2:
         @output "    {:<5.0d}    {:<15.10f}    {}{:>12.10f}    {:<12.10f}    {:<10.5f} {:3s}\n" ite Ecc sign abs(dE) rms t bcc
         ite += 1
     end
-    @output "\nMain CCSD iterations done in {}s\n" main_time
+    @output "\nMain BCC iterations done in {}s\n" main_time
 
     # Converged?
     if abs(dE) < cc_e_conv && rms < cc_max_rms 
         @output "\n 🍾 Equations Converged!\n"
     end
-    @output "\n⇒ Final CCSD Energy:     {:15.10f}\n" Ecc+refwfn.energy
+    @output "\n⇒ Final BCCD Energy:     {:15.10f}\n" Ecc+refwfn.energy
+    @output "\n  Final T1 norm:         {:15.10f}\n" sqrt(sum(newT1.^2))
     @output repeat("-",80)*"\n"
 
     return RCCSD{Ta}(Eguess, Ecc+refwfn.energy, Fermi.MemTensor(newT1), Fermi.MemTensor(newT2))

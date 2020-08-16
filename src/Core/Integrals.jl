@@ -8,7 +8,7 @@ module Integrals
 using Fermi
 using Fermi.Output
 using Fermi.Geometry: Molecule
-using Fermi.Orbitals: AbstractOrbitals
+using Fermi.Orbitals: AbstractOrbitals, OrbDict
 using Lints
 using LinearAlgebra
 using TensorOperations
@@ -51,8 +51,7 @@ mutable struct IntegralHelper{T}
     cache::Dict{String,Array} 
     bname::Dict{String,String}
     mol::Molecule
-    orbs::Dict{String,O} where O <: AbstractOrbitals
-    #C::Dict{String,Array{Float64,2}}
+    orbs::Fermi.Orbitals.OrbDict
     basis::Dict{String,Lints.BasisSetAllocated} 
     type::DataType
 end
@@ -77,13 +76,13 @@ function IntegralHelper{T}() where T <: AbstractFloat
         bname["aux"] = try
             aux_lookup[Fermi.CurrentOptions["basis"]]
         catch KeyError #if we haven't got it programmed, use a large DF basis by default
-            "aug-cc-pvqz-rifit"
+            "augmentation-cc-pvqz-rifit"
         end
     else
         bname["aux"] = aux
     end
     mol = Molecule()
-    orbs = Dict{String,AbstractOrbitals}()
+    orbs = Fermi.Orbitals.OrbDict()
     basis = Dict{String,Lints.BasisSetAllocated}()
     IntegralHelper{T}(cache,bname,mol,orbs,basis,type)
 end
@@ -107,6 +106,7 @@ function aokinetic(molecule::Molecule, basis::String)#, interconnect::Fermi.Envi
     sz = Lints.nao(bas)
     T = zeros(sz,sz)
     Lints.make_2D(T,T_engine,bas)
+    Lints.libint2_finalize()
     T,bas
 end
 function aooverlap(molecule::Molecule, basis::String)#, interconnect::Fermi.Environments.No_IC,
@@ -128,6 +128,7 @@ function aooverlap(molecule::Molecule, basis::String)#, interconnect::Fermi.Envi
     sz = Lints.nao(bas)
     S = zeros(sz,sz)
     Lints.make_2D(S,S_engine,bas)
+    Lints.libint2_finalize()
     S,bas
 end
 function aodipole(molecule::Molecule, basis::String)#, interconnect::Fermi.Environments.No_IC,
@@ -149,6 +150,8 @@ function aodipole(molecule::Molecule, basis::String)#, interconnect::Fermi.Envir
     sz = Lints.nao(bas)
     S = zeros(sz,sz)
     Lints.make_2D(S,S_engine,bas)
+    Lints.libint2_finalize()
+
     S,bas
 end
 function aonuclear(molecule::Molecule, basis::String)#, interconnect::Fermi.Environments.No_IC,
@@ -170,6 +173,7 @@ function aonuclear(molecule::Molecule, basis::String)#, interconnect::Fermi.Envi
     sz = Lints.nao(bas)
     V = zeros(sz,sz)
     Lints.make_2D(V,V_engine,bas)
+    Lints.libint2_finalize()
     V,bas
 end
 function aoeri(molecule::Molecule, basis::String)#, interconnect::Fermi.Environments.No_IC,
@@ -195,6 +199,7 @@ function aoeri(molecule::Molecule, basis::String)#, interconnect::Fermi.Environm
     end
     I = zeros(sz,sz,sz,sz)
     Lints.make_ERI(I,I_engines,bas)
+    Lints.libint2_finalize()
     I,bas
 end
 
@@ -232,6 +237,7 @@ function dfaoeri(molecule::Molecule, bname::String,dfbname::String)
     Jh = Array(Hermitian(J)^(-1/2)) #sometimes Jh becomes complex slightly if J is not ~~exactly~~ hermitian 💔
     B = zeros(dfsz,sz,sz)
     Fermi.contract!(B,Pqp,Jh,"Qpq","Pqp","PQ")
+    Lints.libint2_finalize()
     B,dfbas
 end
 
@@ -247,7 +253,7 @@ function aux_ri!(I::IntegralHelper,ri=Fermi.CurrentOptions["rifit"])
         I.bname["aux"] = try
             aux_lookup[Fermi.CurrentOptions["basis"]]
         catch KeyError
-            "aug-cc-pvqz-rifit" # default to large DF basis
+            "augmentation-cc-pvqz-rifit" # default to large DF basis
         end
     else
         I.bname["aux"] = ri
@@ -265,7 +271,7 @@ function aux_jk!(I::IntegralHelper,jk=Fermi.CurrentOptions["jkfit"])
         I.bname["aux"] = try
             aux_lookup[Fermi.CurrentOptions["basis"]]
         catch KeyError
-            "aug-cc-pvqz-rifit" # default to large DF basis
+            "augmentation-cc-pvqz-rifit" # default to large DF basis
         end
     else
         I.bname["aux"] = jk
@@ -303,7 +309,7 @@ function compute!(I::IntegralHelper,entry::String)
         I.cache["V"],_ = aonuclear(I.mol,I.bname["primary"])
 
     elseif entry == "F"
-        D = Fermi.contract(I.C["O"],I.C["O"],"um","vm")
+        D = Fermi.contract(I.C["[O]"],I.C["[O]"],"um","vm")
         F = zeros(I.type,size(I["S"]))
         Fermi.HartreeFock.build_fock!(F,
                                                      I["T"] + I["V"],
@@ -311,7 +317,7 @@ function compute!(I::IntegralHelper,entry::String)
                                                      I["μ"])
         I.cache["F'"] = F
     elseif entry == "F'"
-        D = Fermi.contract(I.C["O"],I.C["O"],"um","vm")
+        D = Fermi.contract(I.C["[O]"],I.C["[O]"],"um","vm")
         F = zeros(I.type,size(I["S"]))
         Fermi.HartreeFock.build_fock!(F,
                                                      I["T"] + I["V"],
@@ -322,24 +328,17 @@ function compute!(I::IntegralHelper,entry::String)
         aoint = I["B"]
         C1 = try 
             o[entry[2:2]]
-        catch
+        catch KeyError
             error("")
         end
         C2 = try
             o[entry[3:3]]
-        catch
+        catch KeyError
             error("")
         end
         C = []
         push!(C,C1)
         push!(C,C2)
-        drop_occ = Fermi.CurrentOptions["drop_occ"]
-        drop_vir = Fermi.CurrentOptions["drop_vir"]
-
-        for i in eachindex(C)
-            C[i] == o["O"] ? C[i] = C[i][(1+drop_occ):end] : nothing
-            C[i] == o["V"] ? C[i] = C[i][1:end-drop_vir] : nothing
-        end
         I.cache[entry] = transform_eri(aoint, C...)
 
     elseif 'F' in entry
@@ -362,13 +361,6 @@ function compute!(I::IntegralHelper,entry::String)
         C = []
         push!(C,C1)
         push!(C,C2)
-        drop_occ = Fermi.CurrentOptions["drop_occ"]
-        drop_vir = Fermi.CurrentOptions["drop_vir"]
-
-        for i in eachindex(C)
-            C[i] == o["O"] ? C[i] = C[i][(1+drop_occ):end] : nothing
-            C[i] == o["V"] ? C[i] = C[i][1:end-drop_vir] : nothing
-        end
         I[entry] = transform_fock(F,C...)
 
     else 
@@ -408,13 +400,6 @@ function compute!(I::IntegralHelper,entry::String)
         push!(C,C3)
         push!(C,C2)
         push!(C,C4)
-        drop_occ = Fermi.CurrentOptions["drop_occ"]
-        drop_vir = Fermi.CurrentOptions["drop_vir"]
-
-        for i in eachindex(C)
-            C[i] == o["O"] ? C[i] = C[i][(1+drop_occ):end] : nothing
-            C[i] == o["V"] ? C[i] = C[i][1:end-drop_vir] : nothing
-        end
         temp = transform_eri(aoint, C...)
         if notation == "phys"
             I.cache[entry] = permutedims(temp,(1,3,2,4))

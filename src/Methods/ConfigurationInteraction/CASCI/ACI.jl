@@ -48,8 +48,8 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, Alg::ACI; ci = nothing) where T
 
     s = 1:(frozen+active)
 
-    h = T.(Fermi.Integrals.transform_fock(ints["T"] + ints["V"], ints.orbs["*"][s], ints.orbs["*"][s]))
-    V = T.(Fermi.Integrals.transform_eri(ints["μ"], ints.orbs["*"][s], ints.orbs["*"][s], ints.orbs["*"][s], ints.orbs["*"][s]))
+    h = T.(Fermi.Integrals.transform_fock(ints["T"] + ints["V"], ints.orbs["FU"][s], ints.orbs["FU"][s]))
+    V = T.(Fermi.Integrals.transform_eri(ints["μ"], ints.orbs["FU"][s], ints.orbs["FU"][s], ints.orbs["FU"][s], ints.orbs["FU"][s]))
 
     aoint = nothing
 

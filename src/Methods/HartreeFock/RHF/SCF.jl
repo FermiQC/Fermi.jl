@@ -162,16 +162,11 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI
     occ = CanonicalOrbitals([CanonicalOrbital(Array{Float64,1}(C[:,i])) for i in 1:ndocc])
     vir = CanonicalOrbitals([CanonicalOrbital(Array{Float64,1}(C[:,i])) for i in ndocc+1:ndocc+nvir])
     all = CanonicalOrbitals([CanonicalOrbital(Array{Float64,1}(C[:,i])) for i in 1:ndocc+nvir])
-    aoint.orbs["O"] = occ
-    aoint.orbs["o"] = occ
-    aoint.orbs["V"] = vir
-    aoint.orbs["v"] = vir 
-    aoint.orbs["*"] = all
-    #aoint.C["C"] = C
-    #aoint.C["O"] = C[:,1:ndocc]
-    #aoint.C["o"] = C[:,1:ndocc]
-    #aoint.C["V"] = C[:,ndocc+1:ndocc+nvir]
-    #aoint.C["v"] = C[:,ndocc+1:ndocc+nvir]
+    aoint.orbs.ndocc = ndocc
+    aoint.orbs.nvir = nvir
+    aoint.orbs.frozencore = Fermi.CurrentOptions["drop_occ"]
+    aoint.orbs.frozenvir = Fermi.CurrentOptions["drop_vir"]
+    aoint.orbs["canonical"] = all
     aoint["F"]   = F
 
     return RHF(molecule, E, ndocc, nvir, eps, aoint)

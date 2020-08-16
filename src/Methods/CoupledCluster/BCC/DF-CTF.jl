@@ -38,7 +38,7 @@ end
 #
 ############# KERNEL FUNCTIONS ###################
 
-function print_alg(Alg::DFCTF)
+function print_bcc_alg(Alg::DFCTF)
     @output "\n    • Computing CCSD with the DF-CTF algorithm .\n\n"
 end
 

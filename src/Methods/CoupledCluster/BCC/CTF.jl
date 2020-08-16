@@ -48,7 +48,7 @@ end
 #
 #
 ############# KERNEL FUNCTIONS ###################
-function print_alg(alg::CTF)
+function print_bcc_alg(alg::CTF)
     @output "Computing BCC with CTF algorithm.\n"
 end
 
