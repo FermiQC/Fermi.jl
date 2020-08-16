@@ -1,5 +1,7 @@
 # Fermi
 
+> *!* Warning: Fermi is not ready for use yet. 
+
 Fermi is a quantum chemistry program written in (nearly) pure Julia. This code is developed at
 the Center for Computational Quantum Chemistry at the University of Georgia. 
 
