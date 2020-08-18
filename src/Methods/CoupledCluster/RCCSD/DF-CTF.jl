@@ -50,6 +50,25 @@ function compute_integrals(ints,Alg::DFCTF)
     ints["BVV"]
 end
 
+"""
+    Fermi.Coupled Cluster.update_energy(T1::Array{T, 2}, T2::Array{T, 4}, f::Array{T,2}, Voovv::Array{T, 4}) where T <: AbstractFloat
+
+Compute CC energy from amplitudes and integrals.
+"""
+function update_energy(T1::Array{T, 2}, T2::Array{T, 4}, f::Array{T,2}, ints, alg::DFCTF) where { T <: AbstractFloat }
+
+    Bov = ints["BOV"]
+    @tensoropt (k=>x, l=>x, c=>100x, d=>100x)  begin
+        CC_energy = 2.0*f[k,c]*T1[k,c]
+        B[l,c,k,d] := -1.0*T1[l,c]*T1[k,d]
+        B[l,c,k,d] += -1.0*T2[l,k,c,d]
+        B[l,c,k,d] += 2.0*T2[k,l,c,d]
+        CC_energy += B[l,c,k,d]*Bov[Q,k,c]*Bov[Q,l,d]#Voovv[k,l,c,d]
+        CC_energy += 2.0*T1[l,c]*T1[k,d]*Bov[Q,l,c]*Bov[Q,k,d]#Voovv[l,k,c,d]
+    end
+    
+    return CC_energy
+end
 function compute_oovv(ints,alg::DFCTF)
     Bov = ints["BOV"]
     @tensor oovv[i,j,a,b] := Bov[Q,i,a]*Bov[Q,j,b]

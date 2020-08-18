@@ -1,9 +1,9 @@
 
-function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, Alg::ConventionalRHF)
-    RHF(molecule,aoint,C,aoint["μ"])
+function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, Λ, Alg::ConventionalRHF)
+    RHF(molecule,aoint,C,aoint["μ"],Λ)
 end
-function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, Alg::DFRHF)
-    RHF(molecule,aoint,C,aoint["B"])
+function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, Λ, Alg::DFRHF)
+    RHF(molecule,aoint,C,aoint["B"],Λ)
 end
 """
     RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI::Array{Float64,N}) where N
@@ -11,7 +11,7 @@ end
 The RHF kernel. Computes RHF on the given molecule with integral information defined in aoint. Starts from
 the given C matrix. 
 """
-function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI::Array{Float64})
+function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI::Array{Float64}, Λ::Array)
     Fermi.HartreeFock.print_header()
 
     #grab some options
@@ -48,11 +48,9 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI
     @output " Number of Doubly Occupied Orbitals:   {:5.0d}\n" ndocc
     @output " Number of Virtual Spatial Orbitals:   {:5.0d}\n" nvir
     
-    # Form the orthogonalizer 
     S = Hermitian(aoint["S"])
     T = aoint["T"]
     V = aoint["V"]
-    Λ = S^(-1/2)
 
     # Form the density matrix from occupied subset of guess coeffs
     Co = C[:, 1:ndocc]
@@ -72,9 +70,9 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI
         t_iter = @elapsed begin
             # Produce Ft
             if !oda || Drms < oda_cutoff
-                Ft = Λ*F*transpose(Λ)
+                Ft = Λ'*F*Λ
             else
-                Ft = Λ*F̃*transpose(Λ)
+                Ft = Λ'*F̃*Λ
             end
 
             # Get orbital energies and transformed coefficients
@@ -124,6 +122,7 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI
                     F = Fermi.DIIS.extrapolate(DM)
                 end
             end
+            FPrms = sqrt(sum(err.^2))
 
             # Compute the Density RMS
             ΔD = D - D_old
