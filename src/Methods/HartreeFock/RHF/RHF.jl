@@ -99,7 +99,7 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, Alg::B, guess::GWHGuess)
     U = F.vectors
     d = F.values
     Λ = Array(S^(-1/2))*U#*diagm(abs.(d))^(-1/2)
-    idxs = [abs(d[i]) > 1E-9 for i=1:size(S,1)]
+    idxs = [abs(d[i]) > 1E-7 for i=1:size(S,1)]
     @output "Found {} linear dependencies. Projected them out.\n" size(S,1) - sum(idxs)
     Λ = convert(Array{Float64},real.(Λ[:,idxs]))
     H = Hermitian(aoint["T"] + aoint["V"])
