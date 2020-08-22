@@ -12,17 +12,17 @@ function RMP2{T}(refwfn::Fermi.HartreeFock.RHF,alg::Fermi.MollerPlesset.DF) wher
     ΔMP2 = 0.0
     @output "\tComputing MP2 with DF algorithm\n\n"
     ttotal = @elapsed begin
-    @output "\tComputing and transforming integrals ... "
+    @output "\tComputing and transforming integrals ...\n"
     t = @elapsed begin
-        @output "Clearing cache and setting new basis ... \n"
+        @output "\tComputing integrals ..."
         Fermi.Integrals.aux_ri!(ints)
-        @output "Computing new integrals ...\n"
-        ints["B"]
-        @output "Converting integrals to {}\n" T
+        t = @elapsed ints["B"]
+        @output "\t done in {:5.2f} s\n" t
+
         ints.cache["B"] = convert(Array{T},ints.cache["B"])
-        @output "Transforming integrals to MO basis \n"
-        Bov = ints["BOV"]
-        println(eltype(Bov))
+        @output "\tTransforming integrals to MO basis ..."
+        t = @elapsed Bov = ints["BOV"]
+        @output "\t done in {:5.2f} s\n" t
     end
     @output "\tBasis: {}\n" ints.bname["primary"] 
     @output "\tDF basis: {}\n\n" ints.bname["aux"]
