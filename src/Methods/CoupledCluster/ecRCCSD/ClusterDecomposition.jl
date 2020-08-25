@@ -44,13 +44,13 @@ function get_casT2!(T1::Array{Float64,2}, T2::Array{Float64,4}, Ccas::Array{Floa
     end
 end
 
-function get_casT3(idx::NTuple{6,Int}, Coef::Float64, frozen::Int, ndocc::Int, T1::Array{Float64,2}, T2::Array{Float64,4})
+function get_casT3(idx::NTuple{6,Int}, Coef::Float64, frozen::Int, ndocc::Int, T1::Array{Float64,2}, T2::Array{Float64,4}, ref::Determinant)
 
     i,j,k,a,b,c = idx
 
     # Create the corresponding determinant
     p = 1.0
-    _p, _det = annihilate(_det, i, 'α')
+    _p, _det = annihilate(ref, i, 'α')
     p = _p*p
     _p, _det = annihilate(_det, j,  'β')
     p = _p*p
@@ -186,22 +186,12 @@ function get_casT4αβ(idx::NTuple{8,Int}, Ccas_ex4::Array{Float64,1}, dets_ex4:
     
 end
 
-function ec_T3onT1!(ecT1::Array{Float64,2}, c3det::Determinant, coef::Float64, ref::Determinant, frozen::Int, ndocc::Int, T1::Array{Float64,2}, T2::Array{Float64,4})
+function ec_T3onT1!(ridx::NTuple{6,Int}, T3::Float64, ecT1::Array{Float64,2}, Voovv::Array{Float64,4})
 
-    # i > k
-    k,i = αexclusive(ref, c3det)
-    j,  = βexclusive(ref, c3det)
-    # a > c
-    c,a = αexclusive(c3det, ref)
-    b,  = βexclusive(c3det, ref)
-
-    T3 = get_casT3((i,j,k,a,b,c), coef, frozen, ndocc, T1, T2)
-
-    acT1[j,b] += T3[i,j,k,a,b,c]*(Voovv[i,k,a,c] - Voovv[k,i,a,c])
-
-    ecT1[i,a] += 1.5*T3[i,m,n,a,e,f]*(Voovv[m,n,e,f] - Voovv[n,m,e,f])
-
-    ecT1[i,a] += 0.25*T3[m,i,n,a,e,f]*(Voovv[n,m,e,f] - Voovv[m,n,e,f])
+    i,j,k,a,b,c = ridx
+    ecT1[j,b] += 0.25*T3*(Voovv[i,k,a,c] - Voovv[k,i,a,c])
+    ecT1[i,a] += T3*(1.5*Voovv[j,k,b,c] - 0.5*Voovv[k,j,b,c])
+    ecT1[j,a] += 0.25*T3*(Voovv[k,i,b,c] - Voovv[i,k,b,c])
      
 end
 
@@ -324,8 +314,7 @@ function get_casT4αα(idx::NTuple{8,Int}, Ccas_ex4::Array{Float64,1}, dets_ex4:
 
 end
 
-function new_cas_decomposition(Cas_data::Tuple, ndocc::Int, frozen::Int, actocc::Array{Int64,1}, actvir::Array{Int64,1},
-                           fov::Array{Float64,2}, Voovv::Array{Float64,4}, Vovvv::Array{Float64,4}, Vooov::Array{Float64,4})
+function new_cas_decomposition(Cas_data::Tuple, ndocc::Int, frozen::Int, fov::Array{Float64,2}, Voovv::Array{Float64,4}, Vovvv::Array{Float64,4}, Vooov::Array{Float64,4})
 
     ref, Ccas_ex1or2, dets_ex1or2, Ccas_ex3, dets_ex3, Ccas_ex4, dets_ex4 = Cas_data
 
@@ -334,14 +323,45 @@ function new_cas_decomposition(Cas_data::Tuple, ndocc::Int, frozen::Int, actocc:
     T2 = zeros(size(Voovv))
     @output "Getting T1..."
     get_casT1!(T1, Ccas_ex1or2, dets_ex1or2, ref, frozen, ndocc)
+    @output " Done.\n"
     @output "Getting T2..."
     get_casT2!(T1, T2, Ccas_ex1or2, dets_ex1or2, ref, frozen, ndocc)
-    @output "Done.\n"
+    @output " Done.\n"
 
     # Initialize arrays
     ecT1 = zeros(size(fov))
     ecT2 = zeros(size(Voovv))
 
     # Compute ecT1
+    for n in eachindex(dets_ex3)
+        D = dets_ex3[n]
+        C = Ccas_ex3[n]
 
+        if abs(C) < 10^-10
+            continue
+        end
+
+        αexc = αexcitation_level(ref, D)
+        βexc = βexcitation_level(ref, D)
+
+        if αexc != 2 || βexc != 1
+            continue
+        end
+
+        k,i = αexclusive(ref, D)
+        j,  = βexclusive(ref,D)
+        c,a = αexclusive(D, ref)
+        b,  = βexclusive(D, ref)
+
+        T3 = get_casT3((i,j,k,a,b,c), C, frozen, ndocc, T1, T2, ref)
+        i, j, k = (i,j,k) .- frozen
+        a, b, c = (a,b,c) .- ndocc
+
+        ec_T3onT1!((i,j,k,a,b,c), T3, ecT1, Voovv)
+        ec_T3onT1!((k,j,i,a,b,c),-T3, ecT1, Voovv)
+        ec_T3onT1!((i,j,k,c,b,a),-T3, ecT1, Voovv)
+        ec_T3onT1!((k,j,i,c,b,a), T3, ecT1, Voovv)
+    end
+
+    return ecT1
 end
