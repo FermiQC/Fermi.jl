@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.com/FermiQC/Fermi.jl.svg?branch=master)](https://travis-ci.com/FermiQC/Fermi.jl)
+[![Coverage Status](https://coveralls.io/repos/github/mdav2/Fermi.jl/badge.svg?branch=master)](https://coveralls.io/github/mdav2/Fermi.jl?branch=master)
 
 # Fermi
 
