@@ -25,5 +25,5 @@ jobs:
           os: osx
           julia: 1.4.2
 
-after_success:
-- julia -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Coveralls.submit(process_folder())'
+          #after_success:
+          #- julia -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Coveralls.submit(process_folder())'
