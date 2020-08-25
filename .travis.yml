@@ -1,5 +1,5 @@
 language: julia
-coveralls: true
+#coveralls: true
 
 jobs:
     include:
