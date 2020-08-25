@@ -48,10 +48,10 @@ function RCCSD{T}(guess::RCCSD{Tb}) where { T <: AbstractFloat,
     RCCSD{T}(guess,alg)
 end
 
+# implementation specific functions (look at one of these for guidance implementing a new method!)
+include("CTF.jl")
+include("DF-CTF.jl")
 
 # main kernel (ccsd iteration logic)
 include("kernel.jl")
 
-# implementation specific functions (look at one of these for guidance implementing a new method!)
-include("CTF.jl")
-include("DF-CTF.jl")

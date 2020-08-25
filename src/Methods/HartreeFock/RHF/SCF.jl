@@ -55,6 +55,7 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI
     @output " Number of AOs:                        {:5.0d}\n" nao
     @output " Number of Doubly Occupied Orbitals:   {:5.0d}\n" ndocc
     @output " Number of Virtual Spatial Orbitals:   {:5.0d}\n" nvir
+
     
     S = Hermitian(aoint["S"])
     T = aoint["T"]
@@ -71,10 +72,11 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI
     build_fock!(F, T + V, D, ERI, Co)
     F̃ = deepcopy(F)
     D̃ = deepcopy(D)
+    @output " Guess Energy {:20.14f}\n" RHFEnergy(D,T+V,F)
 
     @output "\n Iter.   {:>15} {:>10} {:>10} {:>8} {:>8} {:>8}\n" "E[RHF]" "ΔE" "√|ΔD|²" "t" "DIIS" "damp"
     @output repeat("-",80)*"\n"
-    t = @elapsed @fastmath while ite ≤ maxit
+    t = @elapsed while ite ≤ maxit
         t_iter = @elapsed begin
             # Produce Ft
             if !oda || Drms < oda_cutoff

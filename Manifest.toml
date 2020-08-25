@@ -110,9 +110,9 @@ version = "4.0.3"
 
 [[Cthulhu]]
 deps = ["CodeTracking", "FoldingTrees", "InteractiveUtils", "REPL", "UUIDs", "Unicode"]
-git-tree-sha1 = "34bf82a46f0600727673e3cbed9a5908efff3c0c"
+git-tree-sha1 = "7312835f32e8dfb2ed49c869e102c7d5fa121614"
 uuid = "f68482b8-f384-11e8-15f7-abe071a5a75f"
-version = "1.2.0"
+version = "1.2.2"
 
 [[CuArrays]]
 deps = ["AbstractFFTs", "Adapt", "CEnum", "CUDAapi", "CUDAdrv", "CUDAnative", "DataStructures", "GPUArrays", "Libdl", "LinearAlgebra", "MacroTools", "NNlib", "Pkg", "Printf", "Random", "Reexport", "Requires", "SparseArrays", "Statistics", "TimerOutputs"]
@@ -258,9 +258,9 @@ uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 
 [[Lints]]
 deps = ["CxxWrap", "Eigen_jll", "Libdl", "NPZ", "Pkg", "Serialization", "TensorOperations", "Test", "boost_jll", "libint_jll"]
-git-tree-sha1 = "ab7cb7db796f65ed2f0b02d622004bf412b62df4"
+path = "../Lints"
 uuid = "969b4477-8239-4824-a7ce-fb2a72cbc115"
-version = "0.3.0"
+version = "0.3.1"
 
 [[Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"

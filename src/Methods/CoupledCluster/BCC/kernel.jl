@@ -1,4 +1,14 @@
 using Fermi.Orbitals
+function update_amp(T2::Array{T, 4}, newT1::Array{T,2}, newT2::Array{T,4}, foo::Array{T,2}, fov::Array{T,2}, fvv::Array{T,2}, ints::IntegralHelper, alg::A) where { T <: AbstractFloat,
+                                                                                                                                                                                     A <: CCAlgorithm }
+
+    fill!(newT1, 0.0)
+    fill!(newT2, 0.0)
+
+    # Get new amplitudes
+    update_T1(T2,newT1,foo,fov,fvv,ints,alg)
+    update_T2(T2,newT2,foo,fov,fvv,ints,alg)
+end
 function BCCD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2::Array{Tc,4}, alg::A; ecT1 = Array{Float64}(undef,0,0), ecT2 = Array{Float64}(undef,0,0,0,0)) where { Ta <: AbstractFloat,
                                                                                                                                                                                       Tb <: AbstractFloat,
                                                                                                                                                                                       Tc <: AbstractFloat,
@@ -31,7 +41,7 @@ function BCCD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2:
 
     # Compute Guess Energy
     oovv = convert(Array{Ta},Fermi.CoupledCluster.compute_oovv(ints,alg))
-    Ecc = update_energy(newT1, newT2, fov, oovv)
+    Ecc = update_energy(newT1, newT2, fov, ints, alg)
     Eguess = Ecc+refwfn.energy
     
     #@output "Initial Amplitudes Guess: MP2\n"
@@ -59,8 +69,8 @@ function BCCD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2:
     diis_prec = prec_selector[Fermi.CurrentOptions["diis_prec"]]
     do_diis ? DM_T1 = Fermi.DIIS.DIISManager{Ta,diis_prec}(size=ndiis) : nothing
     do_diis ? DM_T2 = Fermi.DIIS.DIISManager{Ta,diis_prec}(size=ndiis) : nothing
-    nocc = size(oovv,1)
-    nvir = size(oovv,3)
+    nocc = size(newT2,1)
+    nvir = size(newT2,3)
 
     drop_occ = Fermi.CurrentOptions["drop_occ"]
     drop_vir = Fermi.CurrentOptions["drop_vir"]
@@ -112,7 +122,7 @@ function BCCD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2:
         @output "Taking one T2 step\n"
         @output "{:10s}    {: 15s}    {: 12s}    {:12s}    {:10s}\n" "Iteration" "CC Energy" "ΔE" "Max RMS (T1)" "Time (s)"
         t = @elapsed begin 
-            update_amp(T1, T2, newT1, newT2, foo, fov, fvv, ints, alg)
+            update_amp(T2, newT1, newT2, foo, fov, fvv, ints, alg)
 
             #apply external correction
             apply_ec(newT1,dummyT2,ecT1,ecT2)
@@ -139,7 +149,7 @@ function BCCD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2:
 
         rms = max(r1,r2)
         oldE = Ecc
-        Ecc = update_energy(newT1, newT2, fov, oovv)
+        Ecc = update_energy(newT1, newT2, fov, ints, alg)
         dE = Ecc - oldE
         @output "    {:<5}    {:<15.10f}    {:<12.10f}    {:<12.10f}    {:<10.5f}\n" "pre" Ecc dE rms t
 
@@ -151,7 +161,7 @@ function BCCD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2:
             t = @elapsed begin
                 T1 .= newT1
                 T2 .= newT2
-                update_T1(T1,T2,newT1,foo,fov,fvv,ints,alg)
+                update_T1(T2,newT1,foo,fov,fvv,ints,alg)
                 apply_ec(newT1,dummyT2,ecT1,ecT2)
                 newT1 ./= d
                 if do_diis 
@@ -167,7 +177,7 @@ function BCCD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2:
 
                 rms = r1
                 oldE = Ecc
-                Ecc = update_energy(newT1, newT2, fov, oovv)
+                Ecc = update_energy(newT1, newT2, fov, ints, alg)
                 dE = Ecc - oldE
             end
             T1_time += t
@@ -207,33 +217,12 @@ function BCCD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2:
             bcc = false
             T1 .= newT1
             T2 .= newT2
-            X = Array([ I(nocc) zeros(size(T1)); T1' I(nvir) ])
-            U = exp(X - X')
-            #display(U)
-            ndocc = nocc
 
-            #if there's no significant rotation, lets just skip the integral transform
-            if !isapprox(tr(U.^2), sum(U.^2); atol=1E-10)
-                bcc = true
-                Fermi.Orbitals.rotate!(ints.orbs,U,fc=drop_occ,fv=drop_vir)
-                delete_integrals(ints,alg)
-                foo = convert(Array{Ta},ints["FOO"] - Diagonal(ints["FOO"]))
-                fvv = convert(Array{Ta},ints["FVV"] - Diagonal(ints["FVV"]))
-                fov = convert(Array{Ta},ints["FOV"])
-                oovv = convert(Array{Ta},Fermi.CoupledCluster.compute_oovv(ints,alg))
-            end
-            update_amp(T1, T2, newT1, newT2, foo, fov, fvv, ints, alg)
-
+            update_amp(T2, newT1, newT2, foo, fov, fvv, ints, alg)
             apply_ec(newT1,newT2,ecT1,ecT2)
-
             # Apply resolvent
             newT1 ./= d
             newT2 ./= D
-
-            # Compute residues 
-            r1 = sqrt(sum((newT1 .- T1).^2))/length(T1)
-            r2 = sqrt(sum((newT2 .- T2).^2))/length(T2)
-
             if do_diis && ite > 2
                 relax -= 1
                 e1 = (newT1 - T1)
@@ -249,10 +238,37 @@ function BCCD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2:
 
             newT1 .= (1-dp)*newT1 .+ dp*T1
             newT2 .= (1-dp)*newT2 .+ dp*T2
+
+            #X = Array([ I(nocc) zeros(size(T1)); T1' I(nvir)])
+            X = Array([ I(nocc) zeros(size(T1)); newT1' I(nvir)])
+            U = exp(X - X')
+
+            #if there's no significant rotation, lets just skip the integral transform
+            #if !isapprox(tr(U.^2), sum(U.^2); atol=1E-14)
+            if maximum(abs.(T1)) >= 1E-10
+                bcc = true
+                Fermi.Orbitals.rotate!(ints.orbs,U,fc=drop_occ,fv=drop_vir)
+                C = ints.orbs["[FU]"]
+                S = ints["S"]
+                @tensor myI[p,q] := C[μ,p]*C[ν,q]*S[μ,ν]
+                #display(myI)
+                delete_integrals(ints,alg)
+                foo = convert(Array{Ta},ints["FOO"] - Diagonal(ints["FOO"]))
+                fvv = convert(Array{Ta},ints["FVV"] - Diagonal(ints["FVV"]))
+                fov = convert(Array{Ta},ints["FOV"])
+            end
+
+            #println(maximum(abs.(T1)))
+
+
+            # Compute residues 
+            r1 = sqrt(sum((newT1 .- T1).^2))/length(T1)
+            r2 = sqrt(sum((newT2 .- T2).^2))/length(T2)
+
         end
         rms = max(r1,r2)
         oldE = Ecc
-        Ecc = update_energy(newT1, newT2, fov, oovv)
+        Ecc = update_energy(newT1, newT2, fov, ints, alg)
         dE = Ecc - oldE
         main_time += t
         dE > 0 ? sign = "+" : sign = "-"
