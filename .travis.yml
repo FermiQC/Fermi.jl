@@ -4,6 +4,8 @@ after_success:
 - julia -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Coveralls.submit(process_folder())'
 
 jobs:
+    allow_failures:
+        - julia: nightly
     include:
         - arch: amd64
           dist: bionic
