@@ -11,12 +11,6 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, Λ,
     @output " done in {:>5.2f} s\n" t
     RHF(molecule,aoint,C,aoint["B"],Λ)
 end
-"""
-    RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI::Array{Float64,N}) where N
-
-The RHF kernel. Computes RHF on the given molecule with integral information defined in aoint. Starts from
-the given C matrix. 
-"""
 function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI::Array{Float64}, Λ::Array)
     Fermi.HartreeFock.print_header()
 

@@ -8,3 +8,8 @@ Fermi.CoupledCluster
 ```@docs
 Fermi.CoupledCluster.RCCSD
 ```
+
+## ecCCSD
+```@docs
+Fermi.CoupledCluster.ecCCSD
+```

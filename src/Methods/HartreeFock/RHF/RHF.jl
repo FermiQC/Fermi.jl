@@ -20,6 +20,11 @@ struct HuckelGuess <: RHFGuess end
 
 Wave function object for Restricted Hartree-Fock methods
 
+# High Level Interface 
+    RHF()
+
+Computes RHF using information from Fermi.CurrentOptions.
+
 # Fields:
 
     molecule    Molecule object used to compute the RHF wave function
@@ -28,6 +33,29 @@ Wave function object for Restricted Hartree-Fock methods
     nvir        Number of virtual spatial orbitals
     C           Array with MO coefficients
     eps         Array with MO energies
+
+# Relevant options 
+
+These options can be set with `@set <option> <value>`
+
+| Option         | What it does                      | Type      | choices [default]     |
+|----------------|-----------------------------------|-----------|-----------------------|
+| `scf_alg`      | picks SCF algorithm               | `String`  | "df" ["conventional"] |
+| `scf_max_rms`  | RMS density convergence criterion |`Float64`  | [10^-10]              |
+| `scf_max_iter` | Max number of iterations          | `Int`     | [50]                  |
+| `basis`        | What basis set to use             | `String`  | ["sto-3g"]            |
+| `jkfit`        | What aux. basis set to use for JK | `String`  | ["auto"]              |
+| `oda`          | Whether to use ODA                | `Bool`    | [`True`]              |
+| `oda_cutoff`   | When to turn ODA off (RMS)        | `Float64` | [1E-1]                |
+| `oda_shutoff`  | When to turn ODA off (iter)       | `Int`     | [20]                  |
+| `scf_guess`    | Which guess density to use        |           | "core" ["gwh"]        |
+
+# Lower level interfaces
+
+    RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI::Array{Float64,N}, Λ::Array{Float64,2}) where N
+
+The RHF kernel. Computes RHF on the given `molecule` with integral information defined in `aoint`. Starts from
+the given C matrix. 
 
 _struct tree:_
 
@@ -68,11 +96,6 @@ function select_guess(A::String)
     end
 end
 
-"""
-    Fermi.HartreeFock.RHF()
-
-Compute RHF wave function using data from Fermi.CurrentOptions
-"""
 function RHF()
     molecule = Molecule()
     RHF(molecule)
@@ -85,11 +108,6 @@ function RHF(molecule::Molecule)
     RHF(molecule, ints, Alg, guess)
 end
 
-"""
-    Fermi.HartreeFock.RHF(molecule::Molecule, aoint::IntegralHelper, )
-
-Algorithm for to compute RHF wave function given Molecule, IntegralHelper objects.
-"""
 function RHF(molecule::Molecule, aoint::IntegralHelper, Alg::B, guess::GWHGuess) where B <: RHFAlgorithm 
 
     #form GWH guess
@@ -151,12 +169,6 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, Alg::B, guess::CoreGuess
     RHF(molecule, aoint, C, Λ, Alg)
 end
 
-"""
-    Fermi.HartreeFock.RHF(molecule::Molecule, aoint::IntegralHelper, Alg::B) where B <: RHFAlgorithm
-
-Algorithm for to compute RHF wave function given Molecule, IntegralHelper objects. Starts from an input wavefunction,
-and performs basis set castup (or down) as needed.
-"""
 function RHF(wfn::RHF, aoint::IntegralHelper, Alg::B) where B <: RHFAlgorithm 
 
     # Projection of A→B done using equations described in Werner 2004 
