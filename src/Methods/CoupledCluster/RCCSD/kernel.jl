@@ -1,21 +1,21 @@
-"""
-    Fermi.Coupled Cluster.update_energy(T1::Array{T, 2}, T2::Array{T, 4}, f::Array{T,2}, Voovv::Array{T, 4}) where T <: AbstractFloat
-
-Compute CC energy from amplitudes and integrals.
-"""
-function update_energy(T1::Array{T, 2}, T2::Array{T, 4}, f::Array{T,2}, Voovv::Array{T, 4}) where { T <: AbstractFloat }
-
-    @tensoropt (k=>x, l=>x, c=>100x, d=>100x)  begin
-        CC_energy = 2.0*f[k,c]*T1[k,c]
-        B[l,c,k,d] := -1.0*T1[l,c]*T1[k,d]
-        B[l,c,k,d] += -1.0*T2[l,k,c,d]
-        B[l,c,k,d] += 2.0*T2[k,l,c,d]
-        CC_energy += B[l,c,k,d]*Voovv[k,l,c,d]
-        CC_energy += 2.0*T1[l,c]*T1[k,d]*Voovv[l,k,c,d]
-    end
-    
-    return CC_energy
-end
+#"""
+#    Fermi.Coupled Cluster.update_energy(T1::Array{T, 2}, T2::Array{T, 4}, f::Array{T,2}, Voovv::Array{T, 4}) where T <: AbstractFloat
+#
+#Compute CC energy from amplitudes and integrals.
+#"""
+#function update_energy(T1::Array{T, 2}, T2::Array{T, 4}, f::Array{T,2}, Voovv::Array{T, 4}) where { T <: AbstractFloat }
+#
+#    @tensoropt (k=>x, l=>x, c=>100x, d=>100x)  begin
+#        CC_energy = 2.0*f[k,c]*T1[k,c]
+#        B[l,c,k,d] := -1.0*T1[l,c]*T1[k,d]
+#        B[l,c,k,d] += -1.0*T2[l,k,c,d]
+#        B[l,c,k,d] += 2.0*T2[k,l,c,d]
+#        CC_energy += B[l,c,k,d]*Voovv[k,l,c,d]
+#        CC_energy += 2.0*T1[l,c]*T1[k,d]*Voovv[l,k,c,d]
+#    end
+#    
+#    return CC_energy
+#end
 
 """
     Fermi.CoupledCluster.RCCSD.update_amp(T1::Array{T, 2}, T2::Array{T, 4}, newT1::Array{T,2}, newT2::Array{T,4}, foo::Array{T,2}, fov::Array{T,2}, fvv::Array{T,2}, moint::PhysRestrictedMOIntegrals) where T <: AbstractFloat
@@ -50,6 +50,7 @@ function RCCSD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2
     @output "\tBasis: {}\n" ints.bname["primary"]
     @output "\tComputing and Transforming Integrals..."
     tint = @elapsed Fermi.CoupledCluster.compute_integrals(ints,alg)
+    delete!(ints.cache,"B") #clear out AO basis integrals for scratch space
     @output " done in {} s\n" tint
     for key in keys(ints.cache)
         ints[key] = convert(Array{Ta},ints[key])
@@ -64,8 +65,8 @@ function RCCSD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2
     D = Ta[i + j - a - b for i = diag(ints["FOO"]), j = diag(ints["FOO"]), a = diag(ints["FVV"]), b = diag(ints["FVV"])]
 
     # Compute Guess Energy
-    oovv = convert(Array{Ta},Fermi.CoupledCluster.compute_oovv(ints,alg))
-    Ecc = update_energy(newT1, newT2, fov, oovv)
+    #oovv = convert(Array{Ta},Fermi.CoupledCluster.compute_oovv(ints,alg))
+    Ecc = update_energy(newT1, newT2, fov, ints, alg)
     Eguess = Ecc+refwfn.energy
     
     #@output "Initial Amplitudes Guess: MP2\n"
@@ -169,7 +170,7 @@ function RCCSD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2
 
         rms = max(r1,r2)
         oldE = Ecc
-        Ecc = update_energy(newT1, newT2, fov, oovv)
+        Ecc = update_energy(newT1, newT2, fov, ints, alg)
         dE = Ecc - oldE
         @output "    {:<5}    {:<15.10f}    {:<12.10f}    {:<12.10f}    {:<10.5f}\n" "pre" Ecc dE rms t
 
@@ -197,7 +198,7 @@ function RCCSD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2
 
                 rms = r1
                 oldE = Ecc
-                Ecc = update_energy(newT1, newT2, fov, oovv)
+                Ecc = update_energy(newT1, newT2, fov, ints, alg)
                 dE = Ecc - oldE
             end
             T1_time += t
@@ -261,7 +262,7 @@ function RCCSD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2
         end
         rms = max(r1,r2)
         oldE = Ecc
-        Ecc = update_energy(newT1, newT2, fov, oovv)
+        Ecc = update_energy(newT1, newT2, fov, ints, alg)
         dE = Ecc - oldE
         main_time += t
         dE > 0 ? sign = "+" : sign = "-"

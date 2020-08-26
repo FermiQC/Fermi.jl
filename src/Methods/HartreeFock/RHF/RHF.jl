@@ -94,8 +94,14 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, Alg::B, guess::GWHGuess)
 
     #form GWH guess
     @output "Using GWH Guess\n"
-    S = Hermitian(aoint["S"])
-    Λ = S^(-1/2)
+    S = Array(Hermitian(aoint["S"]))
+    F = eigen(S,sortby=x->1/abs(x))
+    U = F.vectors
+    d = F.values
+    Λ = Array(S^(-1/2))*U#*diagm(abs.(d))^(-1/2)
+    idxs = [abs(d[i]) > 1E-7 for i=1:size(S,1)]
+    @output "Found {} linear dependencies. Projected them out.\n" size(S,1) - sum(idxs)
+    Λ = convert(Array{Float64},real.(Λ[:,idxs]))
     H = Hermitian(aoint["T"] + aoint["V"])
     ndocc = molecule.Nα#size(S,1)
     nvir = size(S,1) - ndocc
@@ -109,7 +115,8 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, Alg::B, guess::GWHGuess)
             F[j,i] = F[i,j]
         end
     end
-    Ft = Λ*F*transpose(Λ)
+    F = F#[idxs,idxs]
+    Ft = Λ'*F*Λ
 
     # Get orbital energies and transformed coefficients
     eps,Ct = eigen(Hermitian(Ft))
@@ -121,7 +128,7 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, Alg::B, guess::GWHGuess)
     Eguess = RHFEnergy(D,Array(H),F)
     @output "Guess energy: {}\n" Eguess
 
-    RHF(molecule, aoint, C, Alg)
+    RHF(molecule, aoint, C, Λ, Alg)
 end
 
 function RHF(molecule::Molecule, aoint::IntegralHelper, Alg::B, guess::CoreGuess) where B <: RHFAlgorithm
@@ -141,7 +148,7 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, Alg::B, guess::CoreGuess
     # Reverse transformation to get MO coefficients
     C = Λ*Ct
 
-    RHF(molecule, aoint, C, Alg)
+    RHF(molecule, aoint, C, Λ, Alg)
 end
 
 """
@@ -155,8 +162,10 @@ function RHF(wfn::RHF, aoint::IntegralHelper, Alg::B) where B <: RHFAlgorithm
     # Projection of A→B done using equations described in Werner 2004 
     # https://doi.org/10.1080/0026897042000274801
     @output "Using {} wave function as initial guess\n" wfn.basis
-    Ca = wfn.C
-    Sbb = aoint.S
+    Ca = wfn.ints.orbs["FU"]
+    Sbb = aoint["S"]
+    S = Hermitian(aoint["S"])
+    Λ = S^(-1/2)
     Sab = Lints.projector(wfn.LintsBasis, aoint.LintsBasis)
     T = transpose(Ca)*Sab*(Sbb^-1)*transpose(Sab)*Ca
     Cb = (Sbb^-1)*transpose(Sab)*Ca*T^(-1/2)

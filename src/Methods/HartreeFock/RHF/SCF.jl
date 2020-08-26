@@ -1,9 +1,15 @@
 
-function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, Alg::ConventionalRHF)
-    RHF(molecule,aoint,C,aoint["μ"])
+function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, Λ, Alg::ConventionalRHF)
+    @output "Computing integrals ..."
+    t = @elapsed aoint["μ"]
+    @output " done in {:>5.2f} s\n" t
+    RHF(molecule,aoint,C,aoint["μ"],Λ)
 end
-function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, Alg::DFRHF)
-    RHF(molecule,aoint,C,aoint["B"])
+function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, Λ, Alg::DFRHF)
+    @output "Computing integrals ..."
+    t = @elapsed aoint["B"]
+    @output " done in {:>5.2f} s\n" t
+    RHF(molecule,aoint,C,aoint["B"],Λ)
 end
 """
     RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI::Array{Float64,N}) where N
@@ -11,7 +17,7 @@ end
 The RHF kernel. Computes RHF on the given molecule with integral information defined in aoint. Starts from
 the given C matrix. 
 """
-function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI::Array{Float64})
+function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI::Array{Float64}, Λ::Array)
     Fermi.HartreeFock.print_header()
 
     #grab some options
@@ -43,16 +49,17 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI
     catch InexactError
         throw(Fermi.InvalidFermiOption("Invalid number of electrons $(molecule.Nα + molecule.Nβ) for RHF method."))
     end
-    nvir = size(aoint["S"])[1] - ndocc
+    nvir = size(C)[2] - ndocc
+    nao = size(C)[1]
 
+    @output " Number of AOs:                        {:5.0d}\n" nao
     @output " Number of Doubly Occupied Orbitals:   {:5.0d}\n" ndocc
     @output " Number of Virtual Spatial Orbitals:   {:5.0d}\n" nvir
+
     
-    # Form the orthogonalizer 
     S = Hermitian(aoint["S"])
     T = aoint["T"]
     V = aoint["V"]
-    Λ = S^(-1/2)
 
     # Form the density matrix from occupied subset of guess coeffs
     Co = C[:, 1:ndocc]
@@ -61,20 +68,21 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI
     
     eps = zeros(Float64,ndocc+nvir)
     # Build the inital Fock Matrix and diagonalize
-    F = zeros(Float64,ndocc+nvir,ndocc+nvir)
+    F = zeros(Float64,nao,nao)
     build_fock!(F, T + V, D, ERI, Co)
     F̃ = deepcopy(F)
     D̃ = deepcopy(D)
+    @output " Guess Energy {:20.14f}\n" RHFEnergy(D,T+V,F)
 
     @output "\n Iter.   {:>15} {:>10} {:>10} {:>8} {:>8} {:>8}\n" "E[RHF]" "ΔE" "√|ΔD|²" "t" "DIIS" "damp"
     @output repeat("-",80)*"\n"
-    t = @elapsed @fastmath while ite ≤ maxit
+    t = @elapsed while ite ≤ maxit
         t_iter = @elapsed begin
             # Produce Ft
             if !oda || Drms < oda_cutoff
-                Ft = Λ*F*transpose(Λ)
+                Ft = Λ'*F*Λ
             else
-                Ft = Λ*F̃*transpose(Λ)
+                Ft = Λ'*F̃*Λ
             end
 
             # Get orbital energies and transformed coefficients
@@ -124,6 +132,7 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI
                     F = Fermi.DIIS.extrapolate(DM)
                 end
             end
+            FPrms = sqrt(sum(err.^2))
 
             # Compute the Density RMS
             ΔD = D - D_old
@@ -159,8 +168,8 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI
     end
     @output repeat("-",80)*"\n"
 
-    occ = CanonicalOrbitals([CanonicalOrbital(Array{Float64,1}(C[:,i])) for i in 1:ndocc])
-    vir = CanonicalOrbitals([CanonicalOrbital(Array{Float64,1}(C[:,i])) for i in ndocc+1:ndocc+nvir])
+    #occ = CanonicalOrbitals([CanonicalOrbital(Array{Float64,1}(C[:,i])) for i in 1:ndocc])
+    #vir = CanonicalOrbitals([CanonicalOrbital(Array{Float64,1}(C[:,i])) for i in ndocc+1:ndocc+nvir])
     all = CanonicalOrbitals([CanonicalOrbital(Array{Float64,1}(C[:,i])) for i in 1:ndocc+nvir])
     aoint.orbs.ndocc = ndocc
     aoint.orbs.nvir = nvir

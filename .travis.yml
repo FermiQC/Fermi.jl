@@ -1,6 +1,11 @@
 language: julia
+#coveralls: true
+after_success:
+- julia -e 'using Pkg; Pkg.add("Coverage"); using Coverage; Coveralls.submit(process_folder())'
 
 jobs:
+    allow_failures:
+        - julia: nightly
     include:
         - arch: amd64
           dist: bionic
@@ -23,3 +28,4 @@ jobs:
         - arch: amd64
           os: osx
           julia: 1.4.2
+

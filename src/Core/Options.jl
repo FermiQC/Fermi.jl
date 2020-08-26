@@ -2,17 +2,12 @@
 # if user specifies option they will be overwritten
 export CurrentOptions
 export InvalidFermiOption
+export @reset
 export @set
 export @get
 export @molecule
 
-"""
-    Fermi.CurrentOptions
-
-Dictionary containing options for Fermi. Any information not given
-explicitly to Methods is obtained from here.
-"""
-CurrentOptions = Dict{String,Union{Float64,Int,String,Bool,Nothing}}(
+const DefaultOptions = Dict{String,Union{Float64,Int,String,Bool,Nothing}}(
                                   "molstring" => """
                                   O        1.2091536548      1.7664118189     -0.0171613972
                                   H        2.1984800075      1.7977100627      0.0121161719
@@ -44,6 +39,7 @@ CurrentOptions = Dict{String,Union{Float64,Int,String,Bool,Nothing}}(
                                   "cc_max_iter" => 50,
                                   "cc_max_rms" => 10^-10,
                                   "cc_e_conv" => 10^-10,
+                                  "bcc_max_t1" => 1^-7,
                                   "preconv_T1" => true,
                                   "drop_occ" => 0,
                                   "drop_vir" => 0,
@@ -64,11 +60,37 @@ CurrentOptions = Dict{String,Union{Float64,Int,String,Bool,Nothing}}(
                                   "min_matrix_elem" => 10^-9,
                                   "precision_override" => false
                                  )
+"""
+    Fermi.CurrentOptions
 
-struct InvalidFermiOption <: Exception
-    msg::String
+Dictionary containing options for Fermi. Any information not given
+explicitly to Methods is obtained from here.
+"""
+CurrentOptions = deepcopy(DefaultOptions)
+
+"""
+    Fermi.@reset
+
+Restores all options to their default values.
+"""
+macro reset(key=nothing) 
+    if key == nothing
+        return quote
+            for key in keys(Fermi.CurrentOptions)
+                Fermi.CurrentOptions[key] = Fermi.DefaultOptions[key]
+            end
+        end
+    elseif String(key) in keys(Fermi.CurrentOptions)
+        return quote
+            Fermi.CurrentOptions[$(String(key))] = Fermi.DefaultOptions[$(String(key))]
+        end
+    else
+        return quote
+            error("Invalid option "*$(String(key)))
+        end
+    end
 end
-Base.showerror(io::IO, e::InvalidFermiOption) = print(io, "InvalidFermiOption: ", e.msg)
+
 
 
 """
@@ -120,16 +142,18 @@ macro set(opt,val)
 end
 
 macro set(block)
-    clean_up(s) = String(strip(filter(c->!occursin(c," {}():"),s)))
     lines = split(repr(block),";")
-    for l in lines
-        opt, val = split(strip(l), " ", limit=2)
-        opt = clean_up(opt)
-        val = clean_up(val)
-        try
-            CurrentOptions[opt] = eval(Meta.parse(val))
-        catch UndefVarError
-            CurrentOptions[opt] = val
+    quote 
+        clean_up(s) = String(strip(filter(c->!occursin(c," {}():"),s)))
+        for l in $lines
+            opt, val = split(strip(l), " ", limit=2)
+            opt = clean_up(opt)
+            val = clean_up(val)
+            try
+                CurrentOptions[opt] = eval(Meta.parse(val))
+            catch UndefVarError
+                CurrentOptions[opt] = val
+            end
         end
     end
 end
@@ -167,6 +191,10 @@ macro molecule(block)
     CurrentOptions["molstring"] = String(mol)
 end
 
+struct InvalidFermiOption <: Exception
+    msg::String
+end
+Base.showerror(io::IO, e::InvalidFermiOption) = print(io, "InvalidFermiOption: ", e.msg)
 
 #function notimplemented()
 #    @output "🚧 Not implemented yet! We're working on it 🔨 👷 \n"

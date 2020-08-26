@@ -107,6 +107,8 @@ function aokinetic(molecule::Molecule, basis::String)#, interconnect::Fermi.Envi
     T = zeros(sz,sz)
     Lints.make_2D(T,T_engine,bas)
     Lints.libint2_finalize()
+    T_engine = nothing
+    GC.gc()
     T,bas
 end
 function aooverlap(molecule::Molecule, basis::String)#, interconnect::Fermi.Environments.No_IC,
@@ -129,6 +131,8 @@ function aooverlap(molecule::Molecule, basis::String)#, interconnect::Fermi.Envi
     S = zeros(sz,sz)
     Lints.make_2D(S,S_engine,bas)
     Lints.libint2_finalize()
+    S_engine = nothing
+    GC.gc()
     S,bas
 end
 function aodipole(molecule::Molecule, basis::String)#, interconnect::Fermi.Environments.No_IC,
@@ -151,6 +155,8 @@ function aodipole(molecule::Molecule, basis::String)#, interconnect::Fermi.Envir
     S = zeros(sz,sz)
     Lints.make_2D(S,S_engine,bas)
     Lints.libint2_finalize()
+    S_engine = nothing
+    GC.gc()
 
     S,bas
 end
@@ -174,6 +180,8 @@ function aonuclear(molecule::Molecule, basis::String)#, interconnect::Fermi.Envi
     V = zeros(sz,sz)
     Lints.make_2D(V,V_engine,bas)
     Lints.libint2_finalize()
+    V_engine = nothing
+    GC.gc()
     V,bas
 end
 function aoeri(molecule::Molecule, basis::String)#, interconnect::Fermi.Environments.No_IC,
@@ -200,6 +208,8 @@ function aoeri(molecule::Molecule, basis::String)#, interconnect::Fermi.Environm
     I = zeros(sz,sz,sz,sz)
     Lints.make_ERI(I,I_engines,bas)
     Lints.libint2_finalize()
+    I_engines = nothing
+    GC.gc()
     I,bas
 end
 
@@ -218,31 +228,28 @@ function dfaoeri(molecule::Molecule, bname::String,dfbname::String)
     nprim = max(Lints.max_nprim(bas),Lints.max_nprim(dfbas))
     l = max(Lints.max_l(bas),Lints.max_l(dfbas))
 
-    S_engine = Lints.OverlapEngine(nprim,l)
-    T_engine = Lints.KineticEngine(nprim,l)
-    V_engine = Lints.NuclearEngine(nprim,l,mol)
-    eri_engines = [Lints.DFEngine(nprim,l) for i=1:Threads.nthreads()]
+    eri_engines = Any[Lints.DFEngine(nprim,l) for i=1:Threads.nthreads()]
     sz = Lints.nao(bas)
     dfsz = Lints.nao(dfbas)
-    S = zeros(sz,sz)
-    T = zeros(sz,sz)
-    V = zeros(sz,sz)
     J = zeros(dfsz,dfsz)
     Pqp = zeros(dfsz,sz,sz)
-    Lints.make_2D(S,S_engine,bas)
-    Lints.make_2D(T,T_engine,bas)
-    Lints.make_2D(V,V_engine,bas)
-    Lints.make_j(J,eri_engines[1],dfbas)
     Lints.make_b(Pqp,eri_engines,bas,dfbas)
+    Lints.make_j(J,eri_engines[1],dfbas)
     Jh = Array(Hermitian(J)^(-1/2)) #sometimes Jh becomes complex slightly if J is not ~~exactly~~ hermitian 💔
     B = zeros(dfsz,sz,sz)
-    Fermi.contract!(B,Pqp,Jh,"Qpq","Pqp","PQ")
     Lints.libint2_finalize()
+    for i=1:Threads.nthreads()
+        eri_engines[i] = nothing
+    end
+    eri_engines = nothing
+    GC.gc()
+    Fermi.contract!(B,Pqp,Jh,"Qpq","Pqp","PQ")
     B,dfbas
 end
 
 function aux_ri!(I::IntegralHelper,ri=Fermi.CurrentOptions["rifit"])
     delete!(I.cache,"B") #clear out old aux basis
+    GC.gc()
     if ri == "auto"
         aux_lookup = Dict{String,String}(
                                          "cc-pvdz" => "cc-pvdz-rifit",
@@ -261,6 +268,7 @@ function aux_ri!(I::IntegralHelper,ri=Fermi.CurrentOptions["rifit"])
 end
 function aux_jk!(I::IntegralHelper,jk=Fermi.CurrentOptions["jkfit"])
     delete!(I.cache,"B") #clear out old aux basis
+    GC.gc()
     if jk == "auto"
         aux_lookup = Dict{String,String}(
                                          "cc-pvdz" => "cc-pvdz-jkfit",
@@ -294,10 +302,10 @@ end
 function compute!(I::IntegralHelper,entry::String)
     o = I.orbs
     if entry == "μ" #AO basis eri. 4 index
-        I.cache["μ"],I.basis["primary"] = aoeri(I.mol,I.bname["primary"])  
+        I.cache["μ"],_ = aoeri(I.mol,I.bname["primary"])  
 
     elseif entry == "B" #AO basis eri. 3 index. DF
-        I.cache["B"],I.basis["aux"] = dfaoeri(I.mol,I.bname["primary"],I.bname["aux"])
+        I.cache["B"],_ = dfaoeri(I.mol,I.bname["primary"],I.bname["aux"])
 
     elseif entry == "S" #AO basis overlap
         I.cache["S"],_ = aooverlap(I.mol,I.bname["primary"])
@@ -472,13 +480,15 @@ function transform_eri(ERI::Array{T,4}, C1::Array{Float64,2}, C2::Array{Float64,
     Q4
 end
 
-function transform_eri(ERI::Array{T,3},C1::Array{T,2},C2::Array{T,2}) where T <: AbstractFloat
+function transform_eri(ERI::Array{T,3},C1::Array{Float64,2},C2::Array{Float64,2}) where T <: AbstractFloat
+    C1 = T.(C1)
+    C2 = T.(C2)
     naux = size(ERI,1)
     nao,i = size(C1)
     _,a = size(C2)
-    Bin = zeros(naux,i,nao)
+    Bin = zeros(T,naux,i,nao)
     Fermi.contract!(Bin,C1,ERI,"Qiv","ui","Quv")
-    Bia = zeros(naux,i,a)
+    Bia = zeros(T,naux,i,a)
     Fermi.contract!(Bia,C2,Bin,"Qia","va","Qiv")
     Bia
 end
