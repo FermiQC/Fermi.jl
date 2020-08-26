@@ -28,13 +28,17 @@ Compute a RCCSD wave function using Fermi.CurrentOptions data.
 """
 function RCCSD()
     prec = select_precision(Fermi.CurrentOptions["precision"])
-    dummy = RCCSD{prec}(0.0,0.0,Fermi.MemTensor(zeros(prec,0,0)),Fermi.MemTensor(zeros(prec,0,0,0,0)))
-    RCCSD(dummy)
+    RCCSD{prec}()
 end
 
 function RCCSD(guess::RCCSD{T}) where T <: AbstractFloat
     prec = eltype(guess.T2.data)
     RCCSD{prec}(guess)
+end
+
+function RCCSD{T}() where T <: AbstractFloat
+    dummy = RCCSD{T}(0.0,0.0,Fermi.MemTensor(zeros(T,0,0)),Fermi.MemTensor(zeros(T,0,0,0,0)))
+    RCCSD{T}(dummy)
 end
 
 """

@@ -11,8 +11,8 @@ function RCCSDpT{T}() where T <: AbstractFloat
 
     @output "Transforming Integrals..."
 
-    ccsd_wfn = RCCSD{T}(refwfn, refwfn.ints, Fermi.CoupledCluster.CTF())
-    RCCSDpT{T}(ccsd_wfn, ints)
+    ccsd_wfn = RCCSD{T}()
+    RCCSDpT{T}(ccsd_wfn, refwfn.ints)
 end
 
 function RCCSDpT{T}(ccsd::RCCSD, ints::IntegralHelper) where T <: AbstractFloat

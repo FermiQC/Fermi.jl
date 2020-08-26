@@ -41,8 +41,8 @@ function CASCI{T}(Alg::SparseHamiltonian) where T <: AbstractFloat
     end
 
     s = 1:(frozen+active)
-    h = T.(Fermi.Integrals.transform_fock(ints["T"] + ints["V"], ints.C["C"][:,s], ints.C["C"][:,s]))
-    V = T.(Fermi.Integrals.transform_eri(ints["μ"], ints.C["C"][:,s], ints.C["C"][:,s], ints.C["C"][:,s], ints.C["C"][:,s]))
+    h = T.(Fermi.Integrals.transform_fock(ints["T"] + ints["V"], ints.orbs["FU"][s], ints.orbs["FU"][s]))
+    V = T.(Fermi.Integrals.transform_eri(ints["μ"], ints.orbs["FU"][s], ints.orbs["FU"][s], ints.orbs["FU"][s], ints.orbs["FU"][s]))
 
     aoint = nothing
     CASCI{T}(refwfn, h, V, frozen, act_elec, active, Alg)
