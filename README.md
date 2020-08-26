@@ -3,15 +3,24 @@
 
 # Fermi
 
-> *!* Warning: Fermi is not ready for use yet. 
-
 Fermi is a quantum chemistry program written in (nearly) pure Julia. This code is developed at
 the Center for Computational Quantum Chemistry at the University of Georgia. 
 
-Fermi focuses on post Hartree--Fock methods. Currently, only restricted HF references are supported.
+Fermi focuses on post Hartree--Fock methods. Currently, only restricted references are supported.
 This is intended as a research code with an ever growing collection of methods implemented in
 the package itself. However, the Fermi API is designed to make high performance pilot implementations
 of methods achievable. 
+
+Currently, we have implementations of:
+- RHF (DF)
+- RMP2 (DF)
+- RMP3 (DF)
+- RCCSD (DF)
+- RCCSD(T)
+- CASCI
+- ACI
+- ecCCSD
+- ecCCSD(T) 
 
 ## Contribute
 PR's, issues, and suggestions are very welcome! You might consider reaching out before starting
@@ -20,7 +29,11 @@ work so that we can avoid duplication of efforts.
 ## Install
 Install Fermi by running,
 ```
-pkg> add https://github.com/FermiQC/Fermi.jl.git
+pkg> add Fermi
+```
+If you would like the latest updates, use instead
+```
+pkg> add Fermi#master
 ```
 Everything should work automatically on x86 architechtures for Linux and macOS. Windows is not
 supported. You may run into issues when building Lints, the interface software between the
