@@ -69,6 +69,26 @@ mutable struct OrbDict
     cache::Dict{String,O} where O <: AbstractOrbitals
 end
 
+function matchphase(orbs,oldC)
+    for oi in eachindex(orbs.cache[orbs.current].orbs)
+        o = orbs.cache[orbs.current].orbs[oi]
+        osorted = reverse(sort(o.C,by=abs))
+        csorted = reverse(sort(oldC[:,oi],by=abs))
+        if sign(osorted[1]) != sign(csorted[1])
+            o.C .*= -1
+        end
+    end
+end
+function topositive!(orbs::OrbDict)
+    for o in orbs.cache[orbs.current].orbs
+        sorted = reverse(sort(o.C,by=abs))
+        if sorted[1] >= 0
+            o.C .*= 1
+        else
+            o.C .*= -1
+        end
+    end
+end
 function rotate!(orbs::OrbDict,U::Array{Float64,2};fc=0,fv=0) where O <: AbstractOrbitals
     C = hcat([orb.C for orb in orbs["OV"].orbs]...)
     C = C*U

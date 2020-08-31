@@ -257,7 +257,7 @@ end
 """
     dfaoeri(molecule::Fermi.Molecule, basis::String)
 
-Computes AO basis density fitted electron repulsion integrals ⟨μν|Ô₂|P⟩J(p,q)^-1/2 integrals for the given basis and molecule.
+Computes AO basis density fitted electron repulsion integrals ⟨μν|Ô₂|P⟩J(μ,ν)^-1/2 integrals for the given basis and molecule.
 Note that the returned integrals DO NOT need to be combined with the Coulomb metric J(P,Q). In common notation, this is B(Q,μ,ν).
 Can be accessed at a higher level by calling
     
@@ -288,15 +288,21 @@ function dfaoeri(molecule::Molecule, bname::String,dfbname::String)
     Lints.make_b(Pqp,eri_engines,bas,dfbas)
     Lints.make_j(J,eri_engines[1],dfbas)
     Jh = Array(Hermitian(J)^(-1/2)) #sometimes Jh becomes complex slightly if J is not ~~exactly~~ hermitian 💔
-    B = zeros(dfsz,sz,sz)
     Lints.libint2_finalize()
     for i=1:Threads.nthreads()
         eri_engines[i] = nothing
     end
     eri_engines = nothing
     GC.gc()
-    Fermi.contract!(B,Pqp,Jh,"Qpq","Pqp","PQ")
-    B,dfbas
+    #Fermi.contract!(B,Pqp,Jh,"Qpq","Pqp","PQ")
+    for p=1:sz
+        for q=1:sz
+            auxP = Pqp[:,p,q]
+            auxQ = Jh*auxP
+            Pqp[:,p,q] .= auxQ
+        end
+    end
+    Pqp,dfbas
 end
 
 """
@@ -388,20 +394,22 @@ function compute!(I::IntegralHelper,entry::String)
         I.cache["V"],_ = aonuclear(I.mol,I.bname["primary"])
 
     elseif entry == "F"
-        D = Fermi.contract(I.C["[O]"],I.C["[O]"],"um","vm")
+        D = Fermi.contract(o["[O]"],o["[O]"],"um","vm")
         F = zeros(I.type,size(I["S"]))
         Fermi.HartreeFock.build_fock!(F,
                                                      I["T"] + I["V"],
                                                      D,
-                                                     I["μ"])
-        I.cache["F'"] = F
+                                                     I["μ"],
+                                                     o["[O]"])
+        I.cache["F"] = F
     elseif entry == "F'"
-        D = Fermi.contract(I.C["[O]"],I.C["[O]"],"um","vm")
+        D = Fermi.contract(o["[O]"],o["[O]"],"um","vm")
         F = zeros(I.type,size(I["S"]))
         Fermi.HartreeFock.build_fock!(F,
                                                      I["T"] + I["V"],
                                                      D,
-                                                     I["B"])
+                                                     I["B"],
+                                                     o["[O]"])
         I.cache["F'"] = F
     elseif 'B' in entry #MO basis eri. 3 index. DF
         aoint = I["B"]
