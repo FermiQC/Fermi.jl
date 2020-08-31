@@ -8,6 +8,11 @@ function ecRCCSD{T}(Alg::CTF) where T <: AbstractFloat
     # Call CASCI
     cas = Fermi.ConfigurationInteraction.CASCI{T}()
 
+    ecRCCSD{T}(cas, Alg)
+end
+
+function ecRCCSD{T}(cas::Fermi.ConfigurationInteraction.CASCI, Alg::CTF) where T <: AbstractFloat
+
     # Print intro
     Fermi.CoupledCluster.print_header()
     @output "\n    • Computing Externally Corrected CCSD with the ecRCCSD module.\n\n"
@@ -45,8 +50,8 @@ function ecRCCSD{T}(Alg::CTF) where T <: AbstractFloat
     @output "\n   • CAS Decomposition started:\n"
     @output "Active Occupied Orbitals: {}\n" actocc
     @output "Active Virtual Orbitals:  {}\n" actvir
-    #t = @elapsed T1, T2, ecT1, ecT2 = cas_decomposition(Casdata, refwfn.ndocc, drop_occ, actocc, actvir, moint.ov, moint.oovv, moint.ovvv, moint.ooov)
     t = @elapsed T1, T2, ecT1, ecT2 = new_cas_decomposition(Casdata, refwfn.ndocc, drop_occ, moint.ov, moint.oovv, moint.ovvv, moint.ooov)
+    #t = @elapsed T1, T2, ecT1, ecT2 = cas_decomposition(Casdata, refwfn.ndocc, drop_occ, actocc, actvir, moint.ov, moint.oovv, moint.ovvv, moint.ooov)
     @output "Finished in {:5.5} seconds.\n" t
     Casdata = nothing
 
