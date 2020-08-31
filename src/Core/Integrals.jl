@@ -56,11 +56,11 @@ mutable struct IntegralHelper{T}
     type::DataType
 end
 
-function IntegralHelper()
-    IntegralHelper{Float64}()
+function IntegralHelper(;mol=Molecule(),orbs=Fermi.Orbitals.OrbDict())
+    IntegralHelper{Float64}(;mol=mol,orbs=orbs)
 end
 
-function IntegralHelper{T}() where T <: AbstractFloat
+function IntegralHelper{T}(;mol=Molecule(),orbs=Fermi.Orbitals.OrbDict()) where T <: AbstractFloat
     cache = Dict{String,Array}() 
     bname = Dict{String,String}()
     type = T
@@ -76,17 +76,28 @@ function IntegralHelper{T}() where T <: AbstractFloat
         bname["aux"] = try
             aux_lookup[Fermi.CurrentOptions["basis"]]
         catch KeyError #if we haven't got it programmed, use a large DF basis by default
-            "augmentation-cc-pvqz-rifit"
+            "aug-cc-pvqz-rifit"
         end
     else
         bname["aux"] = aux
     end
-    mol = Molecule()
-    orbs = Fermi.Orbitals.OrbDict()
+    #mol = Molecule()
+    #orbs = Fermi.Orbitals.OrbDict()
     basis = Dict{String,Lints.BasisSetAllocated}()
     IntegralHelper{T}(cache,bname,mol,orbs,basis,type)
 end
 
+
+"""
+    aokinetic(molecule::Fermi.Molecule, basis::String)
+
+Computes AO basis kinetic energy ⟨μ|T̂|ν⟩ integrals for the given basis and molecule.
+Can be accessed at a higher level by calling
+    
+    helper["T"]
+
+where `helper` is bound to the desired molecule and basis set.
+"""
 function aokinetic(molecule::Molecule, basis::String)#, interconnect::Fermi.Environments.No_IC,
                                                      #   communicator::Fermi.Environments.NoCommunicator,
                                                      #   accelerator::Fermi.Environments.NoAccelerator)
@@ -111,6 +122,16 @@ function aokinetic(molecule::Molecule, basis::String)#, interconnect::Fermi.Envi
     GC.gc()
     T,bas
 end
+"""
+    aooverlap(molecule::Fermi.Molecule, basis::String)
+
+Computes AO basis overlap ⟨p|q⟩ integrals for the given basis and molecule.
+Can be accessed at a higher level by calling
+    
+    helper["S"]
+
+where `helper` is bound to the desired molecule and basis set.
+"""
 function aooverlap(molecule::Molecule, basis::String)#, interconnect::Fermi.Environments.No_IC,
                                                      #   communicator::Fermi.Environments.NoCommunicator,
                                                      #   accelerator::Fermi.Environments.NoAccelerator)
@@ -160,6 +181,16 @@ function aodipole(molecule::Molecule, basis::String)#, interconnect::Fermi.Envir
 
     S,bas
 end
+"""
+    aooverlap(molecule::Fermi.Molecule, basis::String)
+
+Computes AO basis overlap ⟨μ|V̂|ν⟩ integrals for the given basis and molecule.
+Can be accessed at a higher level by calling
+    
+    helper["V"]
+
+where `helper` is bound to the desired molecule and basis set.
+"""
 function aonuclear(molecule::Molecule, basis::String)#, interconnect::Fermi.Environments.No_IC,
                                                      #   communicator::Fermi.Environments.NoCommunicator,
                                                      #   accelerator::Fermi.Environments.NoAccelerator)
@@ -184,6 +215,16 @@ function aonuclear(molecule::Molecule, basis::String)#, interconnect::Fermi.Envi
     GC.gc()
     V,bas
 end
+"""
+    aoeri(molecule::Fermi.Molecule, basis::String)
+
+Computes AO basis electron repulsion integrals ⟨μν|Ô₂|ρσ⟩ integrals for the given basis and molecule.
+Can be accessed at a higher level by calling
+    
+    helper["μ"]
+
+where `helper` is bound to the desired molecule and basis set.
+"""
 function aoeri(molecule::Molecule, basis::String)#, interconnect::Fermi.Environments.No_IC,
                                                  #       communicator::Fermi.Environments.NoCommunicator,
                                                  #       accelerator::Fermi.Environments.NoAccelerator)
@@ -213,6 +254,17 @@ function aoeri(molecule::Molecule, basis::String)#, interconnect::Fermi.Environm
     I,bas
 end
 
+"""
+    dfaoeri(molecule::Fermi.Molecule, basis::String)
+
+Computes AO basis density fitted electron repulsion integrals ⟨μν|Ô₂|P⟩J(p,q)^-1/2 integrals for the given basis and molecule.
+Note that the returned integrals DO NOT need to be combined with the Coulomb metric J(P,Q). In common notation, this is B(Q,μ,ν).
+Can be accessed at a higher level by calling
+    
+    helper["B"]
+
+where `helper` is bound to the desired molecule and basis set.
+"""
 function dfaoeri(molecule::Molecule, bname::String,dfbname::String)
     open("/tmp/molfile.xyz","w") do molfile
         natom = length(molecule.atoms)
@@ -247,6 +299,12 @@ function dfaoeri(molecule::Molecule, bname::String,dfbname::String)
     B,dfbas
 end
 
+"""
+    aux_ri!(I::IntegralHelper, ri=Fermi.CurrentOptions["rifit"])
+
+Clears the integral cache and switches auxiliary DF integrals to use the
+current RI fitting basis set. Used between DF-RHF and DF-post HF.
+"""
 function aux_ri!(I::IntegralHelper,ri=Fermi.CurrentOptions["rifit"])
     delete!(I.cache,"B") #clear out old aux basis
     GC.gc()
@@ -266,6 +324,13 @@ function aux_ri!(I::IntegralHelper,ri=Fermi.CurrentOptions["rifit"])
         I.bname["aux"] = ri
     end
 end
+"""
+    aux_ri!(I::IntegralHelper, jk=Fermi.CurrentOptions["jkfit"])
+
+Clears the integral cache and switches auxiliary DF integrals to use the
+current JK fitting basis set. Used to ensure JK integrals are used in
+DF-RHF.
+"""
 function aux_jk!(I::IntegralHelper,jk=Fermi.CurrentOptions["jkfit"])
     delete!(I.cache,"B") #clear out old aux basis
     GC.gc()
@@ -286,6 +351,12 @@ function aux_jk!(I::IntegralHelper,jk=Fermi.CurrentOptions["jkfit"])
     end
 end
 
+"""
+    getindex(I::IntegralHelper,entry::String)
+
+Called when `helper["foo"]` syntax is used. If the requested entry already
+exists, simply return the entry. If not, compute the requested entry.
+"""
 function getindex(I::IntegralHelper,entry::String)
     try
         I.cache[entry]

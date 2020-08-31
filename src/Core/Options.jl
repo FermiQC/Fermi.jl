@@ -69,9 +69,9 @@ explicitly to Methods is obtained from here.
 CurrentOptions = deepcopy(DefaultOptions)
 
 """
-    Fermi.@reset
+    Fermi.@reset(key=nothing)
 
-Restores all options to their default values.
+Restores `key` option to default setting. If `key == nothing`, restores all options to their default values.
 """
 macro reset(key=nothing) 
     if key == nothing
