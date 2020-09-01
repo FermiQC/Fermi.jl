@@ -1,3 +1,4 @@
+using LinearAlgebra
 """
     Fermi.CoupledCluster.RCCSD
 
@@ -13,7 +14,7 @@ _struct tree:_
 
 **RCCSD** <: AbstractCCWavefunction <: AbstractCorrelatedWavefunction <: AbstractWavefunction
 """
-struct RCCSD{T} <: AbstractCCWavefunction
+struct BCCD{T} <: AbstractCCWavefunction
     GuessEnergy::T
     CorrelationEnergy::T
     T1::_T where _T <: Fermi.AbstractTensor
@@ -26,19 +27,15 @@ end
 
 Compute a RCCSD wave function using Fermi.CurrentOptions data.
 """
-function RCCSD()
+function BCCD()
     prec = select_precision(Fermi.CurrentOptions["precision"])
-    RCCSD{prec}()
+    dummy = BCCD{prec}(0.0,0.0,Fermi.MemTensor(zeros(prec,0,0)),Fermi.MemTensor(zeros(prec,0,0,0,0)))
+    BCCD(dummy)
 end
 
-function RCCSD(guess::RCCSD{T}) where T <: AbstractFloat
+function BCCD(guess::BCCD{T}) where T <: AbstractFloat
     prec = eltype(guess.T2.data)
-    RCCSD{prec}(guess)
-end
-
-function RCCSD{T}() where T <: AbstractFloat
-    dummy = RCCSD{T}(0.0,0.0,Fermi.MemTensor(zeros(T,0,0)),Fermi.MemTensor(zeros(T,0,0,0,0)))
-    RCCSD{T}(dummy)
+    BCCD{prec}(guess)
 end
 
 """
@@ -46,11 +43,13 @@ end
 
 Compute a RCCSD wave function for a given precision T (Float64 or Float32)
 """
-function RCCSD{T}(guess::RCCSD{Tb}) where { T <: AbstractFloat,
+function BCCD{T}(guess::BCCD{Tb}) where { T <: AbstractFloat,
                                            Tb <: AbstractFloat }
     alg = select_algorithm(Fermi.CurrentOptions["cc_alg"])
-    RCCSD{T}(guess,alg)
+    BCCD{T}(guess,alg)
 end
+
+
 
 # implementation specific functions (look at one of these for guidance implementing a new method!)
 include("CTF.jl")
@@ -58,4 +57,3 @@ include("DF-CTF.jl")
 
 # main kernel (ccsd iteration logic)
 include("kernel.jl")
-

@@ -2,7 +2,7 @@ module ConfigurationInteraction
 
 using Fermi
 using Fermi.Geometry: Molecule
-using Fermi.Integrals: ConventionalAOIntegrals
+using Fermi.Integrals: IntegralHelper
 using Fermi.Output
 using TensorOperations
 using LinearAlgebra

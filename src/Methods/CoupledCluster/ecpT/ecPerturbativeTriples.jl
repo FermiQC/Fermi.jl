@@ -24,5 +24,10 @@ function select_precision(A::String)
     end
 end
 
+function ecRCCSDpT()
+    prec = select_precision(Fermi.CurrentOptions["precision"])
+    ecRCCSDpT{prec}()
+end
+
 #implementations
 include("ijk.jl")

@@ -13,18 +13,47 @@ import Base.getindex
 
 ## TODO: Implement zeroed initialization for all AbstractTensor
 
-struct MemTensor{T} <: AbstractTensor where T <: Number
-    data::Array{T}
+"""
+    PackedTensor{T} <: AbstractTensor where T <: Number
+    
+Symmetry packed tesor. Not functional."""
+struct PackedTensor{T} <: AbstractTensor where T <: Number
+    symmetries::Dict{Tuple,String}
+    data::Array{T,1}
     ndim::Int8
     dims::Array{UInt16,1}
 end
 
+## start GeneratedTensor ##
+"""
+    GeneratedTensor{T} <: AbstractTensor where T <: Number
+
+Tensor for which elements are computed on the fly by `generator`. 
+"""
+struct GeneratedTensor{T} <: AbstractTensor where T <: Number
+    generator::Function
+    data::Dict{String,Any}
+    ndim::Int8
+    dims::Array{UInt16,1}
+end
+
+function getindex(g::GeneratedTensor,I::Vararg{Int,N}) where N
+    try
+        g.generator(g,I...)
+    catch
+        error("Incorrect number of arguments passed to getindex(::GeneratedTensor) 😦")
+    end
+end
+## end GeneratedTensor ##
+
+## start DiskTensor ##
 struct DiskTensor{T} <: AbstractTensor where T <: Number
     fname::String
     buf::Array{T}
     ndim::Int8
     dims::Array{UInt32,1}
 end
+## end DiskTensor ##
 
 struct DistributedTensor{T} <: AbstractTensor where T <: Number
     data::DistributedArrays.DArray{T}
@@ -32,7 +61,19 @@ struct DistributedTensor{T} <: AbstractTensor where T <: Number
     dims::Array{UInt32,1}
 end
 
-## MemTensor ##
+## start MemTensor ##
+"""
+    MemTensor{T} <: AbstractTensor where T <: Number
+
+Tensor object held entirely in memory. Thin wrapper around a standard Julia array,
+but tagged as a MemTensor to fit into Fermi's dispatch system.
+"""
+struct MemTensor{T} <: AbstractTensor where T <: Number
+    data::Array{T}
+    ndim::Int8
+    dims::Array{UInt16,1}
+end
+
 function MemTensor(data::Array)
     @assert eltype(data) <: Number "MemTensor was passed an array of non-numeric values."
     MemTensor{eltype(data)}(data)
@@ -64,4 +105,4 @@ end
 function getindex(A::MemTensor,I...)
     return A.data[I...]
 end
-## End MemTensor ## 
+## end MemTensor ## 

@@ -1,4 +1,4 @@
-using BitBasis
+using LoopVectorization
 function Hd0(αindex::Array{Int64,1}, βindex::Array{Int64,1}, h::Array{T, 2}, V::Array{T, 4}) where T <: AbstractFloat
     """
     Σ [m|h|m] + 1/2 ΣΣ [mm|nn] - [mn|nm] 
@@ -54,23 +54,22 @@ function Hd1(αindex::Array{Int64,1}, βindex::Array{Int64,1}, D1::Determinant, 
 
         # Compute phase by counting the number of occupied orbitals between m and p
 
-        i = min(m,p)
-        f = max(m,p)-1
+        i,f = minmax(m,p)
         r = count_ones(D1.α >> i)
-        l = count_ones(D1.α << (64-f))
+        l = count_ones(D1.α << (65-f))
         t = count_ones(D1.α)
         t -= r
         t -= l
         #t = l
-        t << 63 == 0 ? ph = 1 : ph = -1
+        ph = (-1)^t
 
         # Compute matrix element
         E = h[m,p] 
-        for i in 1:length(αindex)
+        @avx for i in 1:length(αindex)
             I = αindex[i]
             E += V[m,p,I,I] - V[m,I,I,p]
         end
-        for i in 1:length(βindex)
+        @avx for i in 1:length(βindex)
             I = βindex[i]
             E += V[m,p,I,I] 
         end
@@ -82,23 +81,22 @@ function Hd1(αindex::Array{Int64,1}, βindex::Array{Int64,1}, D1::Determinant, 
 
         # Compute phase by counting the number of occupied orbitals between m and p
 
-        i = min(m,p)
-        f = max(m,p)-1
+        i,f = minmax(m,p)
         r = count_ones(D1.β >> i)
-        l = count_ones(D1.β << (64-f))
+        l = count_ones(D1.β << (65-f))
         t = count_ones(D1.β)
         t -= r
         t -= l
         #t = l
-        t << 63 == 0 ? ph = 1 : ph = -1
+        ph = (-1)^t
 
         # Compute matrix element
         E = h[m,p] 
-        for i in 1:length(αindex)
+        @avx for i in 1:length(αindex)
             I = αindex[i]
             E += V[m,p,I,I] 
         end
-        for i in 1:length(βindex)
+        @avx for i in 1:length(βindex)
             I = βindex[i]
             E += V[m,p,I,I] - V[m,I,I,p]
         end
@@ -121,26 +119,28 @@ function Hd2(D1::Determinant, D2::Determinant, V::Array{T, 4}, αexc::Int) where
 
         # For the phase factor, there is no interference between the two cases since they have difference spin
         # Move m <-> p
-        i = min(m,p)
-        f = max(m,p)-1
+        #i = min(m,p)
+        #f = max(m,p)-1
+        i,f = minmax(m,p)
         #println("$i $f")
         #println(bitstring(D1.α))
         r = count_ones(D1.α >> i)
-        l = count_ones(D1.α << (64-f))
+        l = count_ones(D1.α << (65-f))
         t = count_ones(D1.α)
         t -= r
         t -= l
-        t << 63 == 0 ? ph1 = 1 : ph1 = -1
+        ph1 = (-1)^t
 
         # Move n <-> q
-        i = min(n,q)
-        f = max(n,q)-1
+        i,f = minmax(n,q)
+        #i = min(n,q)
+        #f = max(n,q)-1
         r = count_ones(D1.β >> i)
-        l = count_ones(D1.β << (64-f))
+        l = count_ones(D1.β << (65-f))
         t = count_ones(D1.β)
         t -= r
         t -= l
-        t << 63 == 0 ? ph2 = 1 : ph2 = -1
+        ph2 = (-1)^t
 
         return ph1*ph2*V[m,p,n,q]
 
@@ -152,32 +152,36 @@ function Hd2(D1::Determinant, D2::Determinant, V::Array{T, 4}, αexc::Int) where
         q = second_αexclusive(D2, D1)
         
         #Transform D1 -> D2. First take m into p
-        i = min(m,p)
-        f = max(m,p)-1
+        #i = min(m,p)
+        #f = max(m,p)-1
+        i,f = minmax(m,p)
         #println("$i $f")
         #println(bitstring(D1.α))
         r = count_ones(D1.α >> i)
-        l = count_ones(D1.α << (64-f))
+        l = count_ones(D1.α << (65-f)) # 65 because f used to be f = f - 1
         t = count_ones(D1.α)
         t -= r
         t -= l
         #t = l
-        t << 63 == 0 ? ph1 = 1 : ph1 = -1
+        #iseven(t) ? ph1 = 1 : ph1 = -1
+        ph1 = (-1)^t
         
         # Update bits
-        newα = (D1.α ⊻ (1 << (m-1))) | (1 << (p-1))
+        newα = (D1.α ⊻ (1 << ((m-1)&63))) | (1 << ((p-1)&63))
         
         # Take n into q using the updated bit
         
-        i = (min(n,q))
-        f = ((max(n,q) - 1))
+        #i = (min(n,q))
+        #f = ((max(n,q) - 1))
+        i,f = minmax(n,q)
         
-        r = count_ones(newα >> i)
-        l = count_ones(newα << (64-f))
+        r = count_ones(newα >> (i&63))
+        l = count_ones(newα << ((65-f)&63))
         t = count_ones(newα)
         t -= r
         t -= l
-        t << 63 == 0 ? ph2 = 1 : ph2 = -1
+        ph2 = (-1)^t
+        #iseven(t) ? nothing : ph1 *= -1
 
         return ph1*ph2*(V[m,p,n,q] - V[m,q,n,p])
 
@@ -189,32 +193,30 @@ function Hd2(D1::Determinant, D2::Determinant, V::Array{T, 4}, αexc::Int) where
         q = second_βexclusive(D2, D1)
 
         #Transform D1 -> D2. First take m into p
-        i = min(m,p)
-        f = max(m,p)-1
+        i,f = minmax(m,p)
         #println("$i $f")
         #println(bitstring(D1.α))
         r = count_ones(D1.β >> i)
-        l = count_ones(D1.β << (64-f))
+        l = count_ones(D1.β << (65-f))
         t = count_ones(D1.β)
         t -= r
         t -= l
         #t = l
-        t << 63 == 0 ? ph1 = 1 : ph1 = -1
+        ph1 = (-1)^t
         
         # Update bits
-        newβ = (D1.β ⊻ (1 << (m-1))) | (1 << (p-1))
+        newβ = (D1.β ⊻ (1 << ((m-1)&63))) | (1 << ((p-1)&63))
         
         # Take n into q using the updated bit
         
-        i = (min(n,q))
-        f = ((max(n,q) - 1))
+        i,f = minmax(n,q)
         
-        r = count_ones(newβ >> i)
-        l = count_ones(newβ << (64-f))
+        r = count_ones(newβ >> (i&63))
+        l = count_ones(newβ << ((65-f)&63))
         t = count_ones(newβ)
         t -= r
         t -= l
-        t << 63 == 0 ? ph2 = 1 : ph2 = -1
+        ph2 = (-1)^t
 
         return ph1*ph2*(V[m,p,n,q] - V[m,q,n,p])
     end

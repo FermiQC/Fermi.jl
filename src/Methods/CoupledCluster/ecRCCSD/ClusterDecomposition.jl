@@ -416,29 +416,28 @@ function ec_T4ααonT2!(ridx::NTuple{8,Int}, T4::Float64, ecT2::Array{Float64,4}
     ecT2[j,i,b,a] += ec
 end
 
-function new_cas_decomposition(Cas_data::Tuple, ndocc::Int, frozen::Int, fov::Array{Float64,2}, Voovv::Array{Float64,4}, Vovvv::Array{Float64,4}, Vooov::Array{Float64,4})
-
-    ref, Ccas_ex1or2, dets_ex1or2, C3coef, C3dets, C4coef, C4dets = Cas_data
+function cas_decomposition(ref::Determinant, Casdata::Dict{String,Array}, ndocc::Int, frozen::Int, fov::Array{Float64,2}, Voovv::Array{Float64,4}, Vovvv::Array{Float64,4}, Vooov::Array{Float64,4})
 
     # Get T1 and T2
     T1 = zeros(size(fov))
     T2 = zeros(size(Voovv))
-    @output "Getting T1..."
-    get_casT1!(T1, Ccas_ex1or2, dets_ex1or2, ref, frozen, ndocc)
+    @output "→ Getting T1..."
+    get_casT1!(T1, Casdata["C1"], Casdata["C1dets"], ref, frozen, ndocc)
+    get_casT1!(T1, Casdata["C1"], Casdata["C1dets"], ref, frozen, ndocc)
     @output " Done.\n"
-    @output "Getting T2..."
-    get_casT2!(T1, T2, Ccas_ex1or2, dets_ex1or2, ref, frozen, ndocc)
+    @output "→ Getting T2..."
+    get_casT2!(T1, T2, Casdata["C2"], Casdata["C2dets"], ref, frozen, ndocc)
     @output " Done.\n"
 
     # Initialize arrays
     ecT1 = zeros(size(fov))
     ecT2 = zeros(size(Voovv))
 
-    @output "Computing external correction from T3..."
+    @output "→ Computing external correction from T3..."
     # Compute External Correction from T3
-    for n in eachindex(C3dets)
-        D = C3dets[n]
-        C = C3coef[n]
+    for n in eachindex(Casdata["C3"])
+        D = Casdata["C3dets"][n]
+        C = Casdata["C3"][n]
 
         if abs(C) < 10^-10
             continue
@@ -476,10 +475,10 @@ function new_cas_decomposition(Cas_data::Tuple, ndocc::Int, frozen::Int, fov::Ar
     @output "Done\n"
 
     # Compute External Correction from T4
-    @output "Computing external correction from T4..."
-    for n in eachindex(C4dets)
-        D = C4dets[n]
-        C = C4coef[n]
+    @output "→ Computing external correction from T4..."
+    for n in eachindex(Casdata["C4"])
+        D = Casdata["C4dets"][n]
+        C = Casdata["C4"][n]
 
         if abs(C) < 10^-10
             continue
@@ -495,7 +494,7 @@ function new_cas_decomposition(Cas_data::Tuple, ndocc::Int, frozen::Int, fov::Ar
             c,a  = αexclusive(D, ref)
             d,b  = βexclusive(D, ref)
 
-            T4 = get_casT4αβ((i,j,k,l,a,b,c,d), C, C3coef, C3dets, ref, frozen, ndocc, T1, T2)
+            T4 = get_casT4αβ((i,j,k,l,a,b,c,d), C, Casdata["C3"], Casdata["C3dets"], ref, frozen, ndocc, T1, T2)
 
             i, j, k, l = (i,j,k,l) .- frozen
             a, b, c, d = (a,b,c,d) .- ndocc
@@ -525,7 +524,7 @@ function new_cas_decomposition(Cas_data::Tuple, ndocc::Int, frozen::Int, fov::Ar
             d,c,a  = αexclusive(D, ref)
             b,     = βexclusive(D, ref)
 
-            T4 = get_casT4αα((i,j,k,l,a,b,c,d), C, C3coef, C3dets, ref, frozen, ndocc, T1, T2)
+            T4 = get_casT4αα((i,j,k,l,a,b,c,d), C, Casdata["C3"], Casdata["C3dets"], ref, frozen, ndocc, T1, T2)
 
             i, j, k, l = (i,j,k,l) .- frozen
             a, b, c, d = (a,b,c,d) .- ndocc

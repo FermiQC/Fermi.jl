@@ -1,51 +1,95 @@
-function RMP2{T}(refWfn::Fermi.HartreeFock.RHF.RHFWavefunction,alg::Fermi.MollerPlesset.DF) where T <: AbstractFloat
-    #build DF-basis
-    #T = eltype(refWfn.uvsr)
-    nocc    = refWfn.nalpha
-    nvir    = refWfn.nvira
-    C       = refWfn.Ca
-    pqP, Jpqh = setup_df(refWfn)
-    @inbounds @fastmath begin
-    #    Jpqh    = Jpq^(-1/2)
-        _Co      = C[:,1:nocc]
-        _Cv    = C[:,nocc+1:nocc+nvir]
-    end #@inbounds @fastmath
-    @tensoropt begin
-        bμν[p,q,Q] := pqP[p,q,P]*Jpqh[P,Q]
+using LinearAlgebra
+function RMP2{T}(refwfn::Fermi.HartreeFock.RHF,alg::Fermi.MollerPlesset.DF) where T <: AbstractFloat
+    Fermi.MollerPlesset.print_header()
+    ints = refwfn.ints
+    nocc    = refwfn.ndocc
+    nvir    = refwfn.nvir
+    drop_occ = Fermi.CurrentOptions["drop_occ"]
+    drop_vir = Fermi.CurrentOptions["drop_vir"]
+    ints.orbs.frozencore = drop_occ
+    ints.orbs.frozenvir = drop_vir
+    eps = refwfn.eps
+    ΔMP2 = 0.0
+    @output "\tComputing MP2 with DF algorithm\n\n"
+    ttotal = @elapsed begin
+    @output "\tComputing and transforming integrals ...\n"
+    t = @elapsed begin
+        @output "\tComputing integrals ..."
+        Fermi.Integrals.aux_ri!(ints)
+        t = @elapsed ints["B"]
+        @output "\t done in {:5.2f} s\n" t
+
+        ints.cache["B"] = convert(Array{T},ints.cache["B"])
+        @output "\tTransforming integrals to MO basis ..."
+        t = @elapsed Bov = ints["BOV"]
+        @output "\t done in {:5.2f} s\n" t
     end
-    #bμν     = squeeze(bμν)
-    @tensoropt begin
-        biν[i,ν,Q] := _Co[μ,i]*bμν[μ,ν,Q]
-    end
-    @tensoropt begin
-        bia[i,a,Q] := _Cv[ν,a]*biν[i,ν,Q]
-    end
-    dmp2 = 0.0
-    eps = refWfn.epsa
-    bi = zeros(T,size(bia[1,:,:]))
-    bj = zeros(T,size(bi))
-    bAB = zeros(T,nvir,nvir)
-    for i in 1:nocc
-        for j in 1:nocc
-            bi[:,:] = bia[i,:,:]
-            bj[:,:] = bia[j,:,:]
-            @tensoropt begin
-                bAB[a,b] = bi[a,Q]*bj[b,Q]
+    @output "\tBasis: {}\n" ints.bname["primary"] 
+    @output "\tDF basis: {}\n\n" ints.bname["aux"]
+    @output " done in {:>5.2f} s\n" t
+    Bis = [zeros(T,size(Bov[:,1,:])) for i=1:Threads.nthreads()]
+    Bjs = [zeros(T,size(Bis[1])) for i =1:Threads.nthreads()]
+    BABs = [zeros(T,nvir,nvir) for i=1:Threads.nthreads()]
+    BBAs = [zeros(T,nvir,nvir) for i=1:Threads.nthreads()]
+
+    ΔMP2s = zeros(T,Threads.nthreads())
+    Threads.@threads for i in 1:(nocc-drop_occ)
+        Bi = Bis[Threads.threadid()]
+        Bj = Bjs[Threads.threadid()]
+        @views Bi[:,:] = Bov[:,i,:]
+        BAB = BABs[Threads.threadid()]
+        BBA = BBAs[Threads.threadid()]
+        for j in i:(nocc-drop_occ)
+            if i != j
+                fac = 2
+            else
+                fac = 1
             end
-            bBA = transpose(bAB)
-            for b in 1:nvir
-                for a in 1:nvir
-                    iajb = bAB[a,b]
-                    ibja = bBA[a,b]
-                    dmp2 += iajb*(2*iajb - ibja)/(eps[i] + eps[j] - eps[a+nocc] - eps[b+nocc])
+            @views Bj[:,:] = Bov[:,j,:]
+            @tensoropt begin
+                BAB[a,b] = Bi[Q,a]*Bj[Q,b]
+            end
+            #BBA = transpose(BAB)
+            transpose!(BBA,BAB)
+            for b in 1:nvir-drop_vir
+                for a in 1:nvir-drop_vir
+                    iajb = BAB[a,b]
+                    ibja = BBA[a,b]
+                    ΔMP2s[Threads.threadid()] += fac*iajb*(2*iajb - ibja)/(eps[i+drop_occ] + eps[j+drop_occ] - eps[a+nocc] - eps[b+nocc])
                 end
             end
         end
     end
-    RMP2{T}(dmp2,Fermi.MemTensor{T}(zeros(T,0,0,0,0)),Fermi.MemTensor{T}(zeros(T,0,0,0,0)))
+    end
+    ΔMP2 = sum(ΔMP2s)
+
+    # generator function for T2 amplitudes, given ijab indices
+    function gen(g::Fermi.GeneratedTensor,i,j,a,b)
+        naux,nocc,nvir = size(g.data["Bov"])
+        sum = 0.0
+        for Q in 1:naux
+            sum += g.data["Bov"][Q,i,a]*g.data["Bov"][Q,j,b]
+        end
+        eps = g.data["eps"]
+        sum /= eps[i] + eps[j] - eps[a+nocc] - eps[b+nocc]
+        sum
+    end
+
+    # data required to compute a T2 amplitude
+    data = Dict{String,Any}(
+                            "Bov" => Bov,
+                            "eps" => eps
+                           )
+
+    no = convert(UInt16,nocc)
+    nv = convert(UInt16,nvir)
+
+    G = Fermi.GeneratedTensor{T}(gen,data,4,[no,no,nv,nv])
+
+    @output "\n\tDF-MP2 energy is {:>14.10f}\n" ΔMP2
+    @output "\tDF-MP2 done in {:>5.2f} s\n" ttotal
+    @output repeat("-",80)*"\n"
+
+    RMP2{T}(ΔMP2[],G)
 end
 
-function squeeze(A::AbstractArray)
-    #singleton_dims = tuple((d for d in 1:ndims(A) if size(A, d) == 1)...)
-    return dropdims(A, dims = (findall(size(A) .== 1)...,))
-end
