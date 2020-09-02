@@ -11,7 +11,11 @@ Compute a RCCSD wave function using the Compiled time factorization algorithm (C
 function RCCSD{T}(guess::RCCSD{Tb},Alg::CTF) where { T <: AbstractFloat,
                                                     Tb <: AbstractFloat }
     refwfn = Fermi.HartreeFock.RHF()
+    RCCSD{T}(refwfn, guess, Alg)
+end
 
+function RCCSD{T}(refwfn::RHF, guess::RCCSD{Tb},Alg::CTF) where { T <: AbstractFloat,
+                                                    Tb <: AbstractFloat }
     drop_occ = Fermi.CurrentOptions["drop_occ"]
     drop_vir = Fermi.CurrentOptions["drop_vir"]
 
@@ -27,7 +31,6 @@ function RCCSD{T}(guess::RCCSD{Tb},Alg::CTF) where { T <: AbstractFloat,
     @output " done in {} s" tint
     RCCSD{T}(refwfn, guess, Alg) 
 end
-
 
 function RCCSD{T}(refwfn::RHF, guess::RCCSD{Tb}, Alg::CTF) where { T <: AbstractFloat,
                                                                   Tb <: AbstractFloat }

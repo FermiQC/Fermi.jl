@@ -31,6 +31,13 @@ function RCCSD()
     RCCSD{prec}()
 end
 
+function RCCSD(refwfn::RHF)
+    prec = select_precision(Fermi.CurrentOptions["precision"])
+    alg = select_algorithm(Fermi.CurrentOptions["cc_alg"])
+    dummy = RCCSD{prec}(0.0,0.0,Fermi.MemTensor(zeros(prec,0,0)),Fermi.MemTensor(zeros(prec,0,0,0,0)))
+    RCCSD{prec}(refwfn, dummy, alg)
+end
+
 function RCCSD(guess::RCCSD{T}) where T <: AbstractFloat
     prec = eltype(guess.T2.data)
     RCCSD{prec}(guess)
