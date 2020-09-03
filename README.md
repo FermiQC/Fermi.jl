@@ -1,5 +1,5 @@
 [![Build Status](https://travis-ci.com/FermiQC/Fermi.jl.svg?branch=master)](https://travis-ci.com/FermiQC/Fermi.jl)
-[![Coverage Status](https://coveralls.io/repos/github/mdav2/Fermi.jl/badge.svg?branch=master)](https://coveralls.io/github/mdav2/Fermi.jl?branch=master)
+[![Coverage Status](https://coveralls.io/repos/github/FermiQC/Fermi.jl/badge.svg?branch=master)](https://coveralls.io/github/FermiQC/Fermi.jl?branch=master)
 
 # Fermi
 
@@ -12,15 +12,19 @@ the package itself. However, the Fermi API is designed to make high performance 
 of methods achievable. 
 
 Currently, we have implementations of:
-- RHF (DF)
-- RMP2 (DF)
-- RMP3 (DF)
-- RCCSD (DF)
-- RCCSD(T)
-- CASCI
-- ACI
-- ecCCSD
-- ecCCSD(T) 
+
+| Method    | Conv. | DF |
+|-----------|-------|----|
+| RHF       |  Y    |  Y |
+| RMP2      |  Y    |  Y |
+| RMP3      |  N    |  Y |
+| RCCSD     |  Y    |  Y |
+| RCCSD(T)  |  Y    |  Y |
+| BCCD      |  Y    |  Y |
+| CASCI     |  Y    |  N |
+| ACI       |  Y    |  N |
+| ecCCSD    |  Y    |  N |
+| ecCCSD(T) |  Y    |  N |
 
 ## Contribute
 PR's, issues, and suggestions are very welcome! You might consider reaching out before starting

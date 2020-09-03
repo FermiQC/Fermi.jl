@@ -54,6 +54,7 @@ function BCCD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2:
     cc_e_conv = Fermi.CurrentOptions["cc_e_conv"]
     cc_max_rms = Fermi.CurrentOptions["cc_max_rms"]
     precision_override = Fermi.CurrentOptions["precision_override"]
+    bcc_tol = Fermi.CurrentOptions["bcc_tol"]
 
     preconv_T1 = Fermi.CurrentOptions["preconv_T1"]
     dp = Fermi.CurrentOptions["cc_damp_ratio"]
@@ -117,83 +118,83 @@ function BCCD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2:
     @output "    Starting CC Iterations\n\n"
     preconv_T1 ? T1_time = 0 : nothing
     dummyT2 = zeros(Ta,size(newT2))
-    #if preconv_T1
-    #    @output "Preconverging T1 amplitudes\n"
-    #    @output "Taking one T2 step\n"
-    #    @output "{:10s}    {: 15s}    {: 12s}    {:12s}    {:10s}\n" "Iteration" "CC Energy" "ΔE" "Max RMS (T1)" "Time (s)"
-    #    t = @elapsed begin 
-    #        update_amp(T2, newT1, newT2, foo, fov, fvv, ints, alg)
+    if preconv_T1
+        @output "Preconverging T1 amplitudes\n"
+        @output "Taking one T2 step\n"
+        @output "{:10s}    {: 15s}    {: 12s}    {:12s}    {:10s}\n" "Iteration" "CC Energy" "ΔE" "Max RMS (T1)" "Time (s)"
+        t = @elapsed begin 
+            update_amp(T2, newT1, newT2, foo, fov, fvv, ints, alg)
 
-    #        #apply external correction
-    #        apply_ec(newT1,dummyT2,ecT1,ecT2)
+            #apply external correction
+            apply_ec(newT1,dummyT2,ecT1,ecT2)
 
-    #        # Apply resolvent
-    #        newT1 ./= d
-    #        newT2 ./= D
+            # Apply resolvent
+            newT1 ./= d
+            newT2 ./= D
 
-    #        # Compute residues 
-    #        r1 = sqrt(sum((newT1 .- T1).^2))/length(T1)
-    #        r2 = sqrt(sum((newT2 .- T2).^2))/length(T2)
+            # Compute residues 
+            r1 = sqrt(sum((newT1 .- T1).^2))/length(T1)
+            r2 = sqrt(sum((newT2 .- T2).^2))/length(T2)
 
-    #        if do_diis 
-    #            e1 = (newT1 - T1)
-    #            e2 = (newT2 - T2)
-    #            push!(DM_T1,newT1,e1) 
-    #            push!(DM_T2,newT2,e2) 
-    #        end
+            if do_diis 
+                e1 = (newT1 - T1)
+                e2 = (newT2 - T2)
+                push!(DM_T1,newT1,e1) 
+                push!(DM_T2,newT2,e2) 
+            end
 
-    #        newT1 .= (1-dp)*newT1 .+ dp*T1
-    #        newT2 .= (1-dp)*newT2 .+ dp*T2
-    #    end
-    #    T1_time += t
+            newT1 .= (1-dp)*newT1 .+ dp*T1
+            newT2 .= (1-dp)*newT2 .+ dp*T2
+        end
+        T1_time += t
 
-    #    rms = max(r1,r2)
-    #    oldE = Ecc
-    #    Ecc = update_energy(newT1, newT2, fov, ints, alg)
-    #    dE = Ecc - oldE
-    #    @output "    {:<5}    {:<15.10f}    {:<12.10f}    {:<12.10f}    {:<10.5f}\n" "pre" Ecc dE rms t
+        rms = max(r1,r2)
+        oldE = Ecc
+        Ecc = update_energy(newT1, newT2, fov, ints, alg)
+        dE = Ecc - oldE
+        @output "    {:<5}    {:<15.10f}    {:<12.10f}    {:<12.10f}    {:<10.5f}\n" "pre" Ecc dE rms t
 
-    #    while abs(dE) > cc_e_conv || rms > cc_max_rms
-    #        if ite > cc_max_iter
-    #            @output "\n⚠️  CC Equations did not converge in {:1.0d} iterations.\n" cc_max_iter
-    #            break
-    #        end
-    #        t = @elapsed begin
-    #            T1 .= newT1
-    #            T2 .= newT2
-    #            update_T1(T2,newT1,foo,fov,fvv,ints,alg)
-    #            apply_ec(newT1,dummyT2,ecT1,ecT2)
-    #            newT1 ./= d
-    #            if do_diis 
-    #                e1 = newT1 - T1
-    #                push!(DM_T1,newT1,e1) 
-    #                newT1 = Fermi.DIIS.extrapolate(DM_T1)
-    #            end
+        while abs(dE) > cc_e_conv || rms > cc_max_rms
+            if ite > cc_max_iter
+                @output "\n⚠️  CC Equations did not converge in {:1.0d} iterations.\n" cc_max_iter
+                break
+            end
+            t = @elapsed begin
+                T1 .= newT1
+                T2 .= newT2
+                update_T1(T2,newT1,foo,fov,fvv,ints,alg)
+                apply_ec(newT1,dummyT2,ecT1,ecT2)
+                newT1 ./= d
+                if do_diis 
+                    e1 = newT1 - T1
+                    push!(DM_T1,newT1,e1) 
+                    newT1 = Fermi.DIIS.extrapolate(DM_T1)
+                end
 
-    #            # Compute residues 
-    #            r1 = sqrt(sum((newT1 .- T1).^2))/length(T1)
+                # Compute residues 
+                r1 = sqrt(sum((newT1 .- T1).^2))/length(T1)
 
-    #            newT1 .= (1-dp)*newT1 .+ dp*T1
+                newT1 .= (1-dp)*newT1 .+ dp*T1
 
-    #            rms = r1
-    #            oldE = Ecc
-    #            Ecc = update_energy(newT1, newT2, fov, ints, alg)
-    #            dE = Ecc - oldE
-    #        end
-    #        T1_time += t
-    #        dE > 0 ? sign = "+" : sign = "-"
-    #        @output "    {:<5.0d}    {:<15.10f}    {}{:>12.10f}    {:<12.10f}    {:<10.5f}\n" ite Ecc sign abs(dE) rms t
-    #        ite += 1
-    #    end
-    #    @output "\nT1 pre-convergence took {}s\n" T1_time
-    #end
+                rms = r1
+                oldE = Ecc
+                Ecc = update_energy(newT1, newT2, fov, ints, alg)
+                dE = Ecc - oldE
+            end
+            T1_time += t
+            dE > 0 ? sign = "+" : sign = "-"
+            @output "    {:<5.0d}    {:<15.10f}    {}{:>12.10f}    {:<12.10f}    {:<10.5f}\n" ite Ecc sign abs(dE) rms t
+            ite += 1
+        end
+        @output "\nT1 pre-convergence took {}s\n" T1_time
+    end
 
     ints.orbs["BCC"] = deepcopy(ints.orbs["FU"])
     Fermi.Orbitals.activate!(ints.orbs,"BCC") 
     ints.orbs.frozencore = drop_occ
     ints.orbs.frozenvir = drop_vir
     C = ints.orbs["[FU]"]
-    display(C)
+    #display(C)
 
     dE = 1
     rms = 1
@@ -216,7 +217,8 @@ function BCCD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2:
         sum
     end
 
-    while (abs(dE) > cc_e_conv || rms > cc_max_rms) || ite < 10
+    mT1 = 0
+    while (abs(dE) > cc_e_conv || rms > cc_max_rms) || mT1 > bcc_tol
         if ite > cc_max_iter
             @output "\n⚠️  CC Equations did not converge in {:1.0d} iterations.\n" cc_max_iter
             break
@@ -226,9 +228,6 @@ function BCCD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2:
             bcc = false
             T1 .= newT1
             T2 .= newT2
-            _foo = eigvals(ints["FOO"])
-            _fvv = eigvals(ints["FVV"])
-
             d = Ta[i - a for i = diag(ints["FOO"]), a = diag(ints["FVV"])]
             D = Ta[i + j - a - b for i = diag(ints["FOO"]), j = diag(ints["FOO"]), a = diag(ints["FVV"]), b = diag(ints["FVV"])]
 
@@ -236,22 +235,10 @@ function BCCD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2:
             update_T1(T2,newT1,foo,fov,fvv,ints,alg)
             newT2 ./= D
             newT1 ./= d
+            oldE = Ecc
+            Ecc = update_energy(newT1, newT2, fov, ints, alg)
 
-            #X = Array([ I(nocc) zeros(size(T1)); T1' I(nvir)])
-            X = Array([ zeros(nocc,nocc) zeros(size(T1)); newT1' zeros(nvir,nvir)])
-            #X = Array([ eigvecs(ints["FOO"]) zeros(size(T1)); newT1' eigvecs(ints["FVV"])])
-            U = exp(X - X')
-
-            #if there's no significant rotation, lets just skip the integral transform
-            #if !isapprox(tr(U.^2), sum(U.^2); atol=1E-14)
-            if maximum(abs.(T1)) >= 1E-5 #&& ite >= 3
-                bcc = true
-                Fermi.Orbitals.rotate!(ints.orbs,1.0*U,fc=drop_occ,fv=drop_vir)
-                delete_integrals(ints,alg)
-                foo = convert(Array{Ta},ints["FOO"] - Diagonal(ints["FOO"]))
-                fvv = convert(Array{Ta},ints["FVV"] - Diagonal(ints["FVV"]))
-                fov = convert(Array{Ta},ints["FOV"])
-            end
+            oldC = ints.orbs["[FU]"]
 
             #update_amp(T2, newT1, newT2, foo, fov, fvv, ints, alg)
             apply_ec(newT1,newT2,ecT1,ecT2)
@@ -278,11 +265,29 @@ function BCCD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2:
             # Compute residues 
             r1 = sqrt(sum((newT1 .- T1).^2))/length(T1)
             r2 = sqrt(sum((newT2 .- T2).^2))/length(T2)
+            
+            mT1 = maximum(abs.(newT1))
+
+
+            #if there's no significant rotation, lets just skip the integral transform
+            if mT1 >= bcc_tol #&& max(r1,r2) < 1E-10#&& ite >= 3
+                do_diis ? DM_T1 = Fermi.DIIS.DIISManager{Ta,diis_prec}(size=ndiis) : nothing
+                do_diis ? DM_T2 = Fermi.DIIS.DIISManager{Ta,diis_prec}(size=ndiis) : nothing
+                bcc = true
+                X = Array([ zeros(nocc,nocc) zeros(size(T1)); newT1' zeros(nvir,nvir)])
+                U = exp(X - X')
+                Fermi.Orbitals.rotate!(ints.orbs,1.0*U,fc=drop_occ,fv=drop_vir)
+                delete_integrals(ints,alg)
+                Fermi.Orbitals.matchphase(ints.orbs,oldC)
+                foo = convert(Array{Ta},ints["FOO"] - Diagonal(ints["FOO"]))
+                fvv = convert(Array{Ta},ints["FVV"] - Diagonal(ints["FVV"]))
+                fov = convert(Array{Ta},ints["FOV"])
+            end
+
+
 
         end
         rms = max(r1,r2)
-        oldE = Ecc
-        Ecc = update_energy(newT1, newT2, fov, ints, alg)
         dE = Ecc - oldE
         main_time += t
         dE > 0 ? sign = "+" : sign = "-"
