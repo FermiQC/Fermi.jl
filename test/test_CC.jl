@@ -7,7 +7,7 @@
     wf = @energy ecCCSD;
     @test isapprox(wf.CorrelationEnergy, -75.0187251416, rtol=tol)
     wf = @energy ecCCSD(T);
-    @test isapprox(wf.CorrelationEnergy, -75.0187989952, rtol=tol)
+    @test isapprox(wf.correction, -7.382789470598815e-5, rtol=tol)
     @set ci_alg sparse
     wf = @energy ecCCSD;
     @test isapprox(wf.CorrelationEnergy, -75.0188434735, rtol=tol)
