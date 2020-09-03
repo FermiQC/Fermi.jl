@@ -80,7 +80,7 @@ function select_alg(A::String)
     try
         return implemented[A]
     catch KeyError
-        throw(Fermi.InvalidFermiOptions("Invalid RHF algorithm: $(A)"))
+        throw(Fermi.InvalidFermiOption("Invalid RHF algorithm: $(A)"))
     end
 end
 
@@ -92,7 +92,7 @@ function select_guess(A::String)
     try
         return implemented[A]
     catch KeyError
-        throw(Fermi.InvalidFermiOptions("Invalid RHF guess: $(A)"))
+        throw(Fermi.InvalidFermiOption("Invalid RHF guess: $(A)"))
     end
 end
 
@@ -167,6 +167,12 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, Alg::B, guess::CoreGuess
     C = Λ*Ct
 
     RHF(molecule, aoint, C, Λ, Alg)
+end
+
+function RHF(wfn::RHF)
+    Alg = select_alg(Fermi.CurrentOptions["scf_alg"])
+    ints = Fermi.Integrals.IntegralHelper()
+    RHF(wfn, ints, Alg)
 end
 
 function RHF(wfn::RHF, aoint::IntegralHelper, Alg::B) where B <: RHFAlgorithm 

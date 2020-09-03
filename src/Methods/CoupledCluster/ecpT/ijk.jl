@@ -1,63 +1,22 @@
-function ecRCCSDpT()
-    prec = select_precision(Fermi.CurrentOptions["precision"])
-    ecRCCSDpT{prec}()
-end
-
 function ecRCCSDpT{T}() where T <: AbstractFloat
     @output "Calling CASCI module...\n"
     # Call CASCI
     cas = Fermi.ConfigurationInteraction.CASCI{T}()
-
-    # Save reference wavefunction and process CAS data
-    refwfn = cas.ref
-    Casdata = get_cas_data(cas)
-    # Delete data that will not be used
-    cas = nothing
-
-    # Get MO Integrals
-    drop_occ = Fermi.CurrentOptions["drop_occ"]
-    drop_vir = Fermi.CurrentOptions["drop_vir"]
-    #aoint = Fermi.Integrals.ConventionalAOIntegrals() 
-    #moint = Fermi.Integrals.PhysRestrictedMOIntegrals{T}(refwfn.ndocc, refwfn.nvir, drop_occ, drop_vir, refwfn.C, aoint)
-    ints = refwfn.ints
-    # Delete AO Integrals
-    aoint = nothing
-
-    # Process CAS data to get ecT1 and ecT2 (Cluster Decomposition step)
-    frozen = Fermi.CurrentOptions["cas_frozen"]
-    active = Fermi.CurrentOptions["cas_active"] ≢ -1 ? Fermi.CurrentOptions["cas_active"] : refwfn.nvir+refwfn.ndocc-frozen
-
-    if drop_occ > frozen
-        error("\nFrozen orbitals in the CC step ($drop_occ) cannot be greater than the number of frozen orbitals in the CAS ($frozen).")
-    end
-
-    if drop_vir > (refwfn.ndocc+refwfn.nvir) - active - frozen
-        error("\nToo many virtual orbitals dropped ($drop_vir) for the active space.")
-    end
-
-    actocc = collect((1+frozen):refwfn.ndocc)
-    actvir = collect((1+refwfn.ndocc):(active+frozen))
-    @output "Active Occupied Orbitals: {}\n" actocc
-    @output "Active Virtual Orbitals:  {}\n" actvir
-
-    T1, T2, ecT1, ecT2 = cas_decomposition(Casdata, refwfn.ndocc, drop_occ, actocc, actvir, ints["FOV"], ints["OOVV"], ints["OVVV"], ints["OOOV"])
-    refdet = Casdata[1]
-    cast3 = Casdata[5]
-    Casdata = nothing
-
-    d = [i - a for i = diag(ints["FOO"]), a = diag(ints["FVV"])]
-    D = [i + j - a - b for i = diag(ints["FOO"]), j = diag(ints["FOO"]), a = diag(ints["FVV"]), b = diag(ints["FVV"])]
-
-    ecccsd = ecRCCSD{T}(refwfn, ints, T1, T2, ecT1, ecT2, d, D, CTF())
-    ecT1 = nothing
-    ecT2 = nothing
-    d = nothing
-    D = nothing
-
-    ecRCCSDpT{T}(ecccsd, ints, refdet, cast3, refwfn.ndocc, drop_occ)
+    ecRCCSDpT{T}(cas)
 end
 
-function ecRCCSDpT{T}(ecccsd::ecRCCSD, ints::IntegralHelper, ref::Determinant, casT3::Array{Determinant,1}, ndocc::Int, fcn::Int) where T <: AbstractFloat
+function ecRCCSDpT{T}(cas::Fermi.ConfigurationInteraction.CASCI) where T <: AbstractFloat
+
+    @output "Processing CAS data...\n"
+    refdet, Casdata = process_cas(cas)
+    refwfn = cas.ref
+
+    ecccsd = ecRCCSD{T}(refdet, refwfn, Casdata, CTF())
+    drop_occ = Fermi.CurrentOptions["drop_occ"]
+    ecRCCSDpT{T}(ecccsd, refwfn.ints, refdet, Casdata["C3dets"], refwfn.ndocc, drop_occ)
+end
+
+function ecRCCSDpT{T}(ecccsd::RCCSD, ints::IntegralHelper, ref::Determinant, casT3::Array{Determinant,1}, ndocc::Int, fcn::Int) where T <: AbstractFloat
 
     @output "\n   • Perturbative Triples Started\n\n"
     @output "T3 within EC active space are going to be skipped\n\n"
@@ -181,5 +140,5 @@ function ecRCCSDpT{T}(ecccsd::ecRCCSD, ints::IntegralHelper, ref::Determinant, c
     end
     @output "Final (T) contribution:   {:15.10f}\n" Et
     @output "ecCCSD(T) energy:         {:15.10f}\n" Et+ecccsd.CorrelationEnergy
-    return ecRCCSDpT{T}(ecccsd, Et)
+    return RCCSDpT{T}(ecccsd, Et)
 end
