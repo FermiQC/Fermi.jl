@@ -79,6 +79,15 @@ function matchphase(orbs,oldC)
         end
     end
 end
+"""
+call like readC(ints.orbs,Cmatrix)
+"""
+function readC(orbs,newC)
+    for oi in eachindex(orbs.cache[orbs.current].orbs)
+        o = orbs.cache[orbs.current].orbs[oi]
+        o.C .= newC[:,oi]
+    end
+end
 function topositive!(orbs::OrbDict)
     for o in orbs.cache[orbs.current].orbs
         sorted = reverse(sort(o.C,by=abs))
