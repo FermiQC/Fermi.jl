@@ -32,6 +32,11 @@ Currently, we have implementations of:
 | ecCCSD    |  Y    |  N |
 | ecCCSD(T) |  Y    |  N |
 
+
+## Documentation
+
+[DEV](https://FermiQC.github.io/Fermi.jl/dev)
+
 ## Contribute
 PR's, issues, and suggestions are very welcome! You might consider reaching out before starting
 work so that we can avoid duplication of efforts.
