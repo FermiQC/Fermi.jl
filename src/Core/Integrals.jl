@@ -102,24 +102,11 @@ function aokinetic(molecule::Molecule, basis::String)#, interconnect::Fermi.Envi
                                                      #   communicator::Fermi.Environments.NoCommunicator,
                                                      #   accelerator::Fermi.Environments.NoAccelerator)
 
-    open("/tmp/molfile.xyz","w") do molfile
-        natom = length(molecule.atoms)
-        write(molfile,"$natom\n\n")
-        write(molfile,Fermi.Geometry.get_xyz(molecule))
-    end
-
-    Lints.libint2_init()
-    mol = Lints.Molecule("/tmp/molfile.xyz")
+    mol = Fermi.Geometry.to_lints_molecule(molecule)
     bas = Lints.BasisSet(basis, mol)
-    nprim = Lints.max_nprim(bas)
-    l = Lints.max_l(bas)
-    T_engine = Lints.KineticEngine(nprim,l)
-    sz = Lints.nao(bas)
-    T = zeros(sz,sz)
-    Lints.make_2D(T,T_engine,bas)
-    Lints.libint2_finalize()
-    T_engine = nothing
-    GC.gc()
+    @lints begin
+        T = Lints.make_T(bas)
+    end
     T,bas
 end
 """
@@ -136,55 +123,42 @@ function aooverlap(molecule::Molecule, basis::String)#, interconnect::Fermi.Envi
                                                      #   communicator::Fermi.Environments.NoCommunicator,
                                                      #   accelerator::Fermi.Environments.NoAccelerator)
 
-    open("/tmp/molfile.xyz","w") do molfile
-        natom = length(molecule.atoms)
-        write(molfile,"$natom\n\n")
-        write(molfile,Fermi.Geometry.get_xyz(molecule))
-    end
-
-    Lints.libint2_init()
-    mol = Lints.Molecule("/tmp/molfile.xyz")
+    mol = Fermi.Geometry.to_lints_molecule(molecule)
     bas = Lints.BasisSet(basis, mol)
-    nprim = Lints.max_nprim(bas)
-    l = Lints.max_l(bas)
-    S_engine = Lints.OverlapEngine(nprim,l)
-    sz = Lints.nao(bas)
-    S = zeros(sz,sz)
-    Lints.make_2D(S,S_engine,bas)
-    Lints.libint2_finalize()
-    S_engine = nothing
-    GC.gc()
+    @lints begin
+        S = Lints.make_S(bas)
+    end
     S,bas
 end
-function aodipole(molecule::Molecule, basis::String)#, interconnect::Fermi.Environments.No_IC,
-                                                     #   communicator::Fermi.Environments.NoCommunicator,
-                                                     #   accelerator::Fermi.Environments.NoAccelerator)
-
-    open("/tmp/molfile.xyz","w") do molfile
-        natom = length(molecule.atoms)
-        write(molfile,"$natom\n\n")
-        write(molfile,Fermi.Geometry.get_xyz(molecule))
-    end
-
-    Lints.libint2_init()
-    mol = Lints.Molecule("/tmp/molfile.xyz")
-    bas = Lints.BasisSet(basis, mol)
-    nprim = Lints.max_nprim(bas)
-    l = Lints.max_l(bas)
-    S_engine = Lints.DipoleEngine(nprim,l)
-    sz = Lints.nao(bas)
-    S = zeros(sz,sz)
-    Lints.make_2D(S,S_engine,bas)
-    Lints.libint2_finalize()
-    S_engine = nothing
-    GC.gc()
-
-    S,bas
-end
+#function aodipole(molecule::Molecule, basis::String)#, interconnect::Fermi.Environments.No_IC,
+#                                                     #   communicator::Fermi.Environments.NoCommunicator,
+#                                                     #   accelerator::Fermi.Environments.NoAccelerator)
+#
+#    open("/tmp/molfile.xyz","w") do molfile
+#        natom = length(molecule.atoms)
+#        write(molfile,"$natom\n\n")
+#        write(molfile,Fermi.Geometry.get_xyz(molecule))
+#    end
+#
+#    Lints.libint2_init()
+#    mol = Lints.Molecule("/tmp/molfile.xyz")
+#    bas = Lints.BasisSet(basis, mol)
+#    nprim = Lints.max_nprim(bas)
+#    l = Lints.max_l(bas)
+#    S_engine = Lints.DipoleEngine(nprim,l)
+#    sz = Lints.nao(bas)
+#    S = zeros(sz,sz)
+#    Lints.make_2D(S,S_engine,bas)
+#    Lints.libint2_finalize()
+#    S_engine = nothing
+#    GC.gc()
+#
+#    S,bas
+#end
 """
-    aooverlap(molecule::Fermi.Molecule, basis::String)
+    aonuclear(molecule::Fermi.Molecule, basis::String)
 
-Computes AO basis overlap ⟨μ|V̂|ν⟩ integrals for the given basis and molecule.
+Computes AO basis nuclear attraction ⟨μ|V̂|ν⟩ integrals for the given basis and molecule.
 Can be accessed at a higher level by calling
     
     helper["V"]
@@ -195,24 +169,11 @@ function aonuclear(molecule::Molecule, basis::String)#, interconnect::Fermi.Envi
                                                      #   communicator::Fermi.Environments.NoCommunicator,
                                                      #   accelerator::Fermi.Environments.NoAccelerator)
 
-    open("/tmp/molfile.xyz","w") do molfile
-        natom = length(molecule.atoms)
-        write(molfile,"$natom\n\n")
-        write(molfile,Fermi.Geometry.get_xyz(molecule))
-    end
-
-    Lints.libint2_init()
-    mol = Lints.Molecule("/tmp/molfile.xyz")
+    mol = Fermi.Geometry.to_lints_molecule(molecule)
     bas = Lints.BasisSet(basis, mol)
-    nprim = Lints.max_nprim(bas)
-    l = Lints.max_l(bas)
-    V_engine = Lints.NuclearEngine(nprim,l,mol)
-    sz = Lints.nao(bas)
-    V = zeros(sz,sz)
-    Lints.make_2D(V,V_engine,bas)
-    Lints.libint2_finalize()
-    V_engine = nothing
-    GC.gc()
+    @lints begin
+        V = Lints.make_V(bas)
+    end
     V,bas
 end
 """
@@ -229,28 +190,11 @@ function aoeri(molecule::Molecule, basis::String)#, interconnect::Fermi.Environm
                                                  #       communicator::Fermi.Environments.NoCommunicator,
                                                  #       accelerator::Fermi.Environments.NoAccelerator)
 
-    open("/tmp/molfile.xyz","w") do molfile
-        natom = length(molecule.atoms)
-        write(molfile,"$natom\n\n")
-        write(molfile,Fermi.Geometry.get_xyz(molecule))
+    mol = Fermi.Geometry.to_lints_molecule(molecule)
+    bas = Lints.BasisSet(basis,mol)
+    @lints begin
+        I = Lints.make_ERI4(bas)
     end
-
-    Lints.libint2_init()
-    mol = Lints.Molecule("/tmp/molfile.xyz")
-    bas = Lints.BasisSet(basis, mol)
-
-    nprim = Lints.max_nprim(bas)
-    l = Lints.max_l(bas)
-    I_engines = []
-    sz = Lints.nao(bas)
-    for i in 1:Threads.nthreads()
-        push!(I_engines,Lints.ERIEngine(nprim,l))
-    end
-    I = zeros(sz,sz,sz,sz)
-    Lints.make_ERI(I,I_engines,bas)
-    Lints.libint2_finalize()
-    I_engines = nothing
-    GC.gc()
     I,bas
 end
 
@@ -266,35 +210,15 @@ Can be accessed at a higher level by calling
 where `helper` is bound to the desired molecule and basis set.
 """
 function dfaoeri(molecule::Molecule, bname::String,dfbname::String)
-    open("/tmp/molfile.xyz","w") do molfile
-        natom = length(molecule.atoms)
-        write(molfile,"$natom\n\n")
-        write(molfile,Fermi.Geometry.get_xyz(molecule))
-    end
-
-    Lints.libint2_init()
-    mol = Lints.Molecule("/tmp/molfile.xyz")
-    bas = Lints.BasisSet(bname, mol)
+    mol = Fermi.Geometry.to_lints_molecule(molecule)
+    bas = Lints.BasisSet(bname,mol)
     dfbas = Lints.BasisSet(dfbname,mol)
-
-    nprim = max(Lints.max_nprim(bas),Lints.max_nprim(dfbas))
-    l = max(Lints.max_l(bas),Lints.max_l(dfbas))
-
-    eri_engines = Any[Lints.DFEngine(nprim,l) for i=1:Threads.nthreads()]
-    sz = Lints.nao(bas)
-    dfsz = Lints.nao(dfbas)
-    J = zeros(dfsz,dfsz)
-    Pqp = zeros(dfsz,sz,sz)
-    Lints.make_b(Pqp,eri_engines,bas,dfbas)
-    Lints.make_j(J,eri_engines[1],dfbas)
-    Jh = Array(Hermitian(J)^(-1/2)) #sometimes Jh becomes complex slightly if J is not ~~exactly~~ hermitian 💔
-    Lints.libint2_finalize()
-    for i=1:Threads.nthreads()
-        eri_engines[i] = nothing
+    @lints begin
+        Pqp = Lints.make_ERI3(bas,dfbas)
+        J = Lints.make_ERI2(dfbas)
     end
-    eri_engines = nothing
-    GC.gc()
-    #Fermi.contract!(B,Pqp,Jh,"Qpq","Pqp","PQ")
+    Jh = Array(Hermitian(J)^(-1/2)) #sometimes Jh becomes complex slightly if J is not ~~exactly~~ hermitian 💔
+    sz = Lints.nao(bas)
     for p=1:sz
         for q=1:sz
             auxP = Pqp[:,p,q]
@@ -324,7 +248,7 @@ function aux_ri!(I::IntegralHelper,ri=Fermi.CurrentOptions["rifit"])
         I.bname["aux"] = try
             aux_lookup[Fermi.CurrentOptions["basis"]]
         catch KeyError
-            "augmentation-cc-pvqz-rifit" # default to large DF basis
+            "aug-cc-pvqz-rifit" # default to large DF basis
         end
     else
         I.bname["aux"] = ri
@@ -350,7 +274,7 @@ function aux_jk!(I::IntegralHelper,jk=Fermi.CurrentOptions["jkfit"])
         I.bname["aux"] = try
             aux_lookup[Fermi.CurrentOptions["basis"]]
         catch KeyError
-            "augmentation-cc-pvqz-rifit" # default to large DF basis
+            "aug-cc-pvqz-rifit" # default to large DF basis
         end
     else
         I.bname["aux"] = jk
