@@ -1,8 +1,5 @@
 [![Build Status](https://travis-ci.com/FermiQC/Fermi.jl.svg?branch=master)](https://travis-ci.com/FermiQC/Fermi.jl)
 [![Coverage Status](https://coveralls.io/repos/github/FermiQC/Fermi.jl/badge.svg?branch=master)](https://coveralls.io/github/FermiQC/Fermi.jl?branch=master)
-[![][docs-dev-img]][docs-dev-url] 
-[docs-dev-img]: https://img.shields.io/badge/docs-dev-blue.svg
-[docs-dev-url]: https://FermiQC.github.io/Fermi.jl/dev
 
 > *!!! Warning:* The API is unstable at this time. Semantic Versioning (SemVer) will be followed, so any version `v0.X.Y` is compatable with 
 `v0.X.Z`, and the differences between the two will only bring speed improvements, bugfixes, and documentation improvements.
@@ -11,6 +8,10 @@
 
 Fermi is a quantum chemistry program written in (nearly) pure Julia. This code is developed at
 the Center for Computational Quantum Chemistry at the University of Georgia. 
+
+## Documentation
+
+[DEV](https://FermiQC.github.io/Fermi.jl/dev)
 
 Fermi focuses on post Hartree--Fock methods. Currently, only restricted references are supported.
 This is intended as a research code with an ever growing collection of methods implemented in
@@ -33,9 +34,6 @@ Currently, we have implementations of:
 | ecCCSD(T) |  Y    |  N |
 
 
-## Documentation
-
-[DEV](https://FermiQC.github.io/Fermi.jl/dev)
 
 ## Contribute
 PR's, issues, and suggestions are very welcome! You might consider reaching out before starting
