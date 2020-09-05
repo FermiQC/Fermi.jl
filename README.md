@@ -1,5 +1,8 @@
 [![Build Status](https://travis-ci.com/FermiQC/Fermi.jl.svg?branch=master)](https://travis-ci.com/FermiQC/Fermi.jl)
 [![Coverage Status](https://coveralls.io/repos/github/FermiQC/Fermi.jl/badge.svg?branch=master)](https://coveralls.io/github/FermiQC/Fermi.jl?branch=master)
+[![][docs-dev-img]][docs-dev-url] 
+[docs-dev-img]: https://img.shields.io/badge/docs-dev-blue.svg
+[docs-dev-url]: https://FermiQC.github.io/Fermi.jl/dev
 
 > *!!! Warning:* The API is unstable at this time. Semantic Versioning (SemVer) will be followed, so any version `v0.X.Y` is compatable with 
 `v0.X.Z`, and the differences between the two will only bring speed improvements, bugfixes, and documentation improvements.
