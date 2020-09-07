@@ -88,8 +88,11 @@ function IntegralHelper{T}(;mol=Molecule(),orbs=Fermi.Orbitals.OrbDict()) where 
     IntegralHelper{T}(cache,bname,mol,orbs,basis,type,false)
 end
 
-function normalize(I::IntegralHelper,normalize::Bool)
+function normalize!(I::IntegralHelper,normalize::Bool)
     I.normalize=normalize
+    for entry in keys(I.cache)
+        delete!(I.cache,entry)
+    end
 end
 
 """
