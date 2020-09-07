@@ -35,6 +35,9 @@ Direct access to the underlying orbitals is possible,
     helper.orbs["O"]   # occupied orbitals, array of Orbital objects
     helper.orbs["[O]"] # occupied orbitals, collected into a matrix
 
+To obtain unit normalized (non-CCA) integrals for d and higher angular momentum functions, call
+`Fermi.Integrals.normalize(h::IntegralHelper,true)`. Note that _this will delete all current integrals_.
+
 ```@docs
 Fermi.Integrals.IntegralHelper
 ```

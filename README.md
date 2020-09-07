@@ -9,6 +9,10 @@
 Fermi is a quantum chemistry program written in (nearly) pure Julia. This code is developed at
 the Center for Computational Quantum Chemistry at the University of Georgia. 
 
+## Documentation
+
+[DEV](https://FermiQC.github.io/Fermi.jl/dev)
+
 Fermi focuses on post Hartree--Fock methods. Currently, only restricted references are supported.
 This is intended as a research code with an ever growing collection of methods implemented in
 the package itself. However, the Fermi API is designed to make high performance pilot implementations
@@ -28,6 +32,8 @@ Currently, we have implementations of:
 | ACI       |  Y    |  N |
 | ecCCSD    |  Y    |  N |
 | ecCCSD(T) |  Y    |  N |
+
+
 
 ## Contribute
 PR's, issues, and suggestions are very welcome! You might consider reaching out before starting
