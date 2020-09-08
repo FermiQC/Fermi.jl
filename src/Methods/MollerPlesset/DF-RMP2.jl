@@ -11,6 +11,7 @@ function RMP2{T}(refwfn::Fermi.HartreeFock.RHF,alg::Fermi.MollerPlesset.DF) wher
     ints.orbs.frozenvir = drop_vir
     eps = refwfn.eps
     ΔMP2 = 0.0
+    @output "TEST\n"
     @output "\tComputing MP2 with DF algorithm\n\n"
     ttotal = @elapsed begin
     @output "\tComputing and transforming integrals ...\n"

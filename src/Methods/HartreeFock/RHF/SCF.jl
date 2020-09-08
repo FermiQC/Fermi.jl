@@ -1,3 +1,5 @@
+using TensorOperations
+using LoopVectorization
 
 function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, Λ, Alg::ConventionalRHF)
     @output "Computing integrals ..."
@@ -7,9 +9,14 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, Λ,
 end
 function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, Λ, Alg::DFRHF)
     @output "Computing integrals ..."
-    t = @elapsed aoint["B"]
+    t = @elapsed begin
+        Amn = aoint["B"]
+        J = aoint["J"]
+        Qmn = Array{Float64}(undef,size(Amn))
+        Fermi.contract!(Qmn,J,Amn,0.0,1.0,1.0,"Qmn","PQ","Pmn")
+    end
     @output " done in {:>5.2f} s\n" t
-    RHF(molecule,aoint,C,aoint["B"],Λ)
+    RHF(molecule,aoint,C,Qmn,Λ)
 end
 function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI::Array{Float64}, Λ::Array)
     Fermi.HartreeFock.print_header()
@@ -51,9 +58,21 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI
     @output " Number of Virtual Spatial Orbitals:   {:5.0d}\n" nvir
 
     
-    S = Hermitian(aoint["S"])
+    S = Array(Hermitian(aoint["S"]))
+    J = aoint["J"]^-2
     T = aoint["T"]
     V = aoint["V"]
+    dfsz = size(ERI,3)
+    mn = zeros(size(S))
+    Threads.@threads for m=1:nao
+        for n=1:nao
+            s = 0.0
+            @avx for P=1:dfsz
+                s += ERI[P,m,n]
+            end
+            mn[m,n] = s
+        end
+    end
 
     # Form the density matrix from occupied subset of guess coeffs
     Co = C[:, 1:ndocc]
@@ -63,7 +82,7 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI
     eps = zeros(Float64,ndocc+nvir)
     # Build the inital Fock Matrix and diagonalize
     F = zeros(Float64,nao,nao)
-    build_fock!(F, T + V, D, ERI, Co)
+    build_fock!(F, T + V, D, ERI, Co, mn, J)
     F̃ = deepcopy(F)
     D̃ = deepcopy(D)
     @output " Guess Energy {:20.14f}\n" RHFEnergy(D,T+V,F)
@@ -92,7 +111,7 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI
             Fermi.contract!(D,Co,Co,0.0,1.0,1.0,"uv","um","vm")
 
             # Build the Fock Matrix
-            build_fock!(F, T + V, D, ERI, Co)
+            build_fock!(F, T + V, D, ERI, Co, mn, J)
             Eelec = RHFEnergy(D, T + V, F)
 
             # Compute Energy
@@ -119,6 +138,7 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI
                 damp = 0.0
                 diis = true
                 D̃ = D
+                FP = transpose(Λ)*(F*D*aoint["S"] - aoint["S"]*D*F)*Λ 
                 do_diis ? err = transpose(Λ)*(F*D*aoint["S"] - aoint["S"]*D*F)*Λ : nothing
                 do_diis ? push!(DM, F, err) : nothing
                 #do_diis && ite > diis_start ? F,_ = Fermi.DIIS.extrapolate(DM) : nothing
@@ -181,17 +201,39 @@ function build_fock!(F::Array{Float64,2}, H::Array{Float64,2}, D::Array{Float64,
     Fermi.contract!(F,D,ERI,1.0,1.0,-1.0,"mn","rs","mrns")
 end
 
-function build_fock!(F::Array{Float64,2}, H::Array{Float64,2}, D::Array{Float64,2}, ERI::Array{Float64,3}, Co;build_K=true)
+function build_fock!(F::Array{Float64,2}, H::Array{Float64,2}, D::Array{Float64,2}, ERI::Array{Float64,3}, Co, mn, J;build_K=true)
     F .= H
     sz = size(F,1)
     dfsz = size(ERI,1)
     no = size(Co,2)
-    Fp = zeros(dfsz)
-    Fermi.contract!(Fp,D,ERI,1.0,1.0,2.0,"Q","rs","Qrs")
-    Fermi.contract!(F,Fp,ERI,1.0,1.0,1.0,"mn","Q","Qmn")
+
+    Fp = Array{Float64}(undef,dfsz)
+    tj = @elapsed begin
+        Fermi.contract!(Fp,D,ERI,0.0,1.0,2.0,"Q","rs","Qrs")
+    end
+    #Fermi.contract!(F,Fp,ERI,1.0,1.0,1.0,"mn","Q","Qmn")
+
     ρ = zeros(dfsz,sz,no)
-    Fermi.contract!(ρ,Co,ERI,"Qmc","rc","Qmr")
-    Fermi.contract!(F,ρ,ρ,1.0,1.0,-1.0,"mn","Qmc","Qnc")
+    t1 = @elapsed begin
+        Threads.@threads for m=1:sz
+            for r=1:sz
+                if abs(mn[m,r])^(1/2) > 1E-10
+                s = 0.0
+                @avx for Q=1:dfsz
+                    eqmr = ERI[Q,m,r]
+                    for c=1:no
+                        ρ[Q,m,c] += Co[r,c]*eqmr
+                    end
+                    s += Fp[Q]*eqmr
+                end
+                F[m,r] += s
+                end
+            end
+        end
+        #Fermi.contract!(ρ,Co,ERI,0.0,1.0,1.0,"Qmc","rc","Qmr")
+    end
+    t2 = @elapsed Fermi.contract!(F,ρ,ρ,1.0,1.0,-1.0,"mn","Qmc","Qnc")
+    @output "{} {}\n" tj t1+t2
 end
 
 function build_J!(J::Array{Float64,2},D::Array{Float64,2},ERI::Array{Float64,3})

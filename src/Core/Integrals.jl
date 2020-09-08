@@ -172,7 +172,7 @@ function compute!(I::IntegralHelper,entry::String)
         I.cache["μ"],_ = aoeri(I.mol,I.bname["primary"],normalize=I.normalize)  
 
     elseif entry == "B" #AO basis eri. 3 index. DF
-        I.cache["B"],_ = dfaoeri(I.mol,I.bname["primary"],I.bname["aux"],normalize=I.normalize)
+        I.cache["B"],I.cache["J"] = dfaoeri(I.mol,I.bname["primary"],I.bname["aux"],normalize=I.normalize)
 
     elseif entry == "S" #AO basis overlap
         I.cache["S"],_ = aooverlap(I.mol,I.bname["primary"],normalize=I.normalize)
@@ -216,7 +216,10 @@ function compute!(I::IntegralHelper,entry::String)
         C = []
         push!(C,C1)
         push!(C,C2)
-        I.cache[entry] = transform_eri(aoint, C...)
+        _Pqp = transform_eri(aoint,C...)
+        Bqp = Array{Float64}(undef,size(_Pqp))
+        Fermi.contract!(Bqp,I.cache["J"],_Pqp,"Qqp","PQ","Pqp")
+        I.cache[entry] = Bqp
 
     elseif 'F' in entry
         df = '\'' in entry
@@ -389,7 +392,7 @@ function aoeri(molecule::Molecule, basis::String; normalize=false)#, interconnec
                                                  #       accelerator::Fermi.Environments.NoAccelerator)
 
     mol = Fermi.Geometry.to_lints_molecule(molecule)
-    bas = Lints.BasisSet(basis,mol)
+    bas = Lints.BasisSet(basis,mol) 
     @lints begin
         I = Lints.make_ERI4(bas; normalize=normalize)
     end
@@ -416,15 +419,7 @@ function dfaoeri(molecule::Molecule, bname::String,dfbname::String; normalize=fa
         J = Lints.make_ERI2(dfbas; normalize=normalize)
     end
     Jh = Array(Hermitian(J)^(-1/2)) #sometimes Jh becomes complex slightly if J is not ~~exactly~~ hermitian 💔
-    sz = Lints.nao(bas)
-    for p=1:sz
-        for q=1:sz
-            auxP = Pqp[:,p,q]
-            auxQ = Jh*auxP
-            Pqp[:,p,q] .= auxQ
-        end
-    end
-    Pqp,dfbas
+    Pqp,Jh
 end
 
 
