@@ -93,7 +93,7 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
 
     @output "\n • Most important determinants:\n\n"
 
-    for i in 1:50
+    for i in 1:(min(20,length(C)))
         @output "{:15.5f}      {}\n" C[i]  detstring(dets[i], frozen+active)
     end
     @output "\n"
@@ -173,4 +173,42 @@ function get_sparse_hamiltonian_matrix(dets::Array{Determinant,1}, h::Array{T,2}
     jvals = vcat(jvals...)
     vals  = vcat(vals...)
     return Symmetric(sparse(ivals, jvals, vals))
+end
+
+function get_1p_coupling_coefficients(dets::Array{Determinant,1}, nmo::Int)
+
+    Ndets = length(dets)
+    γ = zeros(nmo, nmo, Ndets, Ndets)
+
+    for nI in 1:Ndets
+        I = dets[nI]
+        for nJ in 1:Ndets
+            J = dets[nJ]
+
+            if αexcitation_level(I,J) > 1
+                continue
+            elseif βexcitation_level(I,J) > 1
+                continue
+            end
+
+            if αexcitation_level(I,J) == 1
+                i = αexclusive(I,J)
+                j = αexclusive(I,J)
+                p = phase(I,J)
+                γ[i,j,nI,nJ] = p
+            elseif βexcitation_level(I,J) == 1
+                i = αexclusive(I,J)
+                j = αexclusive(I,J)
+                p = phase(I,J)
+                γ[i,j,nI,nJ] = p
+                i = αexclusive(I,J)
+                j = αexclusive(I,J)
+                p = phase(I,J)
+                γ[i,j,nI,nJ] = p
+            else
+                γ[i,j,nI,nJ] = 2
+
+
+
+
 end
