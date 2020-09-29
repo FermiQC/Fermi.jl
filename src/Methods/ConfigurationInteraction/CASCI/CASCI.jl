@@ -52,20 +52,53 @@ include("ACI.jl")
 
 Compute a RCCSD wave function using Fermi.CurrentOptions data.
 """
-function CASCI()
+function CASCI(args...)
     @output "Selecting CAS precision...\n"
     prec = select_precision(Fermi.CurrentOptions["precision"])
-    CASCI{prec}()
+    alg = select_algorithm(Fermi.CurrentOptions["ci_alg"])
+    CASCI{prec}(args...,alg)
 end
+
+function CASCI{T}() where T <: AbstractFloat
+    alg = select_algorithm(Fermi.CurrentOptions["ci_alg"])
+    CASCI{T}(alg)
+end
+
+#function CASCI{T}(args...) where T <: AbstractFloat
+#    @output "Selecting CAS algorithm...\n"
+#    for x in args
+#        print(typeof(x))
+#        print("  ")
+#    end
+#    println()
+#    alg = select_algorithm(Fermi.CurrentOptions["ci_alg"])
+#    if any(i->typeof(i) <: CIAlgorithm, args)
+#        throw(Fermi.MethodArgument("Invalid arguments passed to the CASCI method. Please notice that the order matters. Check docummentation for help. You can do it interactively using `? Fermi.ConfigurationInteraction.CASCI`"))
+#    end
+#    CASCI{T}(args...,alg)
+#end
+#function CASCI(args...;alg=select_algorithm(Fermi.CurrentOptions["ci_alg"]))
+#    @output "Selecting CAS precision...\n"
+#    prec = select_precision(Fermi.CurrentOptions["precision"])
+#    CASCI{prec}(args...,alg)
+#end
+#
+#function CASCI{T}(args...;alg=select_algorithm(Fermi.CurrentOptions["ci_alg"]))where T <: AbstractFloat
+#    @output "i a iiiii\n"
+#    CASCI{T}(args...,alg)
+#end
 
 """
     Fermi.CoupledCluster.RCCSD{T}()
 
 Compute a RCCSD wave function for a given precision T (Float64 or Float32)
 """
-function CASCI{T}() where T <: AbstractFloat
-    @output "Selecting CAS Algorithm...\n"
-    alg = select_algorithm(Fermi.CurrentOptions["ci_alg"])
-    CASCI{T}(alg)
-end
+#function CASCI{T}(args...) where T <: AbstractFloat
+#    if length(args) > 0 
+#        @assert typeof(args[end]) != CIAlgorithm
+#    end
+#    @output "Selecting CAS Algorithm...\n"
+#    alg = select_algorithm(Fermi.CurrentOptions["ci_alg"])
+#    CASCI{T}(args...,alg)
+#end
 

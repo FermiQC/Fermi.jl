@@ -18,6 +18,7 @@ struct RCCSD{T} <: AbstractCCWavefunction
     CorrelationEnergy::T
     T1::_T where _T <: Fermi.AbstractTensor
     T2::_T where _T <: Fermi.AbstractTensor
+    converged::Bool
 end
 
 # Most general function. It defines the precision and call a precision-specific function
@@ -34,8 +35,14 @@ end
 function RCCSD(refwfn::RHF)
     prec = select_precision(Fermi.CurrentOptions["precision"])
     alg = select_algorithm(Fermi.CurrentOptions["cc_alg"])
-    dummy = RCCSD{prec}(0.0,0.0,Fermi.MemTensor(zeros(prec,0,0)),Fermi.MemTensor(zeros(prec,0,0,0,0)))
+    dummy = RCCSD{prec}(0.0,0.0,Fermi.MemTensor(zeros(prec,0,0)),Fermi.MemTensor(zeros(prec,0,0,0,0)),false)
     RCCSD{prec}(refwfn, dummy, alg)
+end
+
+function RCCSD(refwfn::RHF, guess::RCCSD)
+    prec = select_precision(Fermi.CurrentOptions["precision"])
+    alg = select_algorithm(Fermi.CurrentOptions["cc_alg"])
+    RCCSD{prec}(refwfn, guess, alg)
 end
 
 function RCCSD(guess::RCCSD{T}) where T <: AbstractFloat
@@ -44,7 +51,7 @@ function RCCSD(guess::RCCSD{T}) where T <: AbstractFloat
 end
 
 function RCCSD{T}() where T <: AbstractFloat
-    dummy = RCCSD{T}(0.0,0.0,Fermi.MemTensor(zeros(T,0,0)),Fermi.MemTensor(zeros(T,0,0,0,0)))
+    dummy = RCCSD{T}(0.0,0.0,Fermi.MemTensor(zeros(T,0,0)),Fermi.MemTensor(zeros(T,0,0,0,0)),false)
     RCCSD{T}(dummy)
 end
 

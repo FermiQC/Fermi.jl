@@ -6,23 +6,36 @@ Compute a RCCSD wave function using the Compiled time factorization algorithm (C
 function ecRCCSD{T}(Alg::CTF) where T <: AbstractFloat
     @output "Calling CASCI module...\n"
     # Call CASCI
-    cas = Fermi.ConfigurationInteraction.CASCI{T}()
+    cas = Fermi.ConfigurationInteraction.CASCI()
     ecRCCSD{T}(cas, Alg)
+end
+
+function ecRCCSD{T}(refwfn::Fermi.HartreeFock.RHF, Alg::CTF) where T <: AbstractFloat
+    @output "Using given RHF to compute CASCI...\n"
+    cas = Fermi.ConfigurationInteraction.CASCI(refwfn)
+    ecRCCSD{T}(cas, Alg)
+end
+
+function ecRCCSD{T}(refwfn::Fermi.HartreeFock.RHF, cas::Fermi.ConfigurationInteraction.CASCI, Alg::CTF) where T <: AbstractFloat
+
+    # Save reference wavefunction and process CAS data. Modify Ref (if not HF)
+    @output "\n\nProcessing CAS data...\n"
+    refdet, Casdata = process_cas(cas)
+    ecRCCSD{T}(refdet, refwfn, Casdata, Alg)
 end
 
 function ecRCCSD{T}(cas::Fermi.ConfigurationInteraction.CASCI, Alg::CTF) where T <: AbstractFloat
 
     # Save reference wavefunction and process CAS data. Modify Ref (if not HF)
-    @output "Processing CAS data...\n"
+    @output "\n\nProcessing CAS data...\n"
     refdet, Casdata = process_cas(cas)
     refwfn = cas.ref
     ecRCCSD{T}(refdet, refwfn, Casdata, Alg)
 end
 
-
 function ecRCCSD{T}(refdet::Determinant, refwfn::Fermi.HartreeFock.RHF, Casdata::Dict{String,Array}, Alg::CTF) where T <: AbstractFloat
     # Print intro
-    Fermi.CoupledCluster.print_header()
+#    Fermi.CoupledCluster.print_header()
     @output "\n    • Computing Externally Corrected CCSD with the ecRCCSD module.\n\n"
 
     # Recover integrals object

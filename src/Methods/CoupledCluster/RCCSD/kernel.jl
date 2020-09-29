@@ -272,13 +272,15 @@ function RCCSD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2
     @output "\nMain CCSD iterations done in {}s\n" main_time
 
     # Converged?
+    conv = false
     if abs(dE) < cc_e_conv && rms < cc_max_rms 
         @output "\n 🍾 Equations Converged!\n"
+        conv = true
     end
     @output "\n⇒ Final CCSD Energy:     {:15.10f}\n" Ecc+refwfn.energy
     @output repeat("-",80)*"\n"
 
-    return RCCSD{Ta}(Eguess, Ecc+refwfn.energy, Fermi.MemTensor(newT1), Fermi.MemTensor(newT2))
+    return RCCSD{Ta}(Eguess, Ecc+refwfn.energy, Fermi.MemTensor(newT1), Fermi.MemTensor(newT2), conv)
 end
 
 function apply_ec(T1,T2,ecT1,ecT2)
