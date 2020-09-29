@@ -28,10 +28,11 @@ end
 #
 #Compute a RCCSD wave function using Fermi.CurrentOptions data.
 #"""
-function ecRCCSD()
+function ecRCCSD(args...)
     @output "Selecting precision...\n"
     prec = select_precision(Fermi.CurrentOptions["precision"])
-    ecRCCSD{prec}()
+    alg = select_algorithm(Fermi.CurrentOptions["cc_alg"])
+    ecRCCSD{prec}(args...,alg)
 end
 
 """
@@ -39,11 +40,11 @@ end
 
 Compute a RCCSD wave function for a given precision T (Float64 or Float32)
 """
-function ecRCCSD{T}() where T <: AbstractFloat
-    @output "Selecting Algorithm...\n"
-    alg = select_algorithm(Fermi.CurrentOptions["cc_alg"])
-    ecRCCSD{T}(alg)
-end
+#function ecRCCSD{T}() where T <: AbstractFloat
+#    @output "Selecting Algorithm...\n"
+#    alg = select_algorithm(Fermi.CurrentOptions["cc_alg"])
+#    ecRCCSD{T}(alg)
+#end
 
 # kernel (loop logic) from main RCCSD
 include("../RCCSD/kernel.jl")

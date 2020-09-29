@@ -2,6 +2,7 @@
 # if user specifies option they will be overwritten
 export CurrentOptions
 export InvalidFermiOption
+export MethodArgument
 export @reset
 export @set
 export @get
@@ -197,6 +198,10 @@ struct InvalidFermiOption <: Exception
 end
 Base.showerror(io::IO, e::InvalidFermiOption) = print(io, "InvalidFermiOption: ", e.msg)
 
+struct MethodArgument <: Exception
+    msg::String
+end
+Base.showerror(io::IO, e::MethodArgument) = print(io, "MethodArgument: ", e.msg)
 #function notimplemented()
 #    @output "🚧 Not implemented yet! We're working on it 🔨 👷 \n"
 #end

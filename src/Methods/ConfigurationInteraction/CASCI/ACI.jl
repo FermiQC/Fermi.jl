@@ -16,6 +16,16 @@ function CASCI{T}(Alg::ACI) where T <: AbstractFloat
     CASCI{T}(refwfn, Alg)
 end
 
+function CASCI{T}(ci::CASCI, Alg::ACI) where T <: AbstractFloat
+    @output "Using previous CASCI wave function as starting point\n"
+    CASCI{T}(ci.ref, Alg, ci=ci)
+end
+
+function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, ci::CASCI, Alg::ACI) where T <: AbstractFloat
+    @output "Using previous CASCI wave function as starting point\n"
+    CASCI{T}(refwfn, Alg, ci=ci)
+end
+
 function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, Alg::ACI; ci = nothing) where T <: AbstractFloat
     @output "Generating Integrals for CAS computation...\n"
     #aoint = ConventionalAOIntegrals()
@@ -53,7 +63,6 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, Alg::ACI; ci = nothing) where T
 
     aoint = nothing
 
-    aoint = nothing
     CASCI{T}(refwfn, h, V, frozen, act_elec, active, Alg, ci=ci)
 end
 
@@ -79,8 +88,7 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
         P = [Determinant(zeroth, zeroth)]
         Pcoef = [1.0]
     else
-        P = deepcopy(ci.dets)
-        Pcoef = deepcopy(ci.coef)
+        P, Pcoef = coarse_grain(ci.dets, ci.coef, γ, σ)
     end
     E = refwfn.energy - refwfn.molecule.Vnuc
     ΔE = 1.0
@@ -163,24 +171,8 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
             break
         end
         oldP = Set(deepcopy(P))
-        Lenny = length(P)
-        @output "Coarse graining model space for next iteration\n"
-        # Coarse grain
-        Cperm = zeros(Int, length(P))
-        sortperm!(Cperm, Pcoef, by=i->i^2)
-        reverse!(Cperm)
+        P, Pcoef = coarse_grain(P, Pcoef, γ, σ)
 
-        Pcoef = Pcoef[Cperm]
-        P = P[Cperm]
-
-        while true
-            if sum(Pcoef[1:end-1].^2) >= 1-γ*σ
-                pop!(Pcoef)
-                pop!(P)
-            else
-                break
-            end
-        end
         @output "Final coarse grained model space size is {}\n" length(P)
         @output repeat("=",50)*"\n"
     end
@@ -697,4 +689,28 @@ groupby(f, list::Array) = begin
     push!(get!(dict, f(v), []), v)
     dict
   end
+end
+
+function coarse_grain(dets::Array{Determinant,1}, C::Array{T,1}, γ::Number, σ::Float64) where T <: AbstractFloat
+
+    #oldP = Set(deepcopy(P))
+    #Lenny = length(P)
+    @output "Coarse graining model space for next iteration\n"
+    # Coarse grain
+    Cperm = zeros(Int, length(C))
+    sortperm!(Cperm, C, by=i->i^2)
+    reverse!(Cperm)
+    
+    Pcoef = C[Cperm]
+    P = dets[Cperm]
+    
+    while true
+        if sum(Pcoef[1:end-1].^2) >= 1-γ*σ
+            pop!(Pcoef)
+            pop!(P)
+        else
+            break
+        end
+    end
+    return P, Pcoef
 end
