@@ -64,12 +64,12 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
     
     @output "\nGenerating α-strings.."
     t = @elapsed begin
-        dets = get_determinants(act_elec, active, frozen)
-        Ndets = length(dets)
+        strings, tree = get_αstrings(act_elec, active)
     end
     
     @output " done in {} seconds.\n" t
-    @output "\nNumber of Determinants: {:10d}\n" Ndets
+    @output "\nNumber of α-strings:    {:10d}\n" length(strings)
+    @output "\nNumber of Determinants: {:10d}\n" length(strings)^2
 
     @output "\nBuilding Sparse Hamiltonian..."
 end
@@ -110,3 +110,208 @@ function get_αstrings(Ne::Int, No::Int)
                                                                                     
     return string_list, intree                                                      
 end                                                                                 
+
+function get_H_fromstrings(string_list::Array{Int64,1}, intree::Array{Array{NTuple{4,Int64},1},1}, h::Array{Float64,2}, V::Array{Float64,4}, frozen::Int, Nα::Int, Nβ::Int)
+
+    # Dense H for now
+    L = length(string_list)
+    H = zeros(L^2, L^2)
+    αindex = Array{Int64,1}(undef,Nα)
+    βindex = Array{Int64,1}(undef,Nβ)
+    # Build Fock matrix
+    F = h - 0.5*[tr(V[i,:,:,j]) for i=1:size(V,1), j=1:size(V,4)]
+
+    # Get diagonal elements
+    for iα in 1:L
+        Iα = string_list[iα]
+        index!(Iα, αindex)
+        d = L*(iα-1)
+        for iβ in 1:L
+            Iβ = string_list[iβ]
+            index!(Iβ, βindex)
+            d += iβ
+
+            # One electron energy
+            E1 = 0.0
+            # Two electron energy
+            E2 = 0.0
+            for n in 1:Nα
+                N = αindex[n]
+                E1 += h[N,N]
+                for m in n:Nα
+                    M = αindex[m]
+                    E2 += V[M,M,N,N] - V[M,N,N,M]
+                end
+            end
+            for m in 1:Nα
+                M = αindex[m]
+                for n in m:Nα
+                    N = αindex[n]
+                    E2 += V[N,N,M,M] - V[N,M,M,N]
+                end
+                for n in 1:Nβ
+                    N = βindex[n]
+                    E2 += 2V[M,M,N,N]
+                end
+            end
+
+            for m in 1:Nβ
+                M = βindex[m]
+                E1 += h[M,M]
+                for n in m:Nβ
+                    N = βindex[n]
+                    E2 += V[M,M,N,N] - V[M,N,N,M]
+                    E2 += V[N,N,M,M] - V[N,M,M,N]
+                end
+            end
+            H[d,d] = E1 + 0.5*E2
+            d -= iβ
+        end
+    end
+
+
+    # Get 1-electron matrix elements
+    for iα in 1:L
+        Iα = string_list[iα]
+        index!(Iα, αindex)
+        for (i,j,p,jα) in intree[iα]
+
+            elem = h[i,j]
+            for l in αindex
+                elem -= 0.5*V[i,l,l,j]
+            end
+            elem -= 0.5*V[i,j,j,j]
+            elem = elem*p
+
+            for iβ in 1:L
+                d1 = L*(iα-1) + iβ
+                d2 = L*(jα-1) + iβ
+                H[d1,d2] += elem
+            end
+        end
+    end
+
+    for iβ in 1:L
+        Iβ = string_list[iβ]
+        index!(Iβ, αindex)
+        for (i,j,p,jβ) in intree[iβ]
+
+            elem = h[i,j]
+            for l in βindex
+                elem -= 0.5*V[i,l,l,j]
+            end
+            elem -= 0.5*V[i,j,j,j]
+            elem = elem*p
+
+            for iα in 1:L
+                d1 = L*(iα-1) + iβ
+                d2 = L*(iα-1) + jβ 
+                H[d1,d2] += elem
+            end
+        end
+    end
+
+    display(H)
+
+    #Get 2-electron matrix elements H[I,J] = 0.5*(ij,kl)*γijIK*γklKJ
+    
+    # αα excitations 
+    for iα in 1:L
+        d1 = L*(iα-1)
+        # Kα is a single excitation from Iα 
+        for (i,j,p1,kα) in intree[iα]
+            # Jα is a single excitation from Kα
+            for (k,l,p2,jα) in intree[kα]
+                d2 = L*(jα-1)
+                elem = 0.5*p1*p2*V[i,j,k,l]
+                # Skip diagonal (I=J) cases for now
+                if jα == iα
+                    continue
+                end
+                # I, K and J have the same beta string
+                for iβ in 1:L
+                    d1 += iβ
+                    d2 += iβ
+                    H[d1,d2] += elem
+                    d1 -= iβ
+                    d2 -= iβ
+                end
+            end
+        end
+    end
+
+    # ββ excitations 
+    for iβ in 1:L
+        # Kβ is a single excitation from Iβ
+        for (i,j,p1,kβ) in intree[iβ]
+            # Jβ is a single excitation from Kβ
+            for (k,l,p2,jβ) in intree[kβ]
+                elem = 0.5*p1*p2*V[i,j,k,l]
+                # Skip diagonal (I=J) cases for now
+                if jβ == iβ
+                    continue
+                end
+                # I, K and J have the same alpha string
+                for iα in 1:L
+                    d = L*(iα-1)
+                    d1 += d + iβ
+                    d2 += d + jβ
+                    H[d1,d2] += elem
+                end
+            end
+        end
+    end
+
+
+    #αβ excitations
+    for iα in 1:L
+        # Kβ is equal Iβ    
+        for iβ in 1:L
+            # Kα is a single excitation from Iα and it is equal Jα
+            for (i,j,p1,kα) in intree[iα]
+                # Jβ is a single excitation from Kβ = Iβ
+                for (k,l,p2,jβ) in intree[iβ]
+                    elem = 0.5*p1*p2*V[i,j,k,l]
+                    d1 = L*(iα-1) + iβ
+                    d2 = L*(kα-1) + jβ
+                    H[d1,d2] += elem
+                end
+            end
+        end
+    end
+
+    #βα excitations
+    for iβ in 1:L
+        # Kα is equal Iα
+        for iα in 1:L
+            # Kβ is a single excitation from Iβ
+            for (i,j,p1,kβ) in intree[iβ]
+                # Jα is a single excitation from Iα
+                for (k,l,p2,jα) in intree[iα]
+                    elem = 0.5*p1*p2*V[i,j,k,l]
+                    d1 = L*(iα-1) + iβ
+                    d2 = L*(jα-1) + kβ
+                    H[d1,d2] += elem
+                end
+            end
+        end
+    end
+
+    return H
+end
+
+function index!(X::Int, Out::Array{Int64,1})
+
+    i = 1
+    e = 1
+
+    # Loop until 'e' electrons are found. Be careful! If 'e' is greater than
+    # the number of electrons you will get stuck!
+    while e ≤ length(Out)
+        if 1<<(i-1) & X ≠ 0
+            Out[e] = i
+            e += 1
+        end
+        i += 1
+    end
+end
