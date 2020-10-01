@@ -1,3 +1,4 @@
+using TensorOperations
 using Combinatorics
 using SparseArrays
 using ArnoldiMethod
@@ -75,6 +76,16 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
 
     t = @elapsed H = get_sparse_hamiltonian_matrix(dets, h, V, Fermi.CurrentOptions["cas_cutoff"])
     @output " done in {:5.5f} seconds.\n" t
+
+
+    @output "\nBuilding γ Sparse Hamiltonian..."
+
+    t = @elapsed build_H_fullγ(dets, h, V)
+    @output " done in {:5.5f} seconds.\n" t
+
+
+
+
     @output "Hamiltonian Matrix size: {:10.3f} Mb\n" Base.summarysize(H)/10^6
 
     @output "Diagonalizing Hamiltonian for {:3d} eigenvalues..." nroot
@@ -178,6 +189,10 @@ end
 function get_1p_coupling_coefficients(dets::Array{Determinant,1}, nmo::Int)
 
     Ndets = length(dets)
+    Nα = sum(αlist(dets[1]))
+    Nβ = sum(αlist(dets[1]))
+    αind = Array{Int64,1}(undef,Nα)
+    βind = Array{Int64,1}(undef,Nβ)    
     γ = zeros(nmo, nmo, Ndets, Ndets)
 
     for nI in 1:Ndets
@@ -185,30 +200,51 @@ function get_1p_coupling_coefficients(dets::Array{Determinant,1}, nmo::Int)
         for nJ in 1:Ndets
             J = dets[nJ]
 
-            if αexcitation_level(I,J) > 1
-                continue
-            elseif βexcitation_level(I,J) > 1
+            if I.α == J.α && I.β == J.β
+                αindex!(I,αind) 
+                βindex!(I,βind) 
+
+                for i=αind
+                    γ[i,i,nI,nI] += 1
+                end
+
+                for i=βind
+                    γ[i,i,nI,nI] += 1
+                end
+            end
+
+            αexc = αexcitation_level(I,J)
+            if αexc > 1
                 continue
             end
 
-            if αexcitation_level(I,J) == 1
-                i = αexclusive(I,J)
-                j = αexclusive(I,J)
+            βexc = βexcitation_level(I,J)
+            if αexc + βexc > 1
+                continue
+            end
+
+            if αexc == 1
+                i, = αexclusive(I,J)
+                j, = αexclusive(J,I)
                 p = phase(I,J)
                 γ[i,j,nI,nJ] = p
-            elseif βexcitation_level(I,J) == 1
-                i = αexclusive(I,J)
-                j = αexclusive(I,J)
+
+            elseif βexc == 1
+                i, = βexclusive(I,J)
+                j, = βexclusive(J,I)
                 p = phase(I,J)
                 γ[i,j,nI,nJ] = p
-                i = αexclusive(I,J)
-                j = αexclusive(I,J)
-                p = phase(I,J)
-                γ[i,j,nI,nJ] = p
-            else
-                γ[i,j,nI,nJ] = 2
+            end
+        end
+    end
 
+    return γ
+end
 
-
-
+function build_H_fullγ(dets, h, V)
+    nmo = size(h,1)
+    γ = get_1p_coupling_coefficients(dets, nmo)
+    δ = [i==j ? 1 : 0 for i = 1:nmo, j = 1:nmo]
+    @tensoropt H[I,J] := γ[i,j,I,J]*h[i,j] + 0.5*γ[i,j,I,K]*γ[k,l,K,J]*V[i,j,k,l] - 0.5*γ[i,l,I,J]*δ[j,k]*V[i,j,k,l]
+    return H
 end
