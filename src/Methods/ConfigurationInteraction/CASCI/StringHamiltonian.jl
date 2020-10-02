@@ -1,78 +1,78 @@
-using TensorOperations
-using Combinatorics
-using SparseArrays
-using ArnoldiMethod
-
-function CASCI{T}(Alg::SparseHamiltonian) where T <: AbstractFloat
-
-    @output "Getting molecule...\n"
-    molecule = Molecule()
-    @output "Computing AO Integrals...\n"
-    #aoint = ConventionalAOIntegrals()
-
-    @output "Calling RHF module...\n"
-    refwfn = Fermi.HartreeFock.RHF(molecule)
-    ints = refwfn.ints
-
-    @output "Transforming Integrals for CAS computation...\n"
-    # Read options
-    frozen = Fermi.CurrentOptions["cas_frozen"]
-
-    nmo = refwfn.ndocc + refwfn.nvir
-
-    act_elec = 2*(refwfn.ndocc - frozen)
-
-    if act_elec < 0
-        error("\nInvalid number of frozen orbitals ($frozen) for $(2*refwfn.ndocc) electrons.")
-    end
-
-    # Active = -1 means FCI, with frozen
-    if Fermi.CurrentOptions["cas_active"] == -1
-        active = nmo - frozen
-    else
-        active = Fermi.CurrentOptions["cas_active"]
-    end
-
-    if active ≤ act_elec/2
-        error("\nNumber of active orbitals ($active) too small for $(act_elec) active electrons")
-    end
-
-    if active+frozen > nmo
-        error("\nNumber of active ($active) and frozen orbitals ($frozen) greater than number of orbitals ($nmo)")
-    end
-
-    s = 1:(frozen+active)
-    h = T.(Fermi.Integrals.transform_fock(ints["T"] + ints["V"], ints.orbs["FU"][s], ints.orbs["FU"][s]))
-    V = T.(Fermi.Integrals.transform_eri(ints["μ"], ints.orbs["FU"][s], ints.orbs["FU"][s], ints.orbs["FU"][s], ints.orbs["FU"][s]))
-
-    aoint = nothing
-    CASCI{T}(refwfn, h, V, frozen, act_elec, active, Alg)
-end
-
-function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, frozen::Int, act_elec::Int, active::Int, Alg::SparseHamiltonian) where T <: AbstractFloat
-
-    # Print intro
-    Fermi.ConfigurationInteraction.print_header()
-    @output "\n    • Computing FCI with the SparseMatrix algorithm.\n\n"
-
-    nroot = Fermi.CurrentOptions["cas_nroot"]
-
-    @output "\n →  ACTIVE SPACE\n"
-    @output "Frozen Orbitals:  {:3d}\n" frozen
-    @output "Active Electrons: {:3d}\n" act_elec
-    @output "Active Orbitals:  {:3d}\n" active
-    
-    @output "\nGenerating α-strings.."
-    t = @elapsed begin
-        strings, tree = get_αstrings(act_elec, active)
-    end
-    
-    @output " done in {} seconds.\n" t
-    @output "\nNumber of α-strings:    {:10d}\n" length(strings)
-    @output "\nNumber of Determinants: {:10d}\n" length(strings)^2
-
-    @output "\nBuilding Sparse Hamiltonian..."
-end
+#using TensorOperations
+#using Combinatorics
+#using SparseArrays
+#using ArnoldiMethod
+#
+#function CASCI{T}(Alg::SparseHamiltonian) where T <: AbstractFloat
+#
+#    @output "Getting molecule...\n"
+#    molecule = Molecule()
+#    @output "Computing AO Integrals...\n"
+#    #aoint = ConventionalAOIntegrals()
+#
+#    @output "Calling RHF module...\n"
+#    refwfn = Fermi.HartreeFock.RHF(molecule)
+#    ints = refwfn.ints
+#
+#    @output "Transforming Integrals for CAS computation...\n"
+#    # Read options
+#    frozen = Fermi.CurrentOptions["cas_frozen"]
+#
+#    nmo = refwfn.ndocc + refwfn.nvir
+#
+#    act_elec = 2*(refwfn.ndocc - frozen)
+#
+#    if act_elec < 0
+#        error("\nInvalid number of frozen orbitals ($frozen) for $(2*refwfn.ndocc) electrons.")
+#    end
+#
+#    # Active = -1 means FCI, with frozen
+#    if Fermi.CurrentOptions["cas_active"] == -1
+#        active = nmo - frozen
+#    else
+#        active = Fermi.CurrentOptions["cas_active"]
+#    end
+#
+#    if active ≤ act_elec/2
+#        error("\nNumber of active orbitals ($active) too small for $(act_elec) active electrons")
+#    end
+#
+#    if active+frozen > nmo
+#        error("\nNumber of active ($active) and frozen orbitals ($frozen) greater than number of orbitals ($nmo)")
+#    end
+#
+#    s = 1:(frozen+active)
+#    h = T.(Fermi.Integrals.transform_fock(ints["T"] + ints["V"], ints.orbs["FU"][s], ints.orbs["FU"][s]))
+#    V = T.(Fermi.Integrals.transform_eri(ints["μ"], ints.orbs["FU"][s], ints.orbs["FU"][s], ints.orbs["FU"][s], ints.orbs["FU"][s]))
+#
+#    aoint = nothing
+#    CASCI{T}(refwfn, h, V, frozen, act_elec, active, Alg)
+#end
+#
+#function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, frozen::Int, act_elec::Int, active::Int, Alg::SparseHamiltonian) where T <: AbstractFloat
+#
+#    # Print intro
+#    Fermi.ConfigurationInteraction.print_header()
+#    @output "\n    • Computing FCI with the SparseMatrix algorithm.\n\n"
+#
+#    nroot = Fermi.CurrentOptions["cas_nroot"]
+#
+#    @output "\n →  ACTIVE SPACE\n"
+#    @output "Frozen Orbitals:  {:3d}\n" frozen
+#    @output "Active Electrons: {:3d}\n" act_elec
+#    @output "Active Orbitals:  {:3d}\n" active
+#    
+#    @output "\nGenerating α-strings.."
+#    t = @elapsed begin
+#        strings, tree = get_αstrings(act_elec, active)
+#    end
+#    
+#    @output " done in {} seconds.\n" t
+#    @output "\nNumber of α-strings:    {:10d}\n" length(strings)
+#    @output "\nNumber of Determinants: {:10d}\n" length(strings)^2
+#
+#    @output "\nBuilding Sparse Hamiltonian..."
+#end
 
 function get_αstrings(Ne::Int, No::Int)                                             
                                                                                     
@@ -104,85 +104,28 @@ function get_αstrings(Ne::Int, No::Int)
                 address, = findall(x->x==newp, string_list)            
                 push!(branch, (i,a,phase,address))                                  
             end                                                                     
+            push!(branch, (i,i,1,idx))
         end                                                                         
+        idx += 1
         push!(intree, branch)                                                       
     end                                                                             
                                                                                     
     return string_list, intree                                                      
 end                                                                                 
 
-function get_H_fromstrings(string_list::Array{Int64,1}, intree::Array{Array{NTuple{4,Int64},1},1}, h::Array{Float64,2}, V::Array{Float64,4}, frozen::Int, Nα::Int, Nβ::Int)
+function get_H_fromstrings(string_list::Array{Int64,1}, intree::Array{Array{NTuple{4,Int64},1},1}, h::Array{Float64,2}, V::Array{Float64,4}, frozen::Int)
 
     # Dense H for now
     L = length(string_list)
     H = zeros(L^2, L^2)
-    αindex = Array{Int64,1}(undef,Nα)
-    βindex = Array{Int64,1}(undef,Nβ)
-    # Build Fock matrix
+
+    # Build Aux matrix
     F = h - 0.5*[tr(V[i,:,:,j]) for i=1:size(V,1), j=1:size(V,4)]
-
-    # Get diagonal elements
-    for iα in 1:L
-        Iα = string_list[iα]
-        index!(Iα, αindex)
-        d = L*(iα-1)
-        for iβ in 1:L
-            Iβ = string_list[iβ]
-            index!(Iβ, βindex)
-            d += iβ
-
-            # One electron energy
-            E1 = 0.0
-            # Two electron energy
-            E2 = 0.0
-            for n in 1:Nα
-                N = αindex[n]
-                E1 += h[N,N]
-                for m in n:Nα
-                    M = αindex[m]
-                    E2 += V[M,M,N,N] - V[M,N,N,M]
-                end
-            end
-            for m in 1:Nα
-                M = αindex[m]
-                for n in m:Nα
-                    N = αindex[n]
-                    E2 += V[N,N,M,M] - V[N,M,M,N]
-                end
-                for n in 1:Nβ
-                    N = βindex[n]
-                    E2 += 2V[M,M,N,N]
-                end
-            end
-
-            for m in 1:Nβ
-                M = βindex[m]
-                E1 += h[M,M]
-                for n in m:Nβ
-                    N = βindex[n]
-                    E2 += V[M,M,N,N] - V[M,N,N,M]
-                    E2 += V[N,N,M,M] - V[N,M,M,N]
-                end
-            end
-            H[d,d] = E1 + 0.5*E2
-            d -= iβ
-        end
-    end
-
 
     # Get 1-electron matrix elements
     for iα in 1:L
-        Iα = string_list[iα]
-        index!(Iα, αindex)
         for (i,j,p,jα) in intree[iα]
-
-            elem = h[i,j]
-            for l in αindex
-                elem -= 0.5*V[i,l,l,j]
-            end
-            elem -= 0.5*V[i,j,j,j]
-            elem = elem*p
-
+            elem = p*F[i,j]
             for iβ in 1:L
                 d1 = L*(iα-1) + iβ
                 d2 = L*(jα-1) + iβ
@@ -192,17 +135,10 @@ function get_H_fromstrings(string_list::Array{Int64,1}, intree::Array{Array{NTup
     end
 
     for iβ in 1:L
-        Iβ = string_list[iβ]
-        index!(Iβ, αindex)
+        delem = 0.0
         for (i,j,p,jβ) in intree[iβ]
 
-            elem = h[i,j]
-            for l in βindex
-                elem -= 0.5*V[i,l,l,j]
-            end
-            elem -= 0.5*V[i,j,j,j]
-            elem = elem*p
-
+            elem = p*F[i,j]
             for iα in 1:L
                 d1 = L*(iα-1) + iβ
                 d2 = L*(iα-1) + jβ 
@@ -210,8 +146,6 @@ function get_H_fromstrings(string_list::Array{Int64,1}, intree::Array{Array{NTup
             end
         end
     end
-
-    display(H)
 
     #Get 2-electron matrix elements H[I,J] = 0.5*(ij,kl)*γijIK*γklKJ
     
@@ -224,11 +158,6 @@ function get_H_fromstrings(string_list::Array{Int64,1}, intree::Array{Array{NTup
             for (k,l,p2,jα) in intree[kα]
                 d2 = L*(jα-1)
                 elem = 0.5*p1*p2*V[i,j,k,l]
-                # Skip diagonal (I=J) cases for now
-                if jα == iα
-                    continue
-                end
-                # I, K and J have the same beta string
                 for iβ in 1:L
                     d1 += iβ
                     d2 += iβ
@@ -248,20 +177,19 @@ function get_H_fromstrings(string_list::Array{Int64,1}, intree::Array{Array{NTup
             for (k,l,p2,jβ) in intree[kβ]
                 elem = 0.5*p1*p2*V[i,j,k,l]
                 # Skip diagonal (I=J) cases for now
-                if jβ == iβ
-                    continue
-                end
+                #if jβ == iβ
+                #    continue
+                #end
                 # I, K and J have the same alpha string
                 for iα in 1:L
                     d = L*(iα-1)
-                    d1 += d + iβ
-                    d2 += d + jβ
+                    d1 = d + iβ
+                    d2 = d + jβ
                     H[d1,d2] += elem
                 end
             end
         end
     end
-
 
     #αβ excitations
     for iα in 1:L
@@ -271,47 +199,32 @@ function get_H_fromstrings(string_list::Array{Int64,1}, intree::Array{Array{NTup
             for (i,j,p1,kα) in intree[iα]
                 # Jβ is a single excitation from Kβ = Iβ
                 for (k,l,p2,jβ) in intree[iβ]
-                    elem = 0.5*p1*p2*V[i,j,k,l]
+                    elem = p1*p2*V[i,j,k,l]
                     d1 = L*(iα-1) + iβ
                     d2 = L*(kα-1) + jβ
                     H[d1,d2] += elem
                 end
             end
         end
+
     end
 
-    #βα excitations
-    for iβ in 1:L
-        # Kα is equal Iα
-        for iα in 1:L
-            # Kβ is a single excitation from Iβ
-            for (i,j,p1,kβ) in intree[iβ]
-                # Jα is a single excitation from Iα
-                for (k,l,p2,jα) in intree[iα]
-                    elem = 0.5*p1*p2*V[i,j,k,l]
-                    d1 = L*(iα-1) + iβ
-                    d2 = L*(jα-1) + kβ
-                    H[d1,d2] += elem
-                end
-            end
-        end
-    end
+    ##βα excitations
+    #for iβ in 1:L
+    #    # Kα is equal Iα
+    #    for iα in 1:L
+    #        # Kβ is a single excitation from Iβ
+    #        for (i,j,p1,kβ) in intree[iβ]
+    #            # Jα is a single excitation from Iα
+    #            for (k,l,p2,jα) in intree[iα]
+    #                elem = 0.5*p1*p2*V[i,j,k,l]
+    #                d1 = L*(iα-1) + iβ
+    #                d2 = L*(jα-1) + kβ
+    #                H[d1,d2] += elem
+    #            end
+    #        end
+    #    end
+    #end
 
     return H
-end
-
-function index!(X::Int, Out::Array{Int64,1})
-
-    i = 1
-    e = 1
-
-    # Loop until 'e' electrons are found. Be careful! If 'e' is greater than
-    # the number of electrons you will get stuck!
-    while e ≤ length(Out)
-        if 1<<(i-1) & X ≠ 0
-            Out[e] = i
-            e += 1
-        end
-        i += 1
-    end
 end
