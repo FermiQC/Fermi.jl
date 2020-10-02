@@ -72,19 +72,34 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
     @output " done in {} seconds.\n" t
     @output "\nNumber of Determinants: {:10d}\n" Ndets
 
-    @output "\nBuilding Sparse Hamiltonian..."
+    #@output "\nBuilding Sparse Hamiltonian..."
 
-    t = @elapsed H = get_sparse_hamiltonian_matrix(dets, h, V, Fermi.CurrentOptions["cas_cutoff"])
+    #t = @elapsed H = get_sparse_hamiltonian_matrix(dets, h, V, Fermi.CurrentOptions["cas_cutoff"])
+    #@output " done in {:5.5f} seconds.\n" t
+
+    #@output "Hamiltonian Matrix size: {:10.3f} Mb\n" Base.summarysize(H)/10^6
+
+    #@output "Diagonalizing Hamiltonian for {:3d} eigenvalues..." nroot
+    #t = @elapsed begin
+    #    decomp, history = partialschur(H, nev=nroot, tol=10^-12, which=LM())
+    #    λ, ϕ = partialeigen(decomp)
+    #end
+    #@output " done in {:5.5f} seconds.\n" t
+    #@output "\n Final FCI Energy: {:15.10f}\n" λ[1]+refwfn.molecule.Vnuc
+
+
+    @output "\nBuilding Strings..."
+
+    t = @elapsed begin
+        sts,tree = get_αstrings(act_elec, active)
+    end
     @output " done in {:5.5f} seconds.\n" t
-
-
-    @output "\nBuilding γ Sparse Hamiltonian..."
-
-    t = @elapsed build_H_fullγ(dets, h, V)
+    @output "\nBuilding Hamiltonian..."
+    t = @elapsed begin
+        H = sparse(get_H_fromstrings(sts, tree, h, V, frozen))
+        droptol!(H,10^-12) 
+    end
     @output " done in {:5.5f} seconds.\n" t
-
-
-
 
     @output "Hamiltonian Matrix size: {:10.3f} Mb\n" Base.summarysize(H)/10^6
 
@@ -245,6 +260,10 @@ function build_H_fullγ(dets, h, V)
     nmo = size(h,1)
     γ = get_1p_coupling_coefficients(dets, nmo)
     δ = [i==j ? 1 : 0 for i = 1:nmo, j = 1:nmo]
-    @tensoropt H[I,J] := γ[i,j,I,J]*h[i,j] + 0.5*γ[i,j,I,K]*γ[k,l,K,J]*V[i,j,k,l] - 0.5*γ[i,l,I,J]*δ[j,k]*V[i,j,k,l]
+    @tensoropt H[I,J] := γ[i,j,I,J]*h[i,j] - 0.5*γ[i,l,I,J]*δ[j,k]*V[i,j,k,l]
+    println("One piece")
+    display(H)
+    @tensoropt H[I,J] += + 0.5*γ[i,j,I,K]*γ[k,l,K,J]*V[i,j,k,l]
+    println("Final")
     return H
 end

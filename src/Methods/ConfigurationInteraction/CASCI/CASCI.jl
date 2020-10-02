@@ -44,6 +44,7 @@ end
 include("DetOperations.jl")
 include("MatrixElement.jl")
 include("SparseHamiltonian.jl")
+include("StringHamiltonian.jl")
 include("ACI.jl")
 
 # Most general function. It defines the precision and call a precision-specific function
