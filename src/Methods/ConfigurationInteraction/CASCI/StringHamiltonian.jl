@@ -127,25 +127,26 @@ function get_H_fromstrings(string_list::Array{Int64,1}, intree::Array{Array{NTup
         for (i,j,p,jα) in intree[iα]
             elem = p*F[i,j]
             for iβ in 1:L
-                d1 = L*(iα-1) + iβ
-                d2 = L*(jα-1) + iβ
-                H[d1,d2] += elem
+                d1α = L*(iα-1) + iβ
+                d2α = L*(jα-1) + iβ
+                d1β = L*(iβ-1) + iα
+                d2β = L*(iβ-1) + jα
+                H[d1α,d2α] += elem
+                H[d1β,d2β] += elem
             end
         end
     end
 
-    for iβ in 1:L
-        delem = 0.0
-        for (i,j,p,jβ) in intree[iβ]
-
-            elem = p*F[i,j]
-            for iα in 1:L
-                d1 = L*(iα-1) + iβ
-                d2 = L*(iα-1) + jβ 
-                H[d1,d2] += elem
-            end
-        end
-    end
+    #for iβ in 1:L
+    #    for (i,j,p,jβ) in intree[iβ]
+    #        elem = p*F[i,j]
+    #        for iα in 1:L
+    #            d1 = L*(iα-1) + iβ
+    #            d2 = L*(iα-1) + jβ 
+    #            H[d1,d2] += elem
+    #        end
+    #    end
+    #end
 
     #Get 2-electron matrix elements H[I,J] = 0.5*(ij,kl)*γijIK*γklKJ
     
@@ -176,11 +177,6 @@ function get_H_fromstrings(string_list::Array{Int64,1}, intree::Array{Array{NTup
             # Jβ is a single excitation from Kβ
             for (k,l,p2,jβ) in intree[kβ]
                 elem = 0.5*p1*p2*V[i,j,k,l]
-                # Skip diagonal (I=J) cases for now
-                #if jβ == iβ
-                #    continue
-                #end
-                # I, K and J have the same alpha string
                 for iα in 1:L
                     d = L*(iα-1)
                     d1 = d + iβ
@@ -191,7 +187,7 @@ function get_H_fromstrings(string_list::Array{Int64,1}, intree::Array{Array{NTup
         end
     end
 
-    #αβ excitations
+    #αβ excitations (ij|kl) <Iα|Eij|Kα> <Kβ|Ekl|Jβ> δ(Iβ|Kβ) δ(Kα|Jα)
     for iα in 1:L
         # Kβ is equal Iβ    
         for iβ in 1:L
@@ -206,25 +202,7 @@ function get_H_fromstrings(string_list::Array{Int64,1}, intree::Array{Array{NTup
                 end
             end
         end
-
     end
-
-    ##βα excitations
-    #for iβ in 1:L
-    #    # Kα is equal Iα
-    #    for iα in 1:L
-    #        # Kβ is a single excitation from Iβ
-    #        for (i,j,p1,kβ) in intree[iβ]
-    #            # Jα is a single excitation from Iα
-    #            for (k,l,p2,jα) in intree[iα]
-    #                elem = 0.5*p1*p2*V[i,j,k,l]
-    #                d1 = L*(iα-1) + iβ
-    #                d2 = L*(jα-1) + kβ
-    #                H[d1,d2] += elem
-    #            end
-    #        end
-    #    end
-    #end
 
     return H
 end
