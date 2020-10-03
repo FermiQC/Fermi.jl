@@ -260,10 +260,6 @@ function build_H_fullγ(dets, h, V)
     nmo = size(h,1)
     γ = get_1p_coupling_coefficients(dets, nmo)
     δ = [i==j ? 1 : 0 for i = 1:nmo, j = 1:nmo]
-    @tensoropt H[I,J] := γ[i,j,I,J]*h[i,j] - 0.5*γ[i,l,I,J]*δ[j,k]*V[i,j,k,l]
-    println("One piece")
-    display(H)
-    @tensoropt H[I,J] += + 0.5*γ[i,j,I,K]*γ[k,l,K,J]*V[i,j,k,l]
-    println("Final")
+    @tensoropt H[I,J] := γ[i,j,I,J]*h[i,j] - 0.5*γ[i,l,I,J]*δ[j,k]*V[i,j,k,l] + 0.5*γ[i,j,I,K]*γ[k,l,K,J]*V[i,j,k,l]
     return H
 end
