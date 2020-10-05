@@ -3,5 +3,5 @@ timer.dat
 *.swo
 docs/build/
 output.dat
-
+Manifest.toml
 
