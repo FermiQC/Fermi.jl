@@ -7,7 +7,10 @@
 # Fermi
 
 Fermi is a quantum chemistry program written in (nearly) pure Julia. This code is developed at
-the Center for Computational Quantum Chemistry at the University of Georgia. 
+the [Center for Computational Quantum Chemistry](https://github.com/CCQC) at the University of Georgia under the supervision 
+of [Dr. Justin M. Turney](https://github.com/jturney) and Prof. Henry F. Schaefer.
+
+This work is supported by the U.S. National Science Foundation under grant number CHE-1661604.
 
 ## Documentation
 
