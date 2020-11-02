@@ -1,79 +1,3 @@
-#using TensorOperations
-#using Combinatorics
-#using SparseArrays
-#using ArnoldiMethod
-#
-#function CASCI{T}(Alg::SparseHamiltonian) where T <: AbstractFloat
-#
-#    @output "Getting molecule...\n"
-#    molecule = Molecule()
-#    @output "Computing AO Integrals...\n"
-#    #aoint = ConventionalAOIntegrals()
-#
-#    @output "Calling RHF module...\n"
-#    refwfn = Fermi.HartreeFock.RHF(molecule)
-#    ints = refwfn.ints
-#
-#    @output "Transforming Integrals for CAS computation...\n"
-#    # Read options
-#    frozen = Fermi.CurrentOptions["cas_frozen"]
-#
-#    nmo = refwfn.ndocc + refwfn.nvir
-#
-#    act_elec = 2*(refwfn.ndocc - frozen)
-#
-#    if act_elec < 0
-#        error("\nInvalid number of frozen orbitals ($frozen) for $(2*refwfn.ndocc) electrons.")
-#    end
-#
-#    # Active = -1 means FCI, with frozen
-#    if Fermi.CurrentOptions["cas_active"] == -1
-#        active = nmo - frozen
-#    else
-#        active = Fermi.CurrentOptions["cas_active"]
-#    end
-#
-#    if active ≤ act_elec/2
-#        error("\nNumber of active orbitals ($active) too small for $(act_elec) active electrons")
-#    end
-#
-#    if active+frozen > nmo
-#        error("\nNumber of active ($active) and frozen orbitals ($frozen) greater than number of orbitals ($nmo)")
-#    end
-#
-#    s = 1:(frozen+active)
-#    h = T.(Fermi.Integrals.transform_fock(ints["T"] + ints["V"], ints.orbs["FU"][s], ints.orbs["FU"][s]))
-#    V = T.(Fermi.Integrals.transform_eri(ints["μ"], ints.orbs["FU"][s], ints.orbs["FU"][s], ints.orbs["FU"][s], ints.orbs["FU"][s]))
-#
-#    aoint = nothing
-#    CASCI{T}(refwfn, h, V, frozen, act_elec, active, Alg)
-#end
-#
-#function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, frozen::Int, act_elec::Int, active::Int, Alg::SparseHamiltonian) where T <: AbstractFloat
-#
-#    # Print intro
-#    Fermi.ConfigurationInteraction.print_header()
-#    @output "\n    • Computing FCI with the SparseMatrix algorithm.\n\n"
-#
-#    nroot = Fermi.CurrentOptions["cas_nroot"]
-#
-#    @output "\n →  ACTIVE SPACE\n"
-#    @output "Frozen Orbitals:  {:3d}\n" frozen
-#    @output "Active Electrons: {:3d}\n" act_elec
-#    @output "Active Orbitals:  {:3d}\n" active
-#    
-#    @output "\nGenerating α-strings.."
-#    t = @elapsed begin
-#        strings, tree = get_αstrings(act_elec, active)
-#    end
-#    
-#    @output " done in {} seconds.\n" t
-#    @output "\nNumber of α-strings:    {:10d}\n" length(strings)
-#    @output "\nNumber of Determinants: {:10d}\n" length(strings)^2
-#
-#    @output "\nBuilding Sparse Hamiltonian..."
-#end
-
 function get_αstrings(Ne::Int, No::Int)                                             
                                                                                     
     Nae = Int(Ne/2)                                                                 
@@ -113,96 +37,228 @@ function get_αstrings(Ne::Int, No::Int)
     return string_list, intree                                                      
 end                                                                                 
 
+mutable struct SparseH
+    ivals::Array{Int64,1}
+    jvals::Array{Int64,1}
+    vals::Array{Float64,1}
+    size::Int64
+end
+
+function addtoindex!(SH::SparseH, val::Float64, i::Int, j::Int)
+
+    if abs(val) < 10^-12
+        return nothing
+    end
+
+    for x in 1:SH.size
+        if (i,j) == (SH.ivals[x], SH.jvals[x])
+            SH.vals[x] += val
+            return nothing
+        end
+    end
+
+    push!(SH.ivals, i)
+    push!(SH.jvals, j)
+    push!(SH.vals, val)
+    SH.size += 1
+end
+
 function get_H_fromstrings(string_list::Array{Int64,1}, intree::Array{Array{NTuple{4,Int64},1},1}, h::Array{Float64,2}, V::Array{Float64,4}, frozen::Int)
 
-    # Dense H for now
+    ## Dense H for now
+    println("")
     L = length(string_list)
-    H = zeros(L^2, L^2)
+
+    @time begin
+        H = zeros(L^2, L^2)
+    end
+    #H = SparseH([],[],[],0)
+    #println("yay")
+
+    ## Start with diagonal elements
+    #@time begin
+    #    ijvals = [(i,i) for i = 1:L^2]
+
+    #    # Single excitations
+    #    for s1 in 1:L
+    #        for (i,j,p,excs1) in intree[s1]
+    #            if i == j
+    #                continue
+    #            end
+    #            for s2 in 1:L
+    #                # α → α excitation
+    #                d1 = L*(s1-1) + s2
+    #                d2 = L*(excs1-1) + s2
+    #                if !((d1,d2) in ijvals)
+    #                    push!(ijvals, (d1,d2))
+    #                end
+
+    #                # β → β excitation
+    #                d1 = L*(s2-1) + s1
+    #                d2 = L*(s2-1) + excs1
+    #                if !((d1,d2) in ijvals)
+    #                    push!(ijvals, (d1,d2))
+    #                end
+    #            end
+    #        end
+    #    end
+
+    #    # Double excitations (same spin)
+    #    for s1 in 1:L
+    #        for (i,j,p,excs1) in intree[s1]
+    #            if i == j
+    #                continue
+    #            end
+    #            for (k,l,p,dexcs1) in intree[s1]
+    #                if k == l
+    #                    continue
+    #                end
+    #                for s2 in 1: L
+    #                    # αα → αα excitation
+    #                    d1 = L*(s1-1) + s2
+    #                    d2 = L*(dexcs1) + s2
+    #                    if !((d1,d2) in ijvals)
+    #                        push!(ijvals, (d1,d2))
+    #                    end
+
+    #                    # ββ → ββ excitation
+    #                    d1 = L*(s2-1) + s1
+    #                    d2 = L*(s2-1) + dexcs1
+    #                    if !((d1,d2) in ijvals)
+    #                        push!(ijvals, (d1,d2))
+    #                    end
+    #                end
+    #            end
+    #        end
+    #    end
+
+    #    # Double excitation (different spin)
+    #    for iα in 1:L
+    #        # Kβ is equal Iβ    
+    #        for iβ in 1:L
+    #            d1 = L*(iα-1) + iβ
+    #            # Kα is a single excitation from Iα and it is equal Jα
+    #            for (i,j,p1,kα) in intree[iα]
+    #                if i == j
+    #                    continue
+    #                end
+    #                # Jβ is a single excitation from Kβ = Iβ
+    #                for (k,l,p2,jβ) in intree[iβ]
+    #                if k == l
+    #                    continue
+    #                end
+    #                    d2 = L*(kα-1) + jβ
+    #                    if !((d1,d2) in ijvals)
+    #                        push!(ijvals, (d1,d2))
+    #                    end
+    #                end
+    #            end
+    #        end
+    #    end
+
+    #    ivals = [ijvals[i][1] for i = 1:length(ijvals)]
+    #    jvals = [ijvals[j][1] for j = 1:length(ijvals)]
+    #    ijvals = 0.0
+    #    vals = zeros(length(ivals))
+    #    H = sparse(ivals, jvals, vals)
+    #end
 
     # Build Aux matrix
     F = h - 0.5*[tr(V[i,:,:,j]) for i=1:size(V,1), j=1:size(V,4)]
 
+
+    @time begin 
     # Get 1-electron matrix elements
     for iα in 1:L
+        _d1α = L*(iα-1)
         for (i,j,p,jα) in intree[iα]
+            _d2α = L*(jα-1)
             elem = p*F[i,j]
             for iβ in 1:L
-                d1α = L*(iα-1) + iβ
-                d2α = L*(jα-1) + iβ
-                d1β = L*(iβ-1) + iα
-                d2β = L*(iβ-1) + jα
+                _xβ = L*(iβ-1)
+
+                d1α = _d1α + iβ
+                d2α = _d2α + iβ
+                d1β = _xβ + iα
+                d2β = _xβ + jα
+
                 H[d1α,d2α] += elem
                 H[d1β,d2β] += elem
+                #addtoindex!(H, elem, d1α, d2α)
+                #addtoindex!(H, elem, d1β, d2β)
+                #push!(ivals, d1α)
+                #push!(jvals, d2α)
+                #push!(vals, elem)
+                #push!(ivals, d1β)
+                #push!(jvals, d2β)
+                #push!(vals, elem)
             end
         end
     end
-
-    #for iβ in 1:L
-    #    for (i,j,p,jβ) in intree[iβ]
-    #        elem = p*F[i,j]
-    #        for iα in 1:L
-    #            d1 = L*(iα-1) + iβ
-    #            d2 = L*(iα-1) + jβ 
-    #            H[d1,d2] += elem
-    #        end
-    #    end
-    #end
+    end
 
     #Get 2-electron matrix elements H[I,J] = 0.5*(ij,kl)*γijIK*γklKJ
-    
+    @time begin 
     # αα excitations 
     for iα in 1:L
-        d1 = L*(iα-1)
+        _d1α = L*(iα-1)
         # Kα is a single excitation from Iα 
         for (i,j,p1,kα) in intree[iα]
             # Jα is a single excitation from Kα
             for (k,l,p2,jα) in intree[kα]
-                d2 = L*(jα-1)
+                _d2α = L*(jα-1)
                 elem = 0.5*p1*p2*V[i,j,k,l]
                 for iβ in 1:L
-                    d1 += iβ
-                    d2 += iβ
-                    H[d1,d2] += elem
-                    d1 -= iβ
-                    d2 -= iβ
+
+                    d1α = _d1α + iβ
+                    d2α = _d2α + iβ
+
+                    H[d1α,d2α] += elem
+                    #addtoindex!(H, elem, d1α, d2α)
+
+                    _xβ = L*(iβ-1)
+                    d1β = _xβ + iα
+                    d2β = _xβ + jα
+
+                    H[d1β,d2β] += elem
+                    #addtoindex!(H, elem, d1β, d2β)
+
+                    #push!(ivals, d1α)
+                    #push!(jvals, d2α)
+                    #push!(vals, elem)
+
+                    #push!(ivals, d1β)
+                    #push!(jvals, d2β)
+                    #push!(vals, elem)
                 end
             end
         end
     end
-
-    # ββ excitations 
-    for iβ in 1:L
-        # Kβ is a single excitation from Iβ
-        for (i,j,p1,kβ) in intree[iβ]
-            # Jβ is a single excitation from Kβ
-            for (k,l,p2,jβ) in intree[kβ]
-                elem = 0.5*p1*p2*V[i,j,k,l]
-                for iα in 1:L
-                    d = L*(iα-1)
-                    d1 = d + iβ
-                    d2 = d + jβ
-                    H[d1,d2] += elem
-                end
-            end
-        end
     end
 
     #αβ excitations (ij|kl) <Iα|Eij|Kα> <Kβ|Ekl|Jβ> δ(Iβ|Kβ) δ(Kα|Jα)
+    @time begin
     for iα in 1:L
         # Kβ is equal Iβ    
         for iβ in 1:L
+            d1 = L*(iα-1) + iβ
             # Kα is a single excitation from Iα and it is equal Jα
             for (i,j,p1,kα) in intree[iα]
                 # Jβ is a single excitation from Kβ = Iβ
                 for (k,l,p2,jβ) in intree[iβ]
                     elem = p1*p2*V[i,j,k,l]
-                    d1 = L*(iα-1) + iβ
                     d2 = L*(kα-1) + jβ
                     H[d1,d2] += elem
+                    #addtoindex!(H, elem, d1, d2)
+
+                    #push!(ivals, d1)
+                    #push!(jvals, d2)
+                    #push!(vals, elem)
                 end
             end
         end
     end
+    end
 
-    return H
+    return sparse(H)
 end

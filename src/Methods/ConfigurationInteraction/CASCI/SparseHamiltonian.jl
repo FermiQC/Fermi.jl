@@ -68,14 +68,42 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
         dets = get_determinants(act_elec, active, frozen)
         Ndets = length(dets)
     end
-    
+
     @output " done in {} seconds.\n" t
     @output "\nNumber of Determinants: {:10d}\n" Ndets
 
-    #@output "\nBuilding Sparse Hamiltonian..."
+    @output "\nBuilding Sparse Hamiltonian..."
 
-    #t = @elapsed H = get_sparse_hamiltonian_matrix(dets, h, V, Fermi.CurrentOptions["cas_cutoff"])
-    #@output " done in {:5.5f} seconds.\n" t
+    t = @elapsed H = get_sparse_hamiltonian_matrix(dets, h, V, Fermi.CurrentOptions["cas_cutoff"])
+    #H =  build_H_fullγ(dets, h, V)
+    @output " done in {:5.5f} seconds.\n" t
+
+    @output "Hamiltonian Matrix size: {:10.3f} Mb\n" Base.summarysize(H)/10^6
+
+    @output "Diagonalizing Hamiltonian for {:3d} eigenvalues..." nroot
+    t = @elapsed begin
+        decomp, history = partialschur(H, nev=nroot, tol=10^-12, which=LM())
+        λ, ϕ = partialeigen(decomp)
+        #λ = eigvals(Array(H))
+        #ϕ = eigvecs(Array(H))
+    end
+    @output " done in {:5.5f} seconds.\n" t
+    @output "\n Final FCI Energy: {:15.10f}\n" λ[1]+refwfn.molecule.Vnuc
+    println("\n")
+    println(λ)
+
+    #@output "\nBuilding Strings..."
+
+    ##t = @elapsed begin
+    #    sts,tree = get_αstrings(act_elec, active)
+    ##end
+    ##@output " done in {:5.5f} seconds.\n" t
+    #@output "\nBuilding Hamiltonian..."
+    ##t = @elapsed begin
+    #    H = sparse(get_H_fromstrings(sts, tree, h, V, frozen))
+    #    droptol!(H,10^-12) 
+    ##end
+    ##@output " done in {:5.5f} seconds.\n" t
 
     #@output "Hamiltonian Matrix size: {:10.3f} Mb\n" Base.summarysize(H)/10^6
 
@@ -86,30 +114,6 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
     #end
     #@output " done in {:5.5f} seconds.\n" t
     #@output "\n Final FCI Energy: {:15.10f}\n" λ[1]+refwfn.molecule.Vnuc
-
-
-    @output "\nBuilding Strings..."
-
-    t = @elapsed begin
-        sts,tree = get_αstrings(act_elec, active)
-    end
-    @output " done in {:5.5f} seconds.\n" t
-    @output "\nBuilding Hamiltonian..."
-    t = @elapsed begin
-        H = sparse(get_H_fromstrings(sts, tree, h, V, frozen))
-        droptol!(H,10^-12) 
-    end
-    @output " done in {:5.5f} seconds.\n" t
-
-    @output "Hamiltonian Matrix size: {:10.3f} Mb\n" Base.summarysize(H)/10^6
-
-    @output "Diagonalizing Hamiltonian for {:3d} eigenvalues..." nroot
-    t = @elapsed begin
-        decomp, history = partialschur(H, nev=nroot, tol=10^-12, which=LM())
-        λ, ϕ = partialeigen(decomp)
-    end
-    @output " done in {:5.5f} seconds.\n" t
-    @output "\n Final FCI Energy: {:15.10f}\n" λ[1]+refwfn.molecule.Vnuc
 
     # Sort dets by importance
     C = ϕ[:,1]
