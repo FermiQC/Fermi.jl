@@ -26,17 +26,19 @@ function select_precision(A::String)
     try
         return implemented[A]
     catch KeyError
-        throw(Fermi.InvalidFermiOptions("Invalid precision: $(A)"))
+        throw(Fermi.InvalidFermiOption("Invalid precision: $(A)"))
     end
 end
 
 function select_algorithm(A::String)
     implemented = Dict{Any,Any}("sparse" => SparseHamiltonian(),
-                                "aci" => ACI())
+                                "aci" => ACI(),
+                                "xaci" => xACI(),
+                                "olsen" => OlsenMethod())
     try
         return implemented[A]
     catch KeyError
-        throw(Fermi.InvalidFermiOptions("Invalid CI algorithm: $(A)"))
+        throw(Fermi.InvalidFermiOption("Invalid CI algorithm: $(A)"))
     end
 end
 
@@ -45,7 +47,9 @@ include("DetOperations.jl")
 include("MatrixElement.jl")
 include("SparseHamiltonian.jl")
 include("StringHamiltonian.jl")
+include("OlsenMethod.jl")
 include("ACI.jl")
+include("xACI.jl")
 
 # Most general function. It defines the precision and call a precision-specific function
 """

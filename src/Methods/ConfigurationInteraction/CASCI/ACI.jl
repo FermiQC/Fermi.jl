@@ -167,7 +167,7 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
             break
         end
         ite += 1
-        if ite > 100
+        if ite > 30
             break
         end
         oldP = Set(deepcopy(P))
@@ -592,15 +592,17 @@ function ϵI(Fdets, P::Array{Determinant,1}, Pcoef::Array{Float64,1}, Ep::T, h::
     return Fe
 end
 
-function update_model_space(M::Array{Determinant,1}, h::Array{T,2}, V::Array{T,4}) where T <: AbstractFloat
+function update_model_space(M::Array{Determinant,1}, h::Array{T,2}, V::Array{T,4}; complete=true) where T <: AbstractFloat
 
-    M = complete_set(M)
+    if complete
+        M = complete_set(M)
+    end
     H = get_sparse_hamiltonian_matrix(M, h, V, Fermi.CurrentOptions["cas_cutoff"])
 
     @output "Diagonalizing Hamiltonian...\n"
-    decomp, history = partialschur(H, nev=1, tol=10^-12, which=LM())
-    λ, ϕ = partialeigen(decomp)
-    #λ,ϕ = eigen(Array(H))
+    #decomp, history = partialschur(H, nev=1, tol=10^-12, which=LM())
+    #λ, ϕ = partialeigen(decomp)
+    λ,ϕ = eigen(Array(H))
 
     return λ[1], ϕ[:,1], deepcopy(M)
 end

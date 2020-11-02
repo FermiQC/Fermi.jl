@@ -75,28 +75,30 @@ function process_cas(cas::Fermi.ConfigurationInteraction.CASCI)
     dets = cas.dets
     Ccas = cas.coef
 
-    ref = Determinant(repeat("1",cas.ref.ndocc),repeat("1",cas.ref.ndocc))
-    z = 0
-    acf = 0
+    ref = dets[1]
+    C0 = Ccas[1]
+    zeroth = repeat('1', cas.ref.ndocc)*repeat('0', cas.ref.nvir)
+    hf = Fermi.ConfigurationInteraction.Determinant(zeroth, zeroth)
+    if dets[1] == hf
+        @output "Dominant configuration is the RHF determinant.\n"
+    elseif dets[2] == hf
+        @output "Second most important configuration is the RHF determinant.\n"
+        ref = dets[2]
+        C0 = Ccas[2]
+    else
+        error("Dominant determinant is not the RHF.")
+    end
 
     @output "   • CAS Composition\n"
     @output "Excitation      N of dets\n"
+    z = 0
+    acf = 0
     while acf < length(dets)
         x = count(d->excitation_level(ref,d)==z, dets)
         @output "{}           {}\n" z x
         z += 1
         acf += x
     end
-
-    ref = dets[1]
-    zeroth = repeat('1', cas.ref.ndocc)*repeat('0', cas.ref.nvir)
-    hf = Fermi.ConfigurationInteraction.Determinant(zeroth, zeroth)
-    if ref == hf
-        @output "Dominant configuration is the RHF determinant.\n"
-    else
-        error("Dominant determinant is not the RHF.")
-    end
-    C0 = Ccas[1]
 
     # Intermediate Normalization
     Ccas = Ccas ./ C0
