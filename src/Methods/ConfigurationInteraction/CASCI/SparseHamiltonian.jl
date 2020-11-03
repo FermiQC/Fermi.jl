@@ -89,8 +89,6 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
     end
     @output " done in {:5.5f} seconds.\n" t
     @output "\n Final FCI Energy: {:15.10f}\n" λ[1]+refwfn.molecule.Vnuc
-    println("\n")
-    println(λ)
 
     #@output "\nBuilding Strings..."
 
