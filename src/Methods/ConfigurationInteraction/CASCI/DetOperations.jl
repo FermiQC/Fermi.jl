@@ -6,10 +6,15 @@ Constructor function for Determinant object using strings.
 """
 function Determinant(α::String, β::String)
     
-    αint = parse(Int, reverse(α); base=2) 
-    βint = parse(Int, reverse(β); base=2) 
-
-    Determinant(αint, βint)
+    #try
+    #    αint = parse(Int64, reverse(α); base=2) 
+    #    βint = parse(Int64, reverse(β); base=2) 
+    #    return Determinant(αint, βint)
+    #catch OverflowError
+        αint = parse(Int128, reverse(α); base=2) 
+        βint = parse(Int128, reverse(β); base=2) 
+        return Determinant(αint, βint)
+    #end
 end
 
 """
@@ -132,8 +137,19 @@ not in the second
 """
 function first_αexclusive(D1::Determinant, D2::Determinant)
 
-    x = D1.α ⊻ D2.α & D1.α
+    return first_αexclusive(D1.α, D2.α)
+end
+
+function first_αexclusive(D1α::Int64, D2α::Int64)
+
+    x = D1α ⊻ D2α & D1α
     return 64 - leading_zeros(x&(~(x-1)))
+end
+
+function first_αexclusive(D1α::Integer, D2α::Integer)
+
+    x = D1α ⊻ D2α & D1α
+    return 128 - leading_zeros(x&(~(x-1)))
 end
 
 """
@@ -143,11 +159,24 @@ Compare two determinants to return the index of the second alpha electron presen
 not in the second
 """
 function second_αexclusive(D1::Determinant, D2::Determinant)
+    
+    return second_αexclusive(D1.α, D2.α)
+end
 
-    x = D1.α ⊻ D2.α & D1.α
+function second_αexclusive(D1α::Int64, D2α::Int64)
+
+    x = D1α ⊻ D2α & D1α
     y = 64 - leading_zeros(x&(~(x-1)))
     x = x &(~(2^(y-1)))
     w = 64 - leading_zeros(x&(~(x-1)))
+end
+
+function second_αexclusive(D1α::Integer, D2α::Integer)
+
+    x = D1α ⊻ D2α & D1α
+    y = 128 - leading_zeros(x&(~(x-1)))
+    x = x &(~(2^(y-1)))
+    w = 128 - leading_zeros(x&(~(x-1)))
 end
 
 """
@@ -180,9 +209,19 @@ not in the second
 """
 function first_βexclusive(D1::Determinant, D2::Determinant)
 
-    x = D1.β ⊻ D2.β & D1.β
-    return 64 - leading_zeros(x&(~(x-1)))
+    return first_βexclusive(D1.β, D2.β)
+end
 
+function first_βexclusive(D1β::Int64, D2β::Int64)
+
+    x = D1β ⊻ D2β & D1β
+    return 64 - leading_zeros(x&(~(x-1)))
+end
+
+function first_βexclusive(D1β::Integer, D2β::Integer)
+
+    x = D1β ⊻ D2β & D1β
+    return 128 - leading_zeros(x&(~(x-1)))
 end
 
 """
@@ -192,11 +231,24 @@ Compare two determinants to return the index of the second beta electron present
 not in the second
 """
 function second_βexclusive(D1::Determinant, D2::Determinant)
+    
+    return second_βexclusive(D1.β, D2.β)
+end
 
-    x = D1.β ⊻ D2.β & D1.β
+function second_βexclusive(D1β::Int64, D2β::Int64)
+
+    x = D1β ⊻ D2β & D1β
     y = 64 - leading_zeros(x&(~(x-1)))
     x = x &(~(2^(y-1)))
     w = 64 - leading_zeros(x&(~(x-1)))
+end
+
+function second_βexclusive(D1β::Integer, D2β::Integer)
+
+    x = D1β ⊻ D2β & D1β
+    y = 128 - leading_zeros(x&(~(x-1)))
+    x = x &(~(2^(y-1)))
+    w = 128 - leading_zeros(x&(~(x-1)))
 end
 
 """
