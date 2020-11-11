@@ -72,13 +72,22 @@ function process_cas(cas::Fermi.ConfigurationInteraction.CASCI)
     # CI coefficients are intermediate normalized.
     # The reference determinant is taken as the HF one.
 
+    det_size = 
+    if Fermi.CurrentOptions["det_size"] == 64
+        Int64
+    elseif Fermi.CurrentOptions["det_size"] == 128
+        Int128
+    else
+        throw(Fermi.InvalidFermiOption("Invalid determinant representation $(Fermi.CurrentOptions["det_size"])"))
+    end
+
     dets = cas.dets
     Ccas = cas.coef
 
     ref = dets[1]
     C0 = Ccas[1]
     zeroth = repeat('1', cas.ref.ndocc)*repeat('0', cas.ref.nvir)
-    hf = Fermi.ConfigurationInteraction.Determinant(zeroth, zeroth)
+    hf = Fermi.ConfigurationInteraction.Determinant(zeroth, zeroth; precision=det_size)
     if dets[1] == hf
         @output "Dominant configuration is the RHF determinant.\n"
     elseif dets[2] == hf
@@ -86,6 +95,12 @@ function process_cas(cas::Fermi.ConfigurationInteraction.CASCI)
         ref = dets[2]
         C0 = Ccas[2]
     else
+        println(hf)
+        println(typeof(hf.α))
+        println(typeof(hf.β))
+        println(dets[1])
+        println(typeof(dets[1].α))
+        println(typeof(dets[1].β))
         error("Dominant determinant is not the RHF.")
     end
 

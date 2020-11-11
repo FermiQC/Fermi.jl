@@ -8,8 +8,11 @@ function get_casT1!(T1::Array{Float64,2}, Ccas::Array{Float64,1}, dets::Array{De
 
         if αexc == 1 && βexc == 0
 
-            i, = αexclusive(ref, D)     
-            a, = αexclusive(D, ref) 
+            #i, = αexclusive(ref, D)     
+            #a, = αexclusive(D, ref) 
+
+            i = first_αexclusive(ref, D)     
+            a = first_αexclusive(D, ref) 
 
             p = phase(ref, D)
 
@@ -30,10 +33,15 @@ function get_casT2!(T1::Array{Float64,2}, T2::Array{Float64,4}, Ccas::Array{Floa
 
         if αexc == 1 && βexc == 1
 
-            i, = αexclusive(ref, D) 
-            j, = βexclusive(ref, D)
-            a, = αexclusive(D, ref) 
-            b, = βexclusive(D, ref) 
+            #i, = αexclusive(ref, D) 
+            #j, = βexclusive(ref, D)
+            #a, = αexclusive(D, ref) 
+            #b, = βexclusive(D, ref) 
+
+            i = first_αexclusive(ref, D) 
+            j = first_βexclusive(ref, D)
+            a = first_αexclusive(D, ref) 
+            b = first_βexclusive(D, ref) 
 
             p = phase(ref, D)
 

@@ -130,6 +130,15 @@ end
 
 function get_determinants(Ne::Int, No::Int, nfrozen::Int)
 
+    det_size = 
+    if Fermi.CurrentOptions["det_size"] == 64
+        Int64
+    elseif Fermi.CurrentOptions["det_size"] == 128
+        Int128
+    else
+        throw(Fermi.InvalidFermiOption("Invalid determinant representation $(Fermi.CurrentOptions["det_size"])"))
+    end
+
     Nae = Int(Ne/2)
     occ_string = repeat('1', nfrozen)
 
@@ -143,7 +152,7 @@ function get_determinants(Ne::Int, No::Int, nfrozen::Int)
         for βstring in perms
             α = occ_string*join(αstring)
             β = occ_string*join(βstring)
-            _det = Determinant(α, β)
+            _det = Determinant(α, β;precision=det_size)
             push!(dets[Threads.threadid()], _det)
         end
         end #Threads.@spawn
