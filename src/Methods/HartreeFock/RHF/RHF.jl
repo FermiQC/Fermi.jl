@@ -190,7 +190,6 @@ function RHF(wfn::RHF, aoint::IntegralHelper, Alg::B) where B <: RHFAlgorithm
     Ca = reshape(Ca, (nbf, nbf))
 
     Sbb = aoint["S"]
-    println(typeof(Sbb))
     S = Hermitian(aoint["S"])
     Λ = Array(S^(-1/2))
 

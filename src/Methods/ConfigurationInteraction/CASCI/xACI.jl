@@ -84,10 +84,20 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
     @output "Active Orbitals:           {:3d}\n" active
     @output "Total number of Orbitals:  {:3d}\n" nmo
 
+    # Determine precision used to represent determinants
+    det_size = 
+    if Fermi.CurrentOptions["det_size"] == 64
+        Int64
+    elseif Fermi.CurrentOptions["det_size"] == 128
+        Int128
+    else
+        throw(Fermi.InvalidFermiOption("Invalid determinant representation $(Fermi.CurrentOptions["det_size"])"))
+    end
+
     # Start reference space as HF
     zeroth = repeat('1', frozen)*repeat('1', Int(act_elec/2))
     if ci == nothing
-        P = [Determinant(zeroth, zeroth)]
+        P = [Determinant(zeroth, zeroth, precision=det_size)]
         Pcoef = [1.0]
     else
         P, Pcoef = coarse_grain(ci.dets, ci.coef, γ, σ)
@@ -99,6 +109,7 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
     @output repeat("=",50)*"\n"
     Nα = Int(act_elec/2)
     Nβ = Int(act_elec/2)
+    Nelec = refwfn.ndocc
     Lenny = length(P)
     M = nothing
     ϵsum = nothing
@@ -222,8 +233,6 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
     @output "\n∑ C^2 = {:3.2f}\n" acum
 
     # Generate all single and double excitations from these selected determinants. Excitations are taken in the full orbital space.
-    full_range = (frozen+1):size(h,1)
-    println(full_range)
     ζSD = get_fois(ζdets, Nα, Nβ, (frozen+1):nmo)
 
     # Remove determinants that are already in the model space
@@ -232,12 +241,15 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
     @output "Size of the ζ-FOIS space: {:5.5d}\n" length(ζSD)
 
     for d in ζSD
-        if sum(αlist(d)) != Nα
+        if sum(αlist(d)) != Nelec
             println("Invalid det found")
+            println(αlist(d))
             showdet(d)
             @assert 1==2
-        elseif sum(βlist(d)) != Nβ
-            println("Invalid det found")
+        elseif sum(βlist(d)) != Nelec
+            println("iInvalid det found")
+            println(βlist(d))
+            println(typeof(d.β))
             showdet(d)
             @assert 1==2
         end
@@ -282,114 +294,108 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
     M = vcat(P, ζSD)
     @output "Final extended space size: {}\n" length(M)
     @output "Performing final diagonalization...\n"
-    t = @elapsed E, Pcoef, P = update_model_space(M, h, V, complete=false)
+    t = @elapsed E, Pcoef, P = update_model_space(M, h, V)
     @output "Final xACI({}) Energy           {:15.10f}\n" σ E + refwfn.molecule.Vnuc
     @output "Final xACI({}) Energy+PT2       {:15.10f}\n" σ E + refwfn.molecule.Vnuc + ϵest
     
     CASCI{T}(refwfn, E+refwfn.molecule.Vnuc, P, Pcoef)
 end
 
-@fastmath @inbounds function get_fois(dets::Array{Determinant,1}, Nα::Int, Nβ::Int, act_range::UnitRange{Int64})::Array{Determinant,1}
-
-    # Check for the needed type of Int
-    if length(act_range) < 60
-        one = Int64(1)
-    else
-        one = Int128(1)
-    end
-
-    # Ns must be > 1
-    αoccs = [zeros(Int,Nα) for i=1:Threads.nthreads()]
-    βoccs = [zeros(Int,Nβ) for i=1:Threads.nthreads()]
-    αunos = [zeros(Int,length(act_range)-Nα) for i=1:Threads.nthreads()]
-    βunos = [zeros(Int,length(act_range)-Nβ) for i=1:Threads.nthreads()]
-
-    lf_per_det = (length(αoccs[1])^2*length(αunos[1])^2 + length(αoccs[1])*length(αunos[1])
-                       + length(βoccs[1])^2*length(βunos[1])^2 + length(βoccs[1])*length(βunos[1])
-                       + length(αoccs[1])*length(αunos[1])*length(βoccs[1])*length(βunos[1]))
-    lf_crit = Int(round(length(dets)*lf_per_det))
-    fois = [Determinant(0,0) for i=1:lf_crit]
-    @sync for _DI in eachindex(dets)
-        Threads.@spawn begin
-            d = dets[_DI]
-            DI = (_DI-1)*lf_per_det + 1
-            ct = 0
-            id = Threads.threadid()
-            αocc = αoccs[id]
-            βocc = βoccs[id]
-            αuno = αunos[id]
-            βuno = βunos[id]
-            αocc!(d, act_range, αocc)
-            βocc!(d, act_range, βocc)
-            αvir!(d, act_range, αuno)
-            βvir!(d, act_range, βuno)
-            # Get αα -> αα excitations
-            for i in αocc
-                for a in αuno
-                    newα = (d.α ⊻ (one<<(i-1))) | (one<<(a-1)) 
-                    _det = Determinant(newα, d.β)
-                    fois[DI+ct] = _det
-                    ct += 1
-                    for j in αocc
-                        if j ≥ i
-                            break
-                        end
-                        for b in αuno
-                            if b ≥ a
-                                break
-                            end
-                            newestα = (newα ⊻ (one<<(j-1))) | (one<<(b-1)) 
-                            _det = Determinant(newestα, d.β)
-                            fois[DI+ct] = _det
-                            ct += 1
-                        end
-                    end
-                end
-            end
-            # Get ββ -> ββ excitations
-            for i in βocc
-                for a in βuno
-                    newβ = (d.β ⊻ (one<<(i-1))) | (one<<(a-1)) 
-                    _det = Determinant(d.α, newβ)
-                    fois[DI+ct] = _det
-                    ct += 1
-                    for j in βocc
-                        if j ≥ i
-                            break
-                        end
-                        for b in βuno
-                            if b ≥ a
-                                break
-                            end
-                            newestβ = (newβ ⊻ (one<<(j-1))) | (one<<(b-1)) 
-                            _det = Determinant(d.α, newestβ)
-                            fois[DI+ct] = _det
-                            ct += 1
-                        end
-                    end
-                end
-            end
-            # Get αβ -> αβ excitations
-            for i in αocc
-                for a in αuno
-                    for j in βocc
-                        for b in βuno
-                            newα = (d.α ⊻ (one<<(i-1))) | (one<<(a-1)) 
-                            newβ = (d.β ⊻ (one<<(j-1))) | (one<<(b-1)) 
-                            _det = Determinant(newα, newβ)
-                            fois[DI+ct] = _det
-                            ct += 1
-                        end
-                    end
-                end
-            end
-        end #Threads.@spawn 
-    end
-    fois = filter((x)->x != Determinant(0,0), fois)
-    fois = Set(fois)
-    setdiff!(fois, dets)
-    fois = collect(fois)
-    return fois end
+#@fastmath @inbounds function get_fois(dets::Array{Determinant,1}, Nα::Int, Nβ::Int, act_range::UnitRange{Int64})::Array{Determinant,1}
+#
+#    one = typeof(dets[1].α)(1)
+#    # Ns must be > 1
+#    αoccs = [zeros(Int,Nα) for i=1:Threads.nthreads()]
+#    βoccs = [zeros(Int,Nβ) for i=1:Threads.nthreads()]
+#    αunos = [zeros(Int,length(act_range)-Nα) for i=1:Threads.nthreads()]
+#    βunos = [zeros(Int,length(act_range)-Nβ) for i=1:Threads.nthreads()]
+#
+#    lf_per_det = (length(αoccs[1])^2*length(αunos[1])^2 + length(αoccs[1])*length(αunos[1])
+#                       + length(βoccs[1])^2*length(βunos[1])^2 + length(βoccs[1])*length(βunos[1])
+#                       + length(αoccs[1])*length(αunos[1])*length(βoccs[1])*length(βunos[1]))
+#    lf_crit = Int(round(length(dets)*lf_per_det))
+#    fois = [Determinant(0,0) for i=1:lf_crit]
+#    @sync for _DI in eachindex(dets)
+#        Threads.@spawn begin
+#            d = dets[_DI]
+#            DI = (_DI-1)*lf_per_det + 1
+#            ct = 0
+#            id = Threads.threadid()
+#            αocc = αoccs[id]
+#            βocc = βoccs[id]
+#            αuno = αunos[id]
+#            βuno = βunos[id]
+#            αocc!(d, act_range, αocc)
+#            βocc!(d, act_range, βocc)
+#            αvir!(d, act_range, αuno)
+#            βvir!(d, act_range, βuno)
+#            # Get αα -> αα excitations
+#            for i in αocc
+#                for a in αuno
+#                    newα = (d.α ⊻ (one<<(i-1))) | (one<<(a-1)) 
+#                    _det = Determinant(newα, d.β)
+#                    fois[DI+ct] = _det
+#                    ct += 1
+#                    for j in αocc
+#                        if j ≥ i
+#                            break
+#                        end
+#                        for b in αuno
+#                            if b ≥ a
+#                                break
+#                            end
+#                            newestα = (newα ⊻ (one<<(j-1))) | (one<<(b-1)) 
+#                            _det = Determinant(newestα, d.β)
+#                            fois[DI+ct] = _det
+#                            ct += 1
+#                        end
+#                    end
+#                end
+#            end
+#            # Get ββ -> ββ excitations
+#            for i in βocc
+#                for a in βuno
+#                    newβ = (d.β ⊻ (one<<(i-1))) | (one<<(a-1)) 
+#                    _det = Determinant(d.α, newβ)
+#                    fois[DI+ct] = _det
+#                    ct += 1
+#                    for j in βocc
+#                        if j ≥ i
+#                            break
+#                        end
+#                        for b in βuno
+#                            if b ≥ a
+#                                break
+#                            end
+#                            newestβ = (newβ ⊻ (one<<(j-1))) | (one<<(b-1)) 
+#                            _det = Determinant(d.α, newestβ)
+#                            fois[DI+ct] = _det
+#                            ct += 1
+#                        end
+#                    end
+#                end
+#            end
+#            # Get αβ -> αβ excitations
+#            for i in αocc
+#                for a in αuno
+#                    for j in βocc
+#                        for b in βuno
+#                            newα = (d.α ⊻ (one<<(i-1))) | (one<<(a-1)) 
+#                            newβ = (d.β ⊻ (one<<(j-1))) | (one<<(b-1)) 
+#                            _det = Determinant(newα, newβ)
+#                            fois[DI+ct] = _det
+#                            ct += 1
+#                        end
+#                    end
+#                end
+#            end
+#        end #Threads.@spawn 
+#    end
+#    fois = filter((x)->x != Determinant(0,0), fois)
+#    fois = Set(fois)
+#    setdiff!(fois, dets)
+#    fois = collect(fois)
+#    return fois end
 
 #lexicographic premutations generation, By Donald Knuth
 function lpermutations(a::BitArray)

@@ -33,6 +33,7 @@ const DefaultOptions = Dict{String,Union{Float64,Int,String,Bool,Nothing}}(
                                   "precision" => "double",
                                   "cc_alg" => "CTF",
                                   "ci_alg" => "aci",
+                                  "det_size" => 64,
                                   "σ"      => 0.001,
                                   "γ"      => 1.0,
                                   "ζ"      => 0.95,

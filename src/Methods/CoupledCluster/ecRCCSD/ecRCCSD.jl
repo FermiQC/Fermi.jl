@@ -1,4 +1,4 @@
-using Fermi.ConfigurationInteraction: Determinant, excitation_level, αexcitation_level, βexcitation_level, αexclusive, βexclusive, phase, create, annihilate
+using Fermi.ConfigurationInteraction: Determinant, excitation_level, αexcitation_level, βexcitation_level, αexclusive, βexclusive, phase, create, annihilate, first_αexclusive, first_βexclusive
 
 """
     Fermi.CoupledCluster.ecRCCSD

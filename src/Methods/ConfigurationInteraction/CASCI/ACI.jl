@@ -82,10 +82,20 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
     @output "Active Electrons: {:3d}\n" act_elec
     @output "Active Orbitals:  {:3d}\n" active
 
+    # Determine precision used to represent determinants
+    det_size = 
+    if Fermi.CurrentOptions["det_size"] == 64
+        Int64
+    elseif Fermi.CurrentOptions["det_size"] == 128
+        Int128
+    else
+        throw(Fermi.InvalidFermiOption("Invalid determinant representation $(Fermi.CurrentOptions["det_size"])"))
+    end
+
     # Start reference space as HF
     zeroth = repeat('1', frozen)*repeat('1', Int(act_elec/2))
     if ci == nothing
-        P = [Determinant(zeroth, zeroth)]
+        P = [Determinant(zeroth, zeroth; precision=det_size)]
         Pcoef = [1.0]
     else
         P, Pcoef = coarse_grain(ci.dets, ci.coef, γ, σ)
@@ -202,18 +212,25 @@ end
 
 @fastmath @inbounds function get_fois(dets::Array{Determinant,1}, Nα::Int, Nβ::Int, act_range::UnitRange{Int64})::Array{Determinant,1}
 
+    one = typeof(dets[1].α)(1)
     # Ns must be > 1
+    # Preallocate array for the position of occupied orbitals
     αoccs = [zeros(Int,Nα) for i=1:Threads.nthreads()]
     βoccs = [zeros(Int,Nβ) for i=1:Threads.nthreads()]
+    # Preallocate array for the position of unoccupied orbitals
     αunos = [zeros(Int,length(act_range)-Nα) for i=1:Threads.nthreads()]
     βunos = [zeros(Int,length(act_range)-Nβ) for i=1:Threads.nthreads()]
 
+    # Estimate FOIS per det
     lf_per_det = (length(αoccs[1])^2*length(αunos[1])^2 + length(αoccs[1])*length(αunos[1])
                        + length(βoccs[1])^2*length(βunos[1])^2 + length(βoccs[1])*length(βunos[1])
                        + length(αoccs[1])*length(αunos[1])*length(βoccs[1])*length(βunos[1]))
+    # Estimated total number of determinants (FOIS per det * ndets)
     lf_crit = Int(round(length(dets)*lf_per_det))
+    # Preallocate array to hold dummy dets
     fois = [Determinant(0,0) for i=1:lf_crit]
     @sync for _DI in eachindex(dets)
+    #for _DI in eachindex(dets)
         Threads.@spawn begin
             d = dets[_DI]
             DI = (_DI-1)*lf_per_det + 1
@@ -230,7 +247,7 @@ end
             # Get αα -> αα excitations
             for i in αocc
                 for a in αuno
-                    newα = (d.α ⊻ (1<<(i-1))) | (1<<(a-1)) 
+                    newα = (d.α ⊻ (one<<(i-1))) | (one<<(a-1)) 
                     _det = Determinant(newα, d.β)
                     fois[DI+ct] = _det
                     ct += 1
@@ -242,7 +259,7 @@ end
                             if b ≥ a
                                 break
                             end
-                            newestα = (newα ⊻ (1<<(j-1))) | (1<<(b-1)) 
+                            newestα = (newα ⊻ (one<<(j-1))) | (one<<(b-1)) 
                             _det = Determinant(newestα, d.β)
                             fois[DI+ct] = _det
                             ct += 1
@@ -253,7 +270,7 @@ end
             # Get ββ -> ββ excitations
             for i in βocc
                 for a in βuno
-                    newβ = (d.β ⊻ (1<<(i-1))) | (1<<(a-1)) 
+                    newβ = (d.β ⊻ (one<<(i-1))) | (one<<(a-1)) 
                     _det = Determinant(d.α, newβ)
                     fois[DI+ct] = _det
                     ct += 1
@@ -265,7 +282,7 @@ end
                             if b ≥ a
                                 break
                             end
-                            newestβ = (newβ ⊻ (1<<(j-1))) | (1<<(b-1)) 
+                            newestβ = (newβ ⊻ (one<<(j-1))) | (one<<(b-1)) 
                             _det = Determinant(d.α, newestβ)
                             fois[DI+ct] = _det
                             ct += 1
@@ -278,8 +295,8 @@ end
                 for a in αuno
                     for j in βocc
                         for b in βuno
-                            newα = (d.α ⊻ (1<<(i-1))) | (1<<(a-1)) 
-                            newβ = (d.β ⊻ (1<<(j-1))) | (1<<(b-1)) 
+                            newα = (d.α ⊻ (one<<(i-1))) | (one<<(a-1)) 
+                            newβ = (d.β ⊻ (one<<(j-1))) | (one<<(b-1)) 
                             _det = Determinant(newα, newβ)
                             fois[DI+ct] = _det
                             ct += 1
@@ -293,7 +310,8 @@ end
     fois = Set(fois)
     setdiff!(fois, dets)
     fois = collect(fois)
-    return fois end
+    return fois 
+end
 
 #lexicographic premutations generation, By Donald Knuth
 function lpermutations(a::BitArray)
@@ -486,9 +504,6 @@ function ϵI(Fdets, P::Array{Determinant,1}, Pcoef::Array{Float64,1}, Ep::T, h::
             end
         end
 
-        #println(pd)
-        #println(fd)
-
         for key in keys(pd)
             try
                 push!(detpairs,collect(Base.product(fd[key],pd[key])))
@@ -600,9 +615,9 @@ function update_model_space(M::Array{Determinant,1}, h::Array{T,2}, V::Array{T,4
     H = get_sparse_hamiltonian_matrix(M, h, V, Fermi.CurrentOptions["cas_cutoff"])
 
     @output "Diagonalizing Hamiltonian...\n"
-    #decomp, history = partialschur(H, nev=1, tol=10^-12, which=LM())
-    #λ, ϕ = partialeigen(decomp)
-    λ,ϕ = eigen(Array(H))
+    decomp, history = partialschur(H, nev=1, tol=10^-12, which=LM())
+    λ, ϕ = partialeigen(decomp)
+    #λ,ϕ = eigen(Array(H))
 
     return λ[1], ϕ[:,1], deepcopy(M)
 end
@@ -624,6 +639,7 @@ end
 
 function complete_set(dets::Array{Determinant,1})
 
+    one = typeof(dets[1].α)(1)
     newdets = [Determinant[] for i = 1:Threads.nthreads()]
     @Threads.threads for d in dets
         
@@ -642,8 +658,8 @@ function complete_set(dets::Array{Determinant,1})
         perms = multiset_permutations(str, n)
         
         i = 1
-        while i ≤ asym
-            if 1<<(i-1) & asym ≠ 0
+        while (one<<(i-1)) ≤ asym
+            if one<<(i-1) & asym ≠ 0
                 push!(idx, i) 
             end
             i += 1
@@ -654,9 +670,9 @@ function complete_set(dets::Array{Determinant,1})
             newβ = sym
             for (x,i) in zip(p,idx)
                 if x == 1
-                    newα = newα | (1<<(i-1))
+                    newα = newα | (one<<(i-1))
                 elseif x == 0
-                    newβ = newβ | (1<<(i-1))
+                    newβ = newβ | (one<<(i-1))
                 end
             end
             push!(newdets[Threads.threadid()], Determinant(newα, newβ))
