@@ -13,14 +13,32 @@ energy_dict = Dict{String, String}(
 )
 
 """
-    @energy(comm)
+    Fermi.@energy
 
-Macro to call functions to compute energy given current options.
+Macro to call functions to compute energy given current options. Arguments may be passed
+using "=>" or "<="
+
+# Examples
+
+Generating a RHF wave function
+```
+rhf = @energy rhf
+```
+
+Using this wave function in a CCSD computations
+```
+@energy rhf => CCSD
+```
+or
+```
+@energy CCSD <= rhf
+```
 
 # Implemented methods:
-    RHF            Restricted Hartree-Fock
-    RMP2           Restricted Moller-Plesset PT order 2
-    RMP3           Restricted Moller-Plesset PT order 3
+    RHF            Restricted Hartree-Fock.
+    RMP2           Restricted Moller-Plesset PT order 2.
+    RMP3           Restricted Moller-Plesset PT order 3.
+    CASCI          Restricted configuration interaction within given active space.
     CCSD           Restricted Coupled-Cluster with Single and Double substitutions
     CCSD(T)        Restricted Coupled-Cluster with Single and Double substitutions and perturbative triples.
     ecCCSD         Restricted externally corrected CCSD. External correction from CASCI computation.
@@ -62,6 +80,3 @@ macro energy(comm)
 
     return esc(expr_out)
 end
-
-
-
