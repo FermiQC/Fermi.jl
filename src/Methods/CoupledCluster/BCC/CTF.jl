@@ -68,6 +68,7 @@ function delete_integrals(ints,alg::CTF)
     delete!(ints.cache,"OVOV")
     delete!(ints.cache,"OVVV")
     delete!(ints.cache,"VVVV")
+    delete!(ints.cache,"F")
     delete!(ints.cache,"FOO")
     delete!(ints.cache,"FVV")
     delete!(ints.cache,"FOV")
@@ -80,7 +81,7 @@ end
 
 function update_T1(T2::Array{T,4}, newT1::Array{T,2}, foo, fov, fvv, ints::IntegralHelper, alg::CTF) where T <: AbstractFloat
     fill!(newT1, 0.0)
-    Voooo, Vooov, Voovv, Vovov, Vovvv, Vvvvv = ints["OOOO"], ints["OOOV"], ints["OOVV"], ints["OVOV"], ints["OVVVV"], ints["VVVV"]
+    Voooo, Vooov, Voovv, Vovov, Vovvv, Vvvvv = ints["OOOO"], ints["OOOV"], ints["OOVV"], ints["OVOV"], ints["OVVV"], ints["VVVV"]
     @tensoropt (i=>x, j=>x, k=>x, l=>x, a=>10x, b=>10x, c=>10x, d=>10x) begin
         newT1[i,a] += fov[i,a]
         newT1[i,a] += 2.0*fov[k,c]*T2[i,k,a,c]
@@ -94,7 +95,7 @@ end
 
 function update_T2(T2::Array{T,4},newT2::Array{T,4},foo,fov,fvv,ints::IntegralHelper, alg::CTF) where T <: AbstractFloat
     fill!(newT2, 0.0)
-    Voooo, Vooov, Voovv, Vovov, Vovvv, Vvvvv = ints["OOOO"], ints["OOOV"], ints["OOVV"], ints["OVOV"], ints["OVVVV"], ints["VVVV"]
+    Voooo, Vooov, Voovv, Vovov, Vovvv, Vvvvv = ints["OOOO"], ints["OOOV"], ints["OOVV"], ints["OVOV"], ints["OVVV"], ints["VVVV"]
 
     @tensoropt (i=>x, j=>x, k=>x, l=>x, a=>10x, b=>10x, c=>10x, d=>10x) begin
         newT2[i,j,a,b] += Voovv[i,j,a,b]

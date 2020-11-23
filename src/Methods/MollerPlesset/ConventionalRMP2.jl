@@ -1,17 +1,15 @@
-function RMP2{T}(refWfn::Fermi.HartreeFock.RHF.RHFWavefunction,alg::Fermi.MollerPlesset.Conventional) where T <: AbstractFloat
+function RMP2{T}(refWfn::Fermi.HartreeFock.RHF,alg::Fermi.MollerPlesset.Conventional) where T <: AbstractFloat
     print_header()
     dmp2 = 0.0
-    nocc = refWfn.nocca
+    nocc = refWfn.ndocc
     @output "*  executing restricted MP2\n"
     @output "   nocc: {:>3}\n" nocc
-    @output "   nvir: {:>3}\n" refWfn.nvira
+    @output "   nvir: {:>3}\n" refWfn.nvir
     rocc = 1:1:nocc
-    rvir = nocc+1:1:nocc+refWfn.nvira
-    Cao = Fermi.HartreeFock.RHF.Cao(refWfn)
-    Cav = Fermi.HartreeFock.RHF.Cav(refWfn)
-    epsa = refWfn.epsa
+    rvir = nocc+1:1:nocc+refWfn.nvir
+    epsa = refWfn.eps
     @output "*  performing AO->MO integral transformation ... "
-    t = @elapsed moeri = get_eri(refWfn,"OOVV")
+    t = @elapsed moeri = refWfn.ints["OOVV"]
     @output "done in {:>5.2f}s\n" t
     @output "*  Computing MP2 energy ... "
     t = @elapsed for b in rvir
@@ -31,5 +29,5 @@ function RMP2{T}(refWfn::Fermi.HartreeFock.RHF.RHFWavefunction,alg::Fermi.Moller
     end
     @output "done in {:>5.2f}s\n" t
     @output "   @RMP2 {:>20.17f} Eh\n" dmp2
-    RMP2(dmp2,Fermi.MemTensor{T}(zeros(0,0,0,0)),Fermi.MemTensor{T}(zeros(0,0,0,0)))
+    RMP2(dmp2,Fermi.MemTensor{T}(zeros(0,0,0,0)))
 end

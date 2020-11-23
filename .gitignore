@@ -1,7 +1,7 @@
 timer.dat
 *.swp
 *.swo
-docs/build
+docs/build/
 output.dat
-
+Manifest.toml
 

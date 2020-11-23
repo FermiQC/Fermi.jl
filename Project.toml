@@ -1,7 +1,7 @@
 name = "Fermi"
 uuid = "9237668d-08c8-4784-b8dd-383aa52fcf74"
 authors = ["mdav2 <matthew.mcallister.davis@gmail.com>"]
-version = "0.0.1"
+version = "0.1.0"
 
 [deps]
 ArnoldiMethod = "ec485272-7323-5ecc-a04f-4719b315124d"
@@ -32,7 +32,7 @@ DistributedArrays = "^0.6.5"
 Formatting = "^0.4.1"
 HDF5 = "^0.13.3"
 IterativeSolvers = "^0.8.4"
-Lints = "0.3.2"
+Lints = "^0.4"
 LoopVectorization = "0.8.23"
 MPI = "0.15.1"
 PrettyTables = "0.9.1"

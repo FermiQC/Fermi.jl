@@ -24,6 +24,7 @@ function RMP2{T}(ref::Fermi.HartreeFock.RHF) where T <: AbstractFloat
 end
 
 include("DF-RMP2.jl")
+include("ConventionalRMP2.jl")
 #"""
 #This is the most generic constructor, so we'll put the docstring here
 #"""

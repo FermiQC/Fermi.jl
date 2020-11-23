@@ -222,6 +222,8 @@ function RCCSD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2
     main_time = 0
     @output "{:10s}    {: 15s}    {: 12s}    {:12s}    {:10s}\n" "Iteration" "CC Energy" "ΔE" "Max RMS" "Time (s)"
     relax = 1
+            Ecc = update_energy(newT1, newT2, fov, ints, alg)
+            @output "{}\n" Ecc
 
     while (abs(dE) > cc_e_conv || rms > cc_max_rms) || ite < 10
         if ite > cc_max_iter
@@ -239,6 +241,8 @@ function RCCSD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2
             # Apply resolvent
             newT1 ./= d
             newT2 ./= D
+            oldE = Ecc
+            Ecc = update_energy(newT1, newT2, fov, ints, alg)
 
             # Compute residues 
             r1 = sqrt(sum((newT1 .- T1).^2))/length(T1)
@@ -261,7 +265,6 @@ function RCCSD{Ta}(refwfn::RHF, ints::IntegralHelper, newT1::Array{Tb, 2}, newT2
             newT2 .= (1-dp)*newT2 .+ dp*T2
         end
         rms = max(r1,r2)
-        oldE = Ecc
         Ecc = update_energy(newT1, newT2, fov, ints, alg)
         dE = Ecc - oldE
         main_time += t

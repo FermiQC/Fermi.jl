@@ -1,4 +1,5 @@
 using LinearAlgebra
+using LoopVectorization
 function RMP2{T}(refwfn::Fermi.HartreeFock.RHF,alg::Fermi.MollerPlesset.DF) where T <: AbstractFloat
     Fermi.MollerPlesset.print_header()
     ints = refwfn.ints
@@ -13,55 +14,70 @@ function RMP2{T}(refwfn::Fermi.HartreeFock.RHF,alg::Fermi.MollerPlesset.DF) wher
     @output "\tComputing MP2 with DF algorithm\n\n"
     ttotal = @elapsed begin
     @output "\tComputing and transforming integrals ...\n"
-    t = @elapsed begin
-        @output "\tComputing integrals ..."
-        Fermi.Integrals.aux_ri!(ints)
-        t = @elapsed ints["B"]
-        @output "\t done in {:5.2f} s\n" t
-
-        ints.cache["B"] = convert(Array{T},ints.cache["B"])
-        @output "\tTransforming integrals to MO basis ..."
-        t = @elapsed Bov = ints["BOV"]
-        @output "\t done in {:5.2f} s\n" t
-    end
+    @output "\tComputing integrals ..."
+    Fermi.Integrals.aux_ri!(ints)
     @output "\tBasis: {}\n" ints.bname["primary"] 
     @output "\tDF basis: {}\n\n" ints.bname["aux"]
-    @output " done in {:>5.2f} s\n" t
+    t = @elapsed ints["B"]
+    @output "\t done in {:5.2f} s\n" t
+
+    ints.cache["B"] = convert(Array{T},ints.cache["B"])
+    @output "\tTransforming integrals to MO basis ..."
+    t = @elapsed Bov = ints["BOV"]
+    @output "\t done in {:5.2f} s\n" t
+    
     Bis = [zeros(T,size(Bov[:,1,:])) for i=1:Threads.nthreads()]
     Bjs = [zeros(T,size(Bis[1])) for i =1:Threads.nthreads()]
     BABs = [zeros(T,nvir,nvir) for i=1:Threads.nthreads()]
     BBAs = [zeros(T,nvir,nvir) for i=1:Threads.nthreads()]
 
     ΔMP2s = zeros(T,Threads.nthreads())
-    Threads.@threads for i in 1:(nocc-drop_occ)
-        Bi = Bis[Threads.threadid()]
-        Bj = Bjs[Threads.threadid()]
-        @views Bi[:,:] = Bov[:,i,:]
-        BAB = BABs[Threads.threadid()]
-        BBA = BBAs[Threads.threadid()]
-        for j in i:(nocc-drop_occ)
-            if i != j
-                fac = 2
-            else
-                fac = 1
-            end
-            @views Bj[:,:] = Bov[:,j,:]
-            @tensoropt begin
-                BAB[a,b] = Bi[Q,a]*Bj[Q,b]
-            end
-            #BBA = transpose(BAB)
-            transpose!(BBA,BAB)
-            for b in 1:nvir-drop_vir
-                for a in 1:nvir-drop_vir
-                    iajb = BAB[a,b]
-                    ibja = BBA[a,b]
-                    ΔMP2s[Threads.threadid()] += fac*iajb*(2*iajb - ibja)/(eps[i+drop_occ] + eps[j+drop_occ] - eps[a+nocc] - eps[b+nocc])
+    epsd = eps[drop_occ+1:end] #occ - drop_occ
+    epsv = eps[nocc+1:end] #virtuals
+    _nvir = nvir-drop_vir
+    _nocc = nocc-drop_occ
+    t = @elapsed begin
+        @sync for i in 1:_nocc
+            Threads.@spawn begin
+            id = Threads.threadid()
+            Bi = Bis[id]
+            Bj = Bjs[id]
+            @views Bi[:,:] = Bov[:,i,:]
+            BAB = BABs[id]
+            BBA = BBAs[id]
+            for j in i:_nocc
+                if i != j
+                    fac = 2
+                else
+                    fac = 1
                 end
+                @views Bj[:,:] .= Bov[:,j,:]
+                @tensoropt begin
+                    BAB[a,b] = Bi[Q,a]*Bj[Q,b]
+                end
+                transpose!(BBA,BAB)
+                eij = epsd[i] + epsd[j]
+                dmp2_1 = 0.0
+                dmp2_2 = 0.0
+                @fastmath for b in 1:_nvir
+                    @inbounds eij_b = eij - epsv[b]
+                    for a in 1:_nvir
+                        @inbounds iajb = BAB[a,b]
+                        #@inbounds ibja = BBA[a,b]
+                        d = iajb/(eij_b - epsv[a])
+                        @inbounds dmp2_1 += d*iajb
+                        @inbounds dmp2_2 += d*BBA[a,b]
+                    end
+                end
+                dmp2 = 2*dmp2_1 - dmp2_2
+                ΔMP2s[id] += fac*dmp2
+            end
             end
         end
+        end
+        ΔMP2 = sum(ΔMP2s)
     end
-    end
-    ΔMP2 = sum(ΔMP2s)
+    @output "\t Energy computed in {:5.2f} s\n" t
 
     # generator function for T2 amplitudes, given ijab indices
     function gen(g::Fermi.GeneratedTensor,i,j,a,b)
