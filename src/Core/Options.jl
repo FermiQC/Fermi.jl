@@ -8,6 +8,12 @@ export @set
 export @get
 export @molecule
 
+"""
+    Fermi.DefaultOptions
+
+Dictionary containing default options for Fermi. Any information not given
+explicitly to Methods is obtained from here.
+"""
 const DefaultOptions = Dict{String,Union{Float64,Int,String,Bool,Nothing}}(
                                   "molstring" => """
                                   O        1.2091536548      1.7664118189     -0.0171613972
@@ -68,18 +74,18 @@ const DefaultOptions = Dict{String,Union{Float64,Int,String,Bool,Nothing}}(
 """
     Fermi.CurrentOptions
 
-Dictionary containing options for Fermi. Any information not given
-explicitly to Methods is obtained from here.
+Dictionary containing user options for Fermi. Unspecified options are obtained from 
+Fermi.DefaultOptions.
 """
 CurrentOptions = deepcopy(DefaultOptions)
 
 """
-    Fermi.@reset(key=nothing)
+    Fermi.@reset(key="all")
 
-Restores `key` option to default setting. If `key == nothing`, restores all options to their default values.
+Restores `key` option to default setting. If `key == "all"`, restores all options to their default values.
 """
-macro reset(key=nothing) 
-    if key == nothing
+macro reset(key="all") 
+    if key == "all"
         return quote
             for key in keys(Fermi.CurrentOptions)
                 Fermi.CurrentOptions[key] = Fermi.DefaultOptions[key]
@@ -95,8 +101,6 @@ macro reset(key=nothing)
         end
     end
 end
-
-
 
 """
     Fermi.@set
@@ -132,11 +136,23 @@ mybasis = 6-31g
 }
 ```
 Will set the basis to "mybasis" not "6-31g".
+
+Note for basis set: A * at the end of a line is considered an incomplete expression by Julia. Thus, for basis such as 6-31g*
+you should use quotes
+```
+@set basis "6-31g"
+```
 """
 macro set(opt,val)
     clean_up(s) = String(filter(c->!occursin(c," ():"),s))
     A = clean_up(repr(opt))
     B = clean_up(repr(val))
+
+    # Check if the options exists
+    if !(A in keys(DefaultOptions))
+        throw(InvalidFermiOption(A*" is not a valid option."))
+    end
+
     quote
         try
             CurrentOptions[$A] = $val
@@ -154,6 +170,12 @@ macro set(block)
             opt, val = split(strip(l), " ", limit=2)
             opt = clean_up(opt)
             val = clean_up(val)
+
+            # Check if the options exists
+            if !(opt in keys(DefaultOptions))
+                throw(InvalidFermiOption(opt*" is not a valid option."))
+            end
+
             try
                 CurrentOptions[opt] = eval(Meta.parse(val))
             catch UndefVarError
@@ -163,6 +185,22 @@ macro set(block)
     end
 end
 
+"""
+    Fermi.@get
+
+Returns the current value of an options. 
+
+# Examples
+
+```
+julia> @get basis
+"sto-3g"      # Default
+
+julia> @set basis cc-pVDZ
+julia> @get basis
+"cc-pVDZ"
+```
+"""
 macro get(opt)
     clean_up(s) = String(filter(c->!occursin(c," ():"),s))
     A = clean_up(repr(opt))
@@ -170,10 +208,11 @@ macro get(opt)
         try
             CurrentOptions[$A]
         catch KeyError
-            throw(InvalidFermiOption($A*" not a valid option."))
+            throw(InvalidFermiOption($A*" is not a valid option."))
         end
     end |> esc
 end
+
 """
     Fermi.@molecule
 
