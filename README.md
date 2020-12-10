@@ -4,7 +4,8 @@
 > *!!! Warning:* The API is unstable at this time. Semantic Versioning (SemVer) will be followed, so any version `v0.X.Y` is compatable with 
 `v0.X.Z`, and the differences between the two will only bring speed improvements, bugfixes, and documentation improvements.
 *ANY VERSION* that increments the minor version number (`v0.X.Y` to `v0.Z.0`) should be treated as breaking the entire API.
-# Fermi
+
+![Fermi Logo](images/fermi_logo.png)
 
 Fermi is a quantum chemistry program written in (nearly) pure Julia. This code is developed at
 the [Center for Computational Quantum Chemistry](https://github.com/CCQC) at the University of Georgia under the supervision 
