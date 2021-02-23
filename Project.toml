@@ -25,7 +25,7 @@ TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
-ArnoldiMethod = "0.0.4"
+ArnoldiMethod = "0.0.4, 0.2"
 Combinatorics = "^1.0.2"
 CuArrays = "^2.2.2"
 DistributedArrays = "^0.6.5"
