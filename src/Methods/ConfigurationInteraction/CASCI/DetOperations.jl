@@ -4,12 +4,11 @@ using LoopVectorization
 
 Constructor function for Determinant object using strings.
 """
-function Determinant(α::String, β::String)
+function Determinant(α::String, β::String; precision=Int64)
     
-    αint = parse(Int, reverse(α); base=2) 
-    βint = parse(Int, reverse(β); base=2) 
-
-    Determinant(αint, βint)
+    αint = parse(precision, reverse(α); base=2) 
+    βint = parse(precision, reverse(β); base=2) 
+    return Determinant(αint, βint)
 end
 
 """
@@ -39,13 +38,14 @@ Write the indexes of the occupid alpha electrons of the Determinant to a given l
 """
 function αindex!(D::Determinant, Out::Array{Int64,1})
 
+    one = typeof(D.α)(1)
     i = 1
     e = 1
 
     # Loop until 'e' electrons are found. Be careful! If 'e' is greater than
     # the number of electrons you will get stuck!
     while e ≤ length(Out)
-        if 1<<(i-1) & D.α ≠ 0
+        if one<<(i-1) & D.α ≠ 0
             Out[e] = i
             e += 1
         end
@@ -60,13 +60,14 @@ Write the indexes of the occupid beta electrons of the Determinant to a given li
 """
 function βindex!(D::Determinant, Out::Array{Int64,1})
 
+    one = typeof(D.α)(1)
     i = 1
     e = 1
 
     # Loop until 'e' electrons are found. Be careful! If 'e' is greater than
     # the number of electrons you will get stuck!
     while e ≤ length(Out)
-        if 1<<(i-1) & D.β ≠ 0
+        if one<<(i-1) & D.β ≠ 0
             Out[e] = i
             e += 1
         end
@@ -109,13 +110,35 @@ not in the second
 """
 function αexclusive(D1::Determinant, D2::Determinant)
 
-    αexcl = D1.α ⊻ D2.α & D1.α
+    return αexclusive(D1.α, D2.α)
+end
+
+function αexclusive(D1α::Int64, D2α::Int64)
+
+    αexcl = D1α ⊻ D2α & D1α
 
     out = []
     i = 1
     # Save alphas exclusives, in crescent order
     while 1<<((i-1)&63) ≤ αexcl
         if 1<<((i-1)&63) & αexcl ≠ 0
+            push!(out, i)
+        end
+        i += 1
+    end
+
+    return out
+end
+
+function αexclusive(D1α::Int128, D2α::Int128)
+
+    αexcl = D1α ⊻ D2α & D1α
+
+    out = []
+    i = 1
+    # Save alphas exclusives, in crescent order
+    while one(Int128)<<((i-1)&127) ≤ αexcl
+        if one(Int128)<<((i-1)&127) & αexcl ≠ 0
             push!(out, i)
         end
         i += 1
@@ -132,8 +155,19 @@ not in the second
 """
 function first_αexclusive(D1::Determinant, D2::Determinant)
 
-    x = D1.α ⊻ D2.α & D1.α
+    return first_αexclusive(D1.α, D2.α)
+end
+
+function first_αexclusive(D1α::Int64, D2α::Int64)
+
+    x = D1α ⊻ D2α & D1α
     return 64 - leading_zeros(x&(~(x-1)))
+end
+
+function first_αexclusive(D1α::Integer, D2α::Integer)
+
+    x = D1α ⊻ D2α & D1α
+    return 128 - leading_zeros(x&(~(x-1)))
 end
 
 """
@@ -143,11 +177,20 @@ Compare two determinants to return the index of the second alpha electron presen
 not in the second
 """
 function second_αexclusive(D1::Determinant, D2::Determinant)
+    
+    return second_αexclusive(D1.α, D2.α)
+end
 
-    x = D1.α ⊻ D2.α & D1.α
-    y = 64 - leading_zeros(x&(~(x-1)))
-    x = x &(~(2^(y-1)))
-    w = 64 - leading_zeros(x&(~(x-1)))
+function second_αexclusive(D1α::Int64, D2α::Int64)
+
+    x = D1α ⊻ D2α & D1α
+    return 64 - leading_zeros(x)
+end
+
+function second_αexclusive(D1α::Integer, D2α::Integer)
+
+    x = D1α ⊻ D2α & D1α
+    return 128 - leading_zeros(x)
 end
 
 """
@@ -158,13 +201,34 @@ not in the second
 """
 function βexclusive(D1::Determinant, D2::Determinant)
 
-    βexcl = D1.β ⊻ D2.β & D1.β
+    return βexclusive(D1.β, D2.β)
+end
+
+function βexclusive(D1β::Int64, D2β::Int64)
+
+    βexcl = D1β ⊻ D2β & D1β
 
     out = []
     i = 1
     # Save betas exclusives, in crescent order
     while 1<<(i-1) ≤ βexcl
         if 1<<(i-1) & βexcl ≠ 0
+            push!(out, i)
+        end
+        i += 1
+    end
+    return out
+end
+
+function βexclusive(D1β::Int128, D2β::Int128)
+
+    βexcl = D1β ⊻ D2β & D1β
+
+    out = []
+    i = 1
+    # Save betas exclusives, in crescent order
+    while one(Int128)<<(i-1) ≤ βexcl
+        if one(Int128)<<(i-1) & βexcl ≠ 0
             push!(out, i)
         end
         i += 1
@@ -180,9 +244,19 @@ not in the second
 """
 function first_βexclusive(D1::Determinant, D2::Determinant)
 
-    x = D1.β ⊻ D2.β & D1.β
-    return 64 - leading_zeros(x&(~(x-1)))
+    return first_βexclusive(D1.β, D2.β)
+end
 
+function first_βexclusive(D1β::Int64, D2β::Int64)
+
+    x = D1β ⊻ D2β & D1β
+    return 64 - leading_zeros(x&(~(x-1)))
+end
+
+function first_βexclusive(D1β::Integer, D2β::Integer)
+
+    x = D1β ⊻ D2β & D1β
+    return 128 - leading_zeros(x&(~(x-1)))
 end
 
 """
@@ -192,11 +266,20 @@ Compare two determinants to return the index of the second beta electron present
 not in the second
 """
 function second_βexclusive(D1::Determinant, D2::Determinant)
+    
+    return second_βexclusive(D1.β, D2.β)
+end
 
-    x = D1.β ⊻ D2.β & D1.β
-    y = 64 - leading_zeros(x&(~(x-1)))
-    x = x &(~(2^(y-1)))
-    w = 64 - leading_zeros(x&(~(x-1)))
+function second_βexclusive(D1β::Int64, D2β::Int64)
+
+    x = D1β ⊻ D2β & D1β
+    return 64 - leading_zeros(x)
+end
+
+function second_βexclusive(D1β::Integer, D2β::Integer)
+
+    x = D1β ⊻ D2β & D1β
+    return 128 - leading_zeros(x)
 end
 
 """
@@ -207,22 +290,23 @@ not in the second Determinant.
 """
 function exclusive(D1::Determinant, D2::Determinant)
 
+    one = typeof(D1.α)(1)
     αexcl = D1.α ⊻ D2.α & D1.α
     βexcl = D1.β ⊻ D2.β & D1.β
 
     out = []
     i = 1
     # Save alphas exclusives, in crescent order
-    while 1<<((i-1)) ≤ αexcl
-        if 1<<((i-1)) & αexcl ≠ 0
+    while one<<((i-1)) ≤ αexcl
+        if one<<((i-1)) & αexcl ≠ 0
             push!(out, (i, 'α'))
         end
         i += 1
     end
     i = 1
     # Save betas exclusives, in crescent order
-    while 1<<((i-1)) ≤ βexcl
-        if 1<<((i-1)) & βexcl ≠ 0
+    while one<<((i-1)) ≤ βexcl
+        if one<<((i-1)) & βexcl ≠ 0
             push!(out, (i, 'β'))
         end
         i += 1
@@ -238,6 +322,7 @@ factor along with the new determinant
 """
 function annihilate(D::Determinant, orb::Int, spin::Char)
 
+    one = typeof(D.α)(1)
     if spin == 'α'
         #if D.α & (1 << (orb-1)) == 0
         #    error("Annihilation error. Orbital $orb is not occupied")
@@ -245,13 +330,13 @@ function annihilate(D::Determinant, orb::Int, spin::Char)
 
         # Determine sign
         l = 0
-        i = 1
-        while i < (1 << ((orb-1)))
+        i = typeof(D.α)(1)
+        while i < (one << ((orb-1)))
             l += D.α & i ≠ 0 ? 1 : 0
             i = i << 1
         end
 
-        newα = D.α ⊻ (1 << ((orb-1)))
+        newα = D.α ⊻ (one << ((orb-1)))
 
         return (-1)^l, Determinant(newα, D.β)
 
@@ -262,13 +347,13 @@ function annihilate(D::Determinant, orb::Int, spin::Char)
 
         # Determine sign
         l = count(i->(i=='1'), bitstring(D.α))
-        i = 1
-        while i < (1 << (orb-1))
+        i = typeof(D.β)(1)
+        while i < (one << (orb-1))
             l += D.β & i ≠ 0 ? 1 : 0
             i = i << 1
         end
 
-        newβ = D.β ⊻ (1 << (orb-1))
+        newβ = D.β ⊻ (one << (orb-1))
 
         return (-1)^l, Determinant(D.α, newβ)
     end
@@ -282,6 +367,7 @@ Returns the phase factor along with the new determinant
 """
 function create(D::Determinant, orb::Int, spin::Char)
 
+    one = typeof(D.α)(1)
     if spin == 'α'
         #if D.α & (1 << (orb-1)) ≠ 0
         #    error("Creation error. Orbital $orb is occupied")
@@ -289,13 +375,13 @@ function create(D::Determinant, orb::Int, spin::Char)
 
         # Determine sign
         l = 0
-        i = 1
-        while i < (1 << (orb-1))
+        i = typeof(D.α)(1)
+        while i < (one << (orb-1))
             l += D.α & i ≠ 0 ? 1 : 0
             i = i << 1
         end
 
-        newα = D.α | (1 << (orb-1))
+        newα = D.α | (one << (orb-1))
 
         return (-1)^l, Determinant(newα, D.β)
 
@@ -306,19 +392,17 @@ function create(D::Determinant, orb::Int, spin::Char)
 
         # Determine sign
         l = count(i->(i=='1'), bitstring(D.α))
-        i = 1
-        while i < (1 << (orb-1))
+        i = typeof(D.β)(1)
+        while i < (one << (orb-1))
             l += D.β & i ≠ 0 ? 1 : 0
             i = i << 1
         end
 
-        newβ = D.β | (1 << (orb-1))
+        newβ = D.β | (one << (orb-1))
 
         return (-1)^l, Determinant(D.α, newβ)
     end
 end
-
-#function α1phase
 
 """
     Fermi.ConfigurationInteraction.DetOperations.phase(D1::Determinant, D2::Determinant)
@@ -363,9 +447,10 @@ end
 
 function αocc!(D::Determinant, R::UnitRange{Int64}, Out::Array{Int64,1})
 
+    one = typeof(D.α)(1)
     e = 1
     for i in R
-        if 1<<(i-1) & D.α != 0
+        if one<<(i-1) & D.α != 0
             Out[e] = i
             e += 1
         end
@@ -375,9 +460,10 @@ end
 
 function βocc!(D::Determinant, R::UnitRange{Int64}, Out::Array{Int64,1})
 
+    one = typeof(D.β)(1)
     e = 1
     for i in R
-        if 1<<(i-1) & D.β != 0
+        if one<<(i-1) & D.β != 0
             Out[e] = i
             e += 1
         end
@@ -387,9 +473,10 @@ end
 
 function αvir!(D::Determinant, R::UnitRange{Int64}, Out::Array{Int64,1})
 
+    one = typeof(D.α)(1)
     e = 1
     for i in R
-        if 1<<(i-1) & D.α == 0
+        if one<<(i-1) & D.α == 0
             Out[e] = i
             e += 1
         end
@@ -400,8 +487,9 @@ end
 function βvir!(D::Determinant, R::UnitRange{Int64}, Out::Array{Int64,1})
 
     e = 1
+    one = typeof(D.β)(1)
     for i in R
-        if 1<<(i-1) & D.β == 0
+        if one<<(i-1) & D.β == 0
             Out[e] = i
             e += 1
         end

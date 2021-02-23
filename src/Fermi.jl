@@ -1,3 +1,10 @@
+"""
+    Fermi Quantum Chemistry Module
+
+Authors: M. M. Davis, G. J. R. Aroeira, J. M. Turney, and H. F. Schaefer
+
+GitHub: [Fermi.jl](https://github.com/FermiQC/Fermi.jl)
+"""
 module Fermi
 import Lints
 import TBLIS

@@ -1,3 +1,4 @@
+using TensorOperations
 using Combinatorics
 using SparseArrays
 using ArnoldiMethod
@@ -67,23 +68,50 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
         dets = get_determinants(act_elec, active, frozen)
         Ndets = length(dets)
     end
-    
+
     @output " done in {} seconds.\n" t
     @output "\nNumber of Determinants: {:10d}\n" Ndets
 
     @output "\nBuilding Sparse Hamiltonian..."
 
     t = @elapsed H = get_sparse_hamiltonian_matrix(dets, h, V, Fermi.CurrentOptions["cas_cutoff"])
+    #H =  build_H_fullγ(dets, h, V)
     @output " done in {:5.5f} seconds.\n" t
+
     @output "Hamiltonian Matrix size: {:10.3f} Mb\n" Base.summarysize(H)/10^6
 
     @output "Diagonalizing Hamiltonian for {:3d} eigenvalues..." nroot
     t = @elapsed begin
         decomp, history = partialschur(H, nev=nroot, tol=10^-12, which=LM())
         λ, ϕ = partialeigen(decomp)
+        #λ = eigvals(Array(H))
+        #ϕ = eigvecs(Array(H))
     end
     @output " done in {:5.5f} seconds.\n" t
     @output "\n Final FCI Energy: {:15.10f}\n" λ[1]+refwfn.molecule.Vnuc
+
+    #@output "\nBuilding Strings..."
+
+    ##t = @elapsed begin
+    #    sts,tree = get_αstrings(act_elec, active)
+    ##end
+    ##@output " done in {:5.5f} seconds.\n" t
+    #@output "\nBuilding Hamiltonian..."
+    ##t = @elapsed begin
+    #    H = sparse(get_H_fromstrings(sts, tree, h, V, frozen))
+    #    droptol!(H,10^-12) 
+    ##end
+    ##@output " done in {:5.5f} seconds.\n" t
+
+    #@output "Hamiltonian Matrix size: {:10.3f} Mb\n" Base.summarysize(H)/10^6
+
+    #@output "Diagonalizing Hamiltonian for {:3d} eigenvalues..." nroot
+    #t = @elapsed begin
+    #    decomp, history = partialschur(H, nev=nroot, tol=10^-12, which=LM())
+    #    λ, ϕ = partialeigen(decomp)
+    #end
+    #@output " done in {:5.5f} seconds.\n" t
+    #@output "\n Final FCI Energy: {:15.10f}\n" λ[1]+refwfn.molecule.Vnuc
 
     # Sort dets by importance
     C = ϕ[:,1]
@@ -93,7 +121,7 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
 
     @output "\n • Most important determinants:\n\n"
 
-    for i in 1:50
+    for i in 1:(min(20,length(C)))
         @output "{:15.5f}      {}\n" C[i]  detstring(dets[i], frozen+active)
     end
     @output "\n"
@@ -101,6 +129,15 @@ function CASCI{T}(refwfn::Fermi.HartreeFock.RHF, h::Array{T,2}, V::Array{T,4}, f
 end
 
 function get_determinants(Ne::Int, No::Int, nfrozen::Int)
+
+    det_size = 
+    if Fermi.CurrentOptions["det_size"] == 64
+        Int64
+    elseif Fermi.CurrentOptions["det_size"] == 128
+        Int128
+    else
+        throw(Fermi.InvalidFermiOption("Invalid determinant representation $(Fermi.CurrentOptions["det_size"])"))
+    end
 
     Nae = Int(Ne/2)
     occ_string = repeat('1', nfrozen)
@@ -115,7 +152,7 @@ function get_determinants(Ne::Int, No::Int, nfrozen::Int)
         for βstring in perms
             α = occ_string*join(αstring)
             β = occ_string*join(βstring)
-            _det = Determinant(α, β)
+            _det = Determinant(α, β;precision=det_size)
             push!(dets[Threads.threadid()], _det)
         end
         end #Threads.@spawn
@@ -173,4 +210,67 @@ function get_sparse_hamiltonian_matrix(dets::Array{Determinant,1}, h::Array{T,2}
     jvals = vcat(jvals...)
     vals  = vcat(vals...)
     return Symmetric(sparse(ivals, jvals, vals))
+end
+
+function get_1p_coupling_coefficients(dets::Array{Determinant,1}, nmo::Int)
+
+    Ndets = length(dets)
+    Nα = sum(αlist(dets[1]))
+    Nβ = sum(αlist(dets[1]))
+    αind = Array{Int64,1}(undef,Nα)
+    βind = Array{Int64,1}(undef,Nβ)    
+    γ = zeros(nmo, nmo, Ndets, Ndets)
+
+    for nI in 1:Ndets
+        I = dets[nI]
+        for nJ in 1:Ndets
+            J = dets[nJ]
+
+            if I.α == J.α && I.β == J.β
+                αindex!(I,αind) 
+                βindex!(I,βind) 
+
+                for i=αind
+                    γ[i,i,nI,nI] += 1
+                end
+
+                for i=βind
+                    γ[i,i,nI,nI] += 1
+                end
+            end
+
+            αexc = αexcitation_level(I,J)
+            if αexc > 1
+                continue
+            end
+
+            βexc = βexcitation_level(I,J)
+            if αexc + βexc > 1
+                continue
+            end
+
+            if αexc == 1
+                i, = αexclusive(I,J)
+                j, = αexclusive(J,I)
+                p = phase(I,J)
+                γ[i,j,nI,nJ] = p
+
+            elseif βexc == 1
+                i, = βexclusive(I,J)
+                j, = βexclusive(J,I)
+                p = phase(I,J)
+                γ[i,j,nI,nJ] = p
+            end
+        end
+    end
+
+    return γ
+end
+
+function build_H_fullγ(dets, h, V)
+    nmo = size(h,1)
+    γ = get_1p_coupling_coefficients(dets, nmo)
+    δ = [i==j ? 1 : 0 for i = 1:nmo, j = 1:nmo]
+    @tensoropt H[I,J] := γ[i,j,I,J]*h[i,j] - 0.5*γ[i,l,I,J]*δ[j,k]*V[i,j,k,l] + 0.5*γ[i,j,I,K]*γ[k,l,K,J]*V[i,j,k,l]
+    return H
 end

@@ -3,14 +3,14 @@ function RCCSDpT()
     RCCSDpT{prec}()
 end
 
+function RCCSDpT(rhf::Fermi.HartreeFock.RHF)
+    prec = select_precision(Fermi.CurrentOptions["precision"])
+    ccsd_wfn = RCCSD(rhf)
+    RCCSDpT{prec}(ccsd_wfn, rhf.ints)
+end
+
 function RCCSDpT{T}() where T <: AbstractFloat
     refwfn = Fermi.HartreeFock.RHF()
-
-    drop_occ = Fermi.CurrentOptions["drop_occ"]
-    drop_vir = Fermi.CurrentOptions["drop_vir"]
-
-    @output "Transforming Integrals..."
-
     ccsd_wfn = RCCSD{T}()
     RCCSDpT{T}(ccsd_wfn, refwfn.ints)
 end

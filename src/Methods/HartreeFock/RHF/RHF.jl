@@ -177,18 +177,47 @@ end
 
 function RHF(wfn::RHF, aoint::IntegralHelper, Alg::B) where B <: RHFAlgorithm 
 
-    # Projection of A→B done using equations described in Werner 2004 
+    # Projection of A→ B done using equations described in Werner 2004 
     # https://doi.org/10.1080/0026897042000274801
-    @output "Using {} wave function as initial guess\n" wfn.basis
-    Ca = wfn.ints.orbs["FU"]
+    @output "Using {} wave function as initial guess\n" wfn.ints.bname["primary"]
+
+    Ca = Float64[]
+    for orb in wfn.ints.orbs["FU"].orbs
+        Ca = vcat(Ca, orb.C)
+    end
+
+    nbf = Int(√length(Ca))
+    Ca = reshape(Ca, (nbf, nbf))
+
     Sbb = aoint["S"]
     S = Hermitian(aoint["S"])
-    Λ = S^(-1/2)
-    Sab = Lints.projector(wfn.LintsBasis, aoint.LintsBasis)
+    Λ = Array(S^(-1/2))
+
+    open("/tmp/molfile1.xyz","w") do molfile
+        natom = length(wfn.molecule.atoms)
+        write(molfile,"$natom\n\n")
+        write(molfile,Fermi.Geometry.get_xyz(wfn.molecule))
+    end
+
+    Lints.libint2_init()
+    wfnmol = Lints.Molecule("/tmp/molfile1.xyz")
+    wfnbas = Lints.BasisSet(wfn.ints.bname["primary"], wfnmol)
+
+    molecule = Fermi.Geometry.Molecule()
+    open("/tmp/molfile2.xyz","w") do molfile
+        natom = length(molecule.atoms)
+        write(molfile,"$natom\n\n")
+        write(molfile,Fermi.Geometry.get_xyz(molecule))
+    end
+
+    mol = Lints.Molecule("/tmp/molfile2.xyz")
+    bas = Lints.BasisSet(aoint.bname["primary"], wfnmol)
+
+    Sab = Lints.projector(wfnbas, bas)
     T = transpose(Ca)*Sab*(Sbb^-1)*transpose(Sab)*Ca
     Cb = (Sbb^-1)*transpose(Sab)*Ca*T^(-1/2)
     Cb = real.(Cb)
-    RHF(Fermi.Geometry.Molecule(), aoint, Cb, Alg)
+    RHF(molecule, aoint, Cb, Λ, Alg)
 end
 
 function RHFEnergy(D::Array{Float64,2}, H::Array{Float64,2},F::Array{Float64,2})

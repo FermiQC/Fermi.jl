@@ -126,7 +126,7 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI
                     F = Fermi.DIIS.extrapolate(DM)
                 end
             end
-            FPrms = sqrt(sum(err.^2))
+            #FPrms = sqrt(sum(err.^2))
 
             # Compute the Density RMS
             ΔD = D - D_old

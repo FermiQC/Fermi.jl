@@ -6,23 +6,36 @@ Compute a RCCSD wave function using the Compiled time factorization algorithm (C
 function ecRCCSD{T}(Alg::CTF) where T <: AbstractFloat
     @output "Calling CASCI module...\n"
     # Call CASCI
-    cas = Fermi.ConfigurationInteraction.CASCI{T}()
+    cas = Fermi.ConfigurationInteraction.CASCI()
     ecRCCSD{T}(cas, Alg)
+end
+
+function ecRCCSD{T}(refwfn::Fermi.HartreeFock.RHF, Alg::CTF) where T <: AbstractFloat
+    @output "Using given RHF to compute CASCI...\n"
+    cas = Fermi.ConfigurationInteraction.CASCI(refwfn)
+    ecRCCSD{T}(cas, Alg)
+end
+
+function ecRCCSD{T}(refwfn::Fermi.HartreeFock.RHF, cas::Fermi.ConfigurationInteraction.CASCI, Alg::CTF) where T <: AbstractFloat
+
+    # Save reference wavefunction and process CAS data. Modify Ref (if not HF)
+    @output "\n\nProcessing CAS data...\n"
+    refdet, Casdata = process_cas(cas)
+    ecRCCSD{T}(refdet, refwfn, Casdata, Alg)
 end
 
 function ecRCCSD{T}(cas::Fermi.ConfigurationInteraction.CASCI, Alg::CTF) where T <: AbstractFloat
 
     # Save reference wavefunction and process CAS data. Modify Ref (if not HF)
-    @output "Processing CAS data...\n"
+    @output "\n\nProcessing CAS data...\n"
     refdet, Casdata = process_cas(cas)
     refwfn = cas.ref
     ecRCCSD{T}(refdet, refwfn, Casdata, Alg)
 end
 
-
 function ecRCCSD{T}(refdet::Determinant, refwfn::Fermi.HartreeFock.RHF, Casdata::Dict{String,Array}, Alg::CTF) where T <: AbstractFloat
     # Print intro
-    Fermi.CoupledCluster.print_header()
+#    Fermi.CoupledCluster.print_header()
     @output "\n    • Computing Externally Corrected CCSD with the ecRCCSD module.\n\n"
 
     # Recover integrals object
@@ -59,31 +72,48 @@ function process_cas(cas::Fermi.ConfigurationInteraction.CASCI)
     # CI coefficients are intermediate normalized.
     # The reference determinant is taken as the HF one.
 
+    det_size = 
+    if Fermi.CurrentOptions["det_size"] == 64
+        Int64
+    elseif Fermi.CurrentOptions["det_size"] == 128
+        Int128
+    else
+        throw(Fermi.InvalidFermiOption("Invalid determinant representation $(Fermi.CurrentOptions["det_size"])"))
+    end
+
     dets = cas.dets
     Ccas = cas.coef
 
-    ref = Determinant(repeat("1",cas.ref.ndocc),repeat("1",cas.ref.ndocc))
-    z = 0
-    acf = 0
+    ref = dets[1]
+    C0 = Ccas[1]
+    zeroth = repeat('1', cas.ref.ndocc)*repeat('0', cas.ref.nvir)
+    hf = Fermi.ConfigurationInteraction.Determinant(zeroth, zeroth; precision=det_size)
+    if dets[1] == hf
+        @output "Dominant configuration is the RHF determinant.\n"
+    elseif dets[2] == hf
+        @output "Second most important configuration is the RHF determinant.\n"
+        ref = dets[2]
+        C0 = Ccas[2]
+    else
+        println(hf)
+        println(typeof(hf.α))
+        println(typeof(hf.β))
+        println(dets[1])
+        println(typeof(dets[1].α))
+        println(typeof(dets[1].β))
+        error("Dominant determinant is not the RHF.")
+    end
 
     @output "   • CAS Composition\n"
     @output "Excitation      N of dets\n"
+    z = 0
+    acf = 0
     while acf < length(dets)
         x = count(d->excitation_level(ref,d)==z, dets)
         @output "{}           {}\n" z x
         z += 1
         acf += x
     end
-
-    ref = dets[1]
-    zeroth = repeat('1', cas.ref.ndocc)*repeat('0', cas.ref.nvir)
-    hf = Fermi.ConfigurationInteraction.Determinant(zeroth, zeroth)
-    if ref == hf
-        @output "Dominant configuration is the RHF determinant.\n"
-    else
-        error("Dominant determinant is not the RHF.")
-    end
-    C0 = Ccas[1]
 
     # Intermediate Normalization
     Ccas = Ccas ./ C0

@@ -24,9 +24,9 @@ function select_precision(A::String)
     end
 end
 
-function ecRCCSDpT()
+function ecRCCSDpT(x...)
     prec = select_precision(Fermi.CurrentOptions["precision"])
-    ecRCCSDpT{prec}()
+    ecRCCSDpT{prec}(x...)
 end
 
 #implementations
