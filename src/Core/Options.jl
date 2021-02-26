@@ -69,7 +69,8 @@ const DefaultOptions = Dict{String,Union{Float64,Int,String,Bool,Nothing}}(
                                   "cas_cutoff" => 10^-9,
                                   "cas_nroot" => 1,
                                   "min_matrix_elem" => 10^-9,
-                                  "precision_override" => false
+                                  "precision_override" => false,
+                                  "tblis" => false
                                  )
 """
     Fermi.CurrentOptions
@@ -244,6 +245,3 @@ struct MethodArgument <: Exception
     msg::String
 end
 Base.showerror(io::IO, e::MethodArgument) = print(io, "MethodArgument: ", e.msg)
-#function notimplemented()
-#    @output "🚧 Not implemented yet! We're working on it 🔨 👷 \n"
-#end

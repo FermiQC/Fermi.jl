@@ -142,7 +142,8 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, Alg::B, guess::GWHGuess)
     # Reverse transformation to get MO coefficients
     C = Λ*Ct
     Co = C[:,1:ndocc]
-    D = Fermi.contract(Co,Co,"um","vm")
+    #D = Fermi.contract(Co,Co,"um","vm")
+    D = @tensor D[u,v] := Co[u,m]*Co[v,m]
     Eguess = RHFEnergy(D,Array(H),F)
     @output "Guess energy: {}\n" Eguess
 
