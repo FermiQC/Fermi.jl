@@ -9,10 +9,9 @@ _struct tree:_
 """
 abstract type FermiArray end
 
-import Base.size
-import Base.permutedims
-import Base.getindex
-import Base: ndims
+import Base: size, permutedims, getindex, ndims, show, iterate, length, similar, eltype
+
+export FermiMDArray, FermiMDRand, FermiMDZeros
 
 """
 
@@ -34,8 +33,19 @@ function FermiMDArray(data::Array)
     FermiMDArray{eltype(data)}(data)
 end
 
-function size(A::FermiMDArray)
-    size(A.data)
+function FermiMDZeros(x...)
+    data = zeros(x...)
+    return FermiMDArray(data)
+end
+
+function FermiMDRand(x...)
+    data = rand(x...)
+    return FermiMDArray(data)
+end
+
+# Methods for typical operations with arrays in Julia
+function size(A::FermiMDArray, i...)
+    size(A.data, i...)
 end
 
 function permutedims(A::FermiMDArray,tup)
@@ -52,4 +62,26 @@ end
 
 function ndims(A::FermiMDArray)
     return ndims(A.data)
+end
+
+function length(A::FermiMDArray)
+    return length(A.data)
+end
+
+function iterate(A::FermiMDArray, i...)
+    return iterate(A.data, i...)
+end
+
+function similar(A::FermiMDArray, i...)
+    data = similar(A.data, i...)
+    return FermiMDArray(data)
+end
+
+function eltype(A::FermiMDArray)
+    return eltype(A.data)
+end
+
+function show(io::IO, ::MIME"text/plain", A::FermiMDArray{T}) where T <: Number
+    print("Fermi Memory-held Dense Array - ")
+    display(A.data)
 end

@@ -1,6 +1,13 @@
+"""
+
+This module contains the necessary methods to use Fermi Arrays within TensorOperations
+
+"""
+
 import TensorOperations: contract!
 import TensorOperations: IndexTuple
 import TensorOperations: IndexError
+import TensorOperations: similarstructure_from_indices
 import TBLIS
 
 function oind2eins(oindA::NTuple{NAo}, cindA::NTuple{NAc},
@@ -74,9 +81,29 @@ function contract!(α,
         _C = TBLIS.TTensor{CType}(C.data,CType(β))
 
         TBLIS.mul!(_C, _A, _B, einA, einB, einC)
-        return C.data
+        return C
     else
         contract!(α, A.data, conjA, B.data, conjB, β, C.data, oindA, cindA, oindB, cindB, tindC)
+        return C
     end
 end
 
+function similarstructure_from_indices(T::Type, poA::IndexTuple, poB::IndexTuple,
+                                p1::IndexTuple, p2::IndexTuple,
+                                A::FermiMDArray, B::FermiMDArray,
+                                CA::Symbol = :N, CB::Symbol = :N)
+
+    _similarstructure_from_indices(T, poA, poB, (p1..., p2...), A, B)
+
+end
+
+function _similarstructure_from_indices(T, poA::IndexTuple, poB::IndexTuple,
+        ind::IndexTuple, A::FermiMDArray, B::FermiMDArray)
+
+    oszA = map(n->size(A,n), poA)
+    oszB = map(n->size(B,n), poB)
+    sz = let osz = (oszA..., oszB...)
+        map(n->osz[n], ind)
+    end
+    return sz
+end

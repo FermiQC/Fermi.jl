@@ -1,16 +1,17 @@
-
 function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, Λ, Alg::ConventionalRHF)
     @output "Computing integrals ..."
     t = @elapsed aoint["μ"]
     @output " done in {:>5.2f} s\n" t
     RHF(molecule,aoint,C,aoint["μ"],Λ)
 end
+
 function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, Λ, Alg::DFRHF)
     @output "Computing integrals ..."
     t = @elapsed aoint["B"]
     @output " done in {:>5.2f} s\n" t
     RHF(molecule,aoint,C,aoint["B"],Λ)
 end
+
 function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI::Array{Float64}, Λ::Array)
     Fermi.HartreeFock.print_header()
 
@@ -57,7 +58,8 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI
 
     # Form the density matrix from occupied subset of guess coeffs
     Co = C[:, 1:ndocc]
-    D = Fermi.contract(Co,Co,"um","vm")
+    #D = Fermi.contract(Co,Co,"um","vm")
+    @tensor D[u,v] := Co[u,m]*C[v,m]
     D_old = deepcopy(D)
     
     eps = zeros(Float64,ndocc+nvir)
@@ -89,7 +91,8 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI
             # Produce new Density Matrix
             Co = C[:,1:ndocc]
             #D = Fermi.contract(Co,Co,"um","vm")
-            Fermi.contract!(D,Co,Co,0.0,1.0,1.0,"uv","um","vm")
+            @tensor D[u,v] = Co[u,m]*C[v,m]
+            #Fermi.contract!(D,Co,Co,0.0,1.0,1.0,"uv","um","vm")
 
             # Build the Fock Matrix
             build_fock!(F, T + V, D, ERI, Co)
@@ -177,8 +180,10 @@ end
 
 function build_fock!(F::Array{Float64,2}, H::Array{Float64,2}, D::Array{Float64,2}, ERI::Array{Float64,4}, Co)
     F .= H
-    Fermi.contract!(F,D,ERI,1.0,1.0,2.0,"mn","rs","mnrs")
-    Fermi.contract!(F,D,ERI,1.0,1.0,-1.0,"mn","rs","mrns")
+    @tensor F[m,n] += 2*D[r,s]*ERI[m,n,r,s]
+    @tensor F[m,n] -= D[r,s]*ERI[m,r,n,s]
+    #Fermi.contract!(F,D,ERI,1.0,1.0,2.0,"mn","rs","mnrs")
+    #Fermi.contract!(F,D,ERI,1.0,1.0,-1.0,"mn","rs","mrns")
 end
 
 function build_fock!(F::Array{Float64,2}, H::Array{Float64,2}, D::Array{Float64,2}, ERI::Array{Float64,3}, Co;build_K=true)
