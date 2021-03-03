@@ -108,22 +108,20 @@ function RHF(molecule::Molecule)
     RHF(molecule, ints, Alg, guess)
 end
 
-function RHF(molecule::Molecule, aoint::IntegralHelper, Alg::B, guess::GWHGuess) where B <: RHFAlgorithm 
+function RHF(molecule::Molecule, ints::IntegralHelper, Alg::B, guess::GWHGuess) where B <: RHFAlgorithm 
 
     #form GWH guess
     @output "Using GWH Guess\n"
-    S = Array(Hermitian(aoint["S"]))
-    F = eigen(S,sortby=x->1/abs(x))
-    U = F.vectors
-    d = F.values
-    Λ = Array(S^(-1/2))*U#*diagm(abs.(d))^(-1/2)
+    S = ints["S"]
+    d, U = diagonalize(S, sortby = x->1/abs(x))
+    Λ = S^(-1/2)
     idxs = [abs(d[i]) > 1E-7 for i=1:size(S,1)]
     @output "Found {} linear dependencies. Projected them out.\n" size(S,1) - sum(idxs)
-    Λ = convert(Array{Float64},real.(Λ[:,idxs]))
-    H = Hermitian(aoint["T"] + aoint["V"])
-    ndocc = molecule.Nα#size(S,1)
+    #Λ = FermiMDArray(real.(Λ[:,idxs]))
+    H = Hermitian(ints["T"] + ints["V"])
+    ndocc = molecule.Nα
     nvir = size(S,1) - ndocc
-    F = Array{Float64,2}(undef, ndocc+nvir, ndocc+nvir)
+    F = similar(S)
     Hmax = maximum(diag(H))
     Hmin = minimum(diag(H))
     for i = 1:ndocc+nvir
@@ -133,21 +131,21 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, Alg::B, guess::GWHGuess)
             F[j,i] = F[i,j]
         end
     end
-    F = F#[idxs,idxs]
     Ft = Λ'*F*Λ
 
     # Get orbital energies and transformed coefficients
-    eps,Ct = eigen(Hermitian(Ft))
+    eps, Ct = diagonalize(Hermitian(Ft))
 
     # Reverse transformation to get MO coefficients
     C = Λ*Ct
     Co = C[:,1:ndocc]
+    ######
     #D = Fermi.contract(Co,Co,"um","vm")
     D = @tensor D[u,v] := Co[u,m]*Co[v,m]
-    Eguess = RHFEnergy(D,Array(H),F)
+    Eguess = RHFEnergy(D, H, F)
     @output "Guess energy: {}\n" Eguess
 
-    RHF(molecule, aoint, C, Λ, Alg)
+    RHF(molecule, ints, C, Λ, Alg)
 end
 
 function RHF(molecule::Molecule, aoint::IntegralHelper, Alg::B, guess::CoreGuess) where B <: RHFAlgorithm
@@ -221,7 +219,7 @@ function RHF(wfn::RHF, aoint::IntegralHelper, Alg::B) where B <: RHFAlgorithm
     RHF(molecule, aoint, Cb, Λ, Alg)
 end
 
-function RHFEnergy(D::Array{Float64,2}, H::Array{Float64,2},F::Array{Float64,2})
+function RHFEnergy(D::FermiMDArray{Float64}, H::FermiMDArray{Float64},F::FermiMDArray{Float64})
     return sum(D .* (H .+ F))
 end
 

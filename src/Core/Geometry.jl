@@ -141,18 +141,6 @@ function Molecule(atoms::Array{Atom,1}, charge::Int, multiplicity::Int)
     return out
 end
 
-function to_lints_molecule(M::Molecule)
-    natoms = length(M.atoms)
-    zs = zeros(Int64,natoms)
-    pos = fill(Float64[],natoms)
-    for i=1:natoms
-        zs[i] = M.atoms[i].Z
-        pos[i] = collect(M.atoms[i].xyz)
-    end
-    Lints.Molecule(zs,pos)
-end
-
-
 function print_out(M::Molecule)
     @output "   • Molecule:\n\n"
     output(get_xyz(M))

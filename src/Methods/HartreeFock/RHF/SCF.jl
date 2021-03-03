@@ -1,8 +1,8 @@
-function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, Λ, Alg::ConventionalRHF)
+function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray, Λ::FermiMDArray, Alg::ConventionalRHF)
     @output "Computing integrals ..."
-    t = @elapsed aoint["μ"]
+    t = @elapsed ints["ERI"]
     @output " done in {:>5.2f} s\n" t
-    RHF(molecule,aoint,C,aoint["μ"],Λ)
+    RHF(molecule, ints, C, ints["ERI"], Λ)
 end
 
 function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, Λ, Alg::DFRHF)
@@ -12,9 +12,9 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, Λ,
     RHF(molecule,aoint,C,aoint["B"],Λ)
 end
 
-function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI::Array{Float64}, Λ::Array)
-    Fermi.HartreeFock.print_header()
+function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray, ERI::FermiMDArray, Λ::FermiMDArray)
 
+    Fermi.HartreeFock.print_header()
     #grab some options
     maxit = Fermi.CurrentOptions["scf_max_iter"]
     Etol  = 10.0^(-Fermi.CurrentOptions["e_conv"])
@@ -44,27 +44,27 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI
     catch InexactError
         throw(Fermi.InvalidFermiOption("Invalid number of electrons $(molecule.Nα + molecule.Nβ) for RHF method."))
     end
-    nvir = size(C)[2] - ndocc
-    nao = size(C)[1]
+    nvir = size(C,2) - ndocc
+    nao = size(C,1)
 
     @output " Number of AOs:                        {:5.0d}\n" nao
     @output " Number of Doubly Occupied Orbitals:   {:5.0d}\n" ndocc
     @output " Number of Virtual Spatial Orbitals:   {:5.0d}\n" nvir
 
     
-    S = Hermitian(aoint["S"])
-    T = aoint["T"]
-    V = aoint["V"]
+    S = ints["S"]
+    T = ints["T"]
+    V = ints["V"]
 
     # Form the density matrix from occupied subset of guess coeffs
     Co = C[:, 1:ndocc]
     #D = Fermi.contract(Co,Co,"um","vm")
-    @tensor D[u,v] := Co[u,m]*C[v,m]
+    @tensor D[u,v] := Co[u,m]*Co[v,m]
     D_old = deepcopy(D)
     
-    eps = zeros(Float64,ndocc+nvir)
+    eps = FermiMDZeros(Float64,ndocc+nvir)
     # Build the inital Fock Matrix and diagonalize
-    F = zeros(Float64,nao,nao)
+    F = FermiMDZeros(Float64,nao,nao)
     build_fock!(F, T + V, D, ERI, Co)
     F̃ = deepcopy(F)
     D̃ = deepcopy(D)
@@ -178,7 +178,7 @@ function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI
     return RHF(molecule, E, ndocc, nvir, eps, aoint)
 end
 
-function build_fock!(F::Array{Float64,2}, H::Array{Float64,2}, D::Array{Float64,2}, ERI::Array{Float64,4}, Co)
+function build_fock!(F::FermiMDArray{Float64}, H::FermiMDArray{Float64}, D::FermiMDArray{Float64}, ERI::FermiMDArray{Float64}, Co)
     F .= H
     @tensor F[m,n] += 2*D[r,s]*ERI[m,n,r,s]
     @tensor F[m,n] -= D[r,s]*ERI[m,r,n,s]
@@ -202,7 +202,7 @@ end
 function build_J!(J::Array{Float64,2},D::Array{Float64,2},ERI::Array{Float64,3})
     sz = size(ERI,2)
     dfsz = size(ERI,1)
-    Fp = zeros(dfsz)
+    Fp = FermiMDZeros(dfsz)
     Fermi.contract!(Fp,D,ERI,1.0,1.0,2.0,"Q","rs","Qrs")
     Fermi.contract!(J,Fp,ERI,1.0,1.0,1.0,"mn","Q","Qmn")
 end
