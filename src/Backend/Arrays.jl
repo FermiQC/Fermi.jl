@@ -1,5 +1,5 @@
 using LinearAlgebra
-import Base: size, permutedims, getindex, setindex!, ndims, show, iterate, length, similar, adjoint, eltype, +, -, *, /, ^, BroadcastStyle, copyto!, broadcast!
+import Base: size, permutedims, getindex, setindex!, ndims, show, iterate, length, similar, adjoint, eltype, +, -, *, /, ^, BroadcastStyle
 
 export FermiMDArray, FermiMDRand, FermiMDZeros, diagonalize
 
@@ -81,7 +81,7 @@ function permutedims!(A::FermiMDArray,tup)
     A.data .= permutedims(A.data,tup)
 end
 
-function diagonalize(A::FermiMDArray; sortby=nothing)
+function diagonalize(A::FermiMDArray; sortby=x->x)
     vals, vecs = LinearAlgebra.eigen(A.data, sortby=sortby)
     return FermiMDArray(vals), FermiMDArray(vecs)
 end

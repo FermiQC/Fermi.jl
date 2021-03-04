@@ -145,9 +145,9 @@ function print_out(M::Molecule)
     @output "   • Molecule:\n\n"
     output(get_xyz(M))
     @output "\n"
-    @output "\nCharge: {}   " out.charge 
-    @output "Multiplicity: {}   \n" out.multiplicity
-    @output "Nuclear repulsion: {:15.10f}\n\n" out.Vnuc
+    @output "\nCharge: {}   " M.charge 
+    @output "Multiplicity: {}   \n" M.multiplicity
+    @output "Nuclear repulsion: {:15.10f}\n\n" M.Vnuc
 end
 """
     Fermi.Geometry.nuclear_repulsion(A::Atom, B::Atom)

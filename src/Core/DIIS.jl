@@ -13,26 +13,23 @@ import Base.length
     errs::Array{Array{T2},1} error vectors to build B matrix from.
     max_vec::Int64           max number of vectors to hold
 """
-struct DIISManager{T1<:AbstractFloat,
-                  T2 <: AbstractFloat }# where T <: AbstractFloat
-    vecs::Array{Array{T1},1}
-    errs::Array{Array{T2},1}
+struct DIISManager{T1<:AbstractFloat,T2 <: AbstractFloat}
+    vecs::Array{AbstractArray{T1},1}
+    errs::Array{AbstractArray{T2},1}
     max_vec::Int64
 end
 
 struct CROPManager{T<:AbstractFloat}
-    Wopt::Array{Array{T}}
-    Topt::Array{Array{T}}
-    Waux::Array{Array{T}}
-    Taux::Array{Array{T}}
+    Wopt::Array{AbstractArray{T}}
+    Topt::Array{AbstractArray{T}}
+    Waux::Array{AbstractArray{T}}
+    Taux::Array{AbstractArray{T}}
 end
-
-
 
 function DIISManager{T1,T2}(;size=6) where { T1 <: AbstractFloat,
                                              T2 <: AbstractFloat }
-    vecs = Array{Array{T1}}(undef,0)
-    errs = Array{Array{T2}}(undef,0)
+    vecs = Array{AbstractArray{T1}}(undef,0)
+    errs = Array{AbstractArray{T2}}(undef,0)
     DIISManager{T1,T2}(vecs,errs,size)
 end
 
@@ -44,15 +41,11 @@ function CROPManager{T}(;size=6) where T
     CROPManager{T}(Wopt,Topt,Waux,Taux)
 end
 
-function extrap(M::CROPManager{T}) where T
-end
-    
-function length(M::DIISManager{T1,T2}) where { T1 <: AbstractFloat,
-                                               T2 <: AbstractFloat }
+function length(M::DIISManager) 
     length(M.vecs)
 end
 
-function push!(M::DIISManager{T1,T2}, V::Array, E::Array) where { T1 <: AbstractFloat,
+function push!(M::DIISManager{T1,T2}, V::AbstractArray, E::AbstractArray) where { T1 <: AbstractFloat,
                                                                   T2 <: AbstractFloat }
     if length(M)+1 > M.max_vec
         norms = norm.(M.errs)
@@ -60,8 +53,8 @@ function push!(M::DIISManager{T1,T2}, V::Array, E::Array) where { T1 <: Abstract
         deleteat!(M.vecs,idx)
         deleteat!(M.errs,idx)
     end
-    push!(M.vecs,convert(Array{T1},deepcopy(V)))
-    push!(M.errs,convert(Array{T2},deepcopy(E)))
+    push!(M.vecs,deepcopy(V))
+    push!(M.errs,deepcopy(E))
 end
 
 """
@@ -87,7 +80,7 @@ function extrapolate(M::DIISManager{T1,T2};add_res=false) where { T1 <: Abstract
     resid = zeros(T1,diis_size+1)
     resid[end] = 1
     ci = svd(B)\resid
-    out = zeros(T1,size(M.vecs[1]))
+    out = zero(M.vecs[1])
     add_res ? outw = zeros(T1,size(M.vecs[1])) : nothing
     for num in 1:diis_size
         out += ci[num]*M.vecs[num]

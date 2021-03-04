@@ -13,7 +13,6 @@ struct DFRHF <: RHFAlgorithm end
 abstract type RHFGuess end
 struct CoreGuess   <: RHFGuess end
 struct GWHGuess    <: RHFGuess end
-struct HuckelGuess <: RHFGuess end
 
 """
     Fermi.HartreeFock.RHF
@@ -117,7 +116,6 @@ function RHF(molecule::Molecule, ints::IntegralHelper, Alg::B, guess::GWHGuess) 
     Λ = S^(-1/2)
     idxs = [abs(d[i]) > 1E-7 for i=1:size(S,1)]
     @output "Found {} linear dependencies. Projected them out.\n" size(S,1) - sum(idxs)
-    #Λ = FermiMDArray(real.(Λ[:,idxs]))
     H = Hermitian(ints["T"] + ints["V"])
     ndocc = molecule.Nα
     nvir = size(S,1) - ndocc
@@ -139,33 +137,29 @@ function RHF(molecule::Molecule, ints::IntegralHelper, Alg::B, guess::GWHGuess) 
     # Reverse transformation to get MO coefficients
     C = Λ*Ct
     Co = C[:,1:ndocc]
-    ######
-    #D = Fermi.contract(Co,Co,"um","vm")
+
     D = @tensor D[u,v] := Co[u,m]*Co[v,m]
     Eguess = RHFEnergy(D, H, F)
-    @output "Guess energy: {}\n" Eguess
 
     RHF(molecule, ints, C, Λ, Alg)
 end
 
-function RHF(molecule::Molecule, aoint::IntegralHelper, Alg::B, guess::CoreGuess) where B <: RHFAlgorithm
+function RHF(molecule::Molecule, ints::IntegralHelper, Alg::B, guess::CoreGuess) where B <: RHFAlgorithm
 
     #Form core guess
     @output "Using Core Guess\n"
-    S = Hermitian(aoint["S"])
+    S = ints["S"]
     Λ = S^(-1/2)
-    H = Hermitian(aoint["T"] + aoint["V"])
-    F = Array{Float64,2}(undef, ndocc+nvir, ndocc+nvir)
-    F .= H
-    Ft = Λ*F*transpose(Λ)
+    F = ints["T"] + ints["V"]
+    Ft = Λ*F*Λ'
 
     # Get orbital energies and transformed coefficients
-    eps,Ct = eigen(Hermitian(Ft))
+    eps,Ct = diagonalize(Ft)
 
     # Reverse transformation to get MO coefficients
     C = Λ*Ct
 
-    RHF(molecule, aoint, C, Λ, Alg)
+    RHF(molecule, ints, C, Λ, Alg)
 end
 
 function RHF(wfn::RHF)
@@ -178,7 +172,7 @@ function RHF(wfn::RHF, aoint::IntegralHelper, Alg::B) where B <: RHFAlgorithm
 
     # Projection of A→ B done using equations described in Werner 2004 
     # https://doi.org/10.1080/0026897042000274801
-    @output "Using {} wave function as initial guess\n" wfn.ints.bname["primary"]
+    @output "Using {} wave function as initial guess\n" wfn.ints.basis
 
     Ca = Float64[]
     for orb in wfn.ints.orbs["FU"].orbs

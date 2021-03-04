@@ -15,7 +15,8 @@ end
 function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray, ERI::FermiMDArray, Λ::FermiMDArray)
 
     Fermi.HartreeFock.print_header()
-    #grab some options
+    Fermi.Geometry.print_out(molecule)
+    # Grab some options
     maxit = Fermi.CurrentOptions["scf_max_iter"]
     Etol  = 10.0^(-Fermi.CurrentOptions["e_conv"])
     Dtol  = Fermi.CurrentOptions["scf_max_rms"]
@@ -24,7 +25,7 @@ function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray, ERI::Fer
     oda_cutoff = Fermi.CurrentOptions["oda_cutoff"]
     oda_shutoff = Fermi.CurrentOptions["oda_shutoff"]
 
-    #variables that will get updated iteration-to-iteration
+    # Variables that will get updated iteration-to-iteration
     ite = 1
     E = 0.0
     ΔE = 1.0
@@ -34,7 +35,7 @@ function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray, ERI::Fer
     damp = 0.0 
     converged = false
     
-    #build a diis_manager, if needed
+    # Build a diis_manager, if needed
     do_diis ? DM = Fermi.DIIS.DIISManager{Float64,Float64}(size=Fermi.CurrentOptions["ndiis"]) : nothing 
     do_diis ? diis_start = Fermi.CurrentOptions["diis_start"] : nothing
 
@@ -82,7 +83,7 @@ function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray, ERI::Fer
             end
 
             # Get orbital energies and transformed coefficients
-            eps,Ct = eigen(Hermitian(real.(Ft)))
+            eps,Ct = diagonalize(Ft)
 
             # Reverse transformation to get MO coefficients
             C = Λ*Ct
@@ -91,7 +92,7 @@ function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray, ERI::Fer
             # Produce new Density Matrix
             Co = C[:,1:ndocc]
             #D = Fermi.contract(Co,Co,"um","vm")
-            @tensor D[u,v] = Co[u,m]*C[v,m]
+            @tensor D[u,v] = Co[u,m]*Co[v,m]
             #Fermi.contract!(D,Co,Co,0.0,1.0,1.0,"uv","um","vm")
 
             # Build the Fock Matrix
@@ -116,13 +117,13 @@ function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray, ERI::Fer
                 F̃ .= (1-λ)*F̃ + λ*F
                 D̃ .= (1-λ)*D̃ + λ*D
                 damp = 1-λ
-                do_diis ? err = transpose(Λ)*(F*D*aoint["S"] - aoint["S"]*D*F)*Λ : nothing
+                do_diis ? err = transpose(Λ)*(F*D*ints["S"] - ints["S"]*D*F)*Λ : nothing
                 do_diis ? push!(DM, F, err) : nothing
             elseif (!oda || ite > oda_shutoff || Drms < oda_cutoff) && do_diis
                 damp = 0.0
                 diis = true
                 D̃ = D
-                do_diis ? err = transpose(Λ)*(F*D*aoint["S"] - aoint["S"]*D*F)*Λ : nothing
+                do_diis ? err = transpose(Λ)*(F*D*ints["S"] - ints["S"]*D*F)*Λ : nothing
                 do_diis ? push!(DM, F, err) : nothing
                 #do_diis && ite > diis_start ? F,_ = Fermi.DIIS.extrapolate(DM) : nothing
                 if do_diis && ite > diis_start
@@ -165,17 +166,7 @@ function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray, ERI::Fer
     end
     @output repeat("-",80)*"\n"
 
-    #occ = CanonicalOrbitals([CanonicalOrbital(Array{Float64,1}(C[:,i])) for i in 1:ndocc])
-    #vir = CanonicalOrbitals([CanonicalOrbital(Array{Float64,1}(C[:,i])) for i in ndocc+1:ndocc+nvir])
-    all = CanonicalOrbitals([CanonicalOrbital(Array{Float64,1}(C[:,i])) for i in 1:ndocc+nvir])
-    aoint.orbs.ndocc = ndocc
-    aoint.orbs.nvir = nvir
-    aoint.orbs.frozencore = Fermi.CurrentOptions["drop_occ"]
-    aoint.orbs.frozenvir = Fermi.CurrentOptions["drop_vir"]
-    aoint.orbs["canonical"] = all
-    aoint["F"]   = F
-
-    return RHF(molecule, E, ndocc, nvir, eps, aoint)
+    return RHF(molecule, E, ndocc, nvir, eps, ints)
 end
 
 function build_fock!(F::FermiMDArray{Float64}, H::FermiMDArray{Float64}, D::FermiMDArray{Float64}, ERI::FermiMDArray{Float64}, Co)
