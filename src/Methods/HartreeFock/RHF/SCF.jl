@@ -1,18 +1,18 @@
-function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray, Λ::FermiMDArray, Alg::ConventionalRHF)
+function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray{<:AbstractFloat,2}, Λ::FermiMDArray{<:AbstractFloat,2}, Alg::ConventionalRHF)
     @output "Computing integrals ..."
     t = @elapsed ints["ERI"]
     @output " done in {:>5.2f} s\n" t
     RHF(molecule, ints, C, ints["ERI"], Λ)
 end
 
-function RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, Λ, Alg::DFRHF)
+function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray{<:AbstractFloat,2}, Λ::FermiMDArray{<:AbstractFloat,2}, Alg::DFRHF)
     @output "Computing integrals ..."
-    t = @elapsed aoint["B"]
+    t = @elapsed ints["B"]
     @output " done in {:>5.2f} s\n" t
-    RHF(molecule,aoint,C,aoint["B"],Λ)
+    RHF(molecule, ints, C, ints["B"], Λ)
 end
 
-function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray, ERI::FermiMDArray, Λ::FermiMDArray)
+function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray{<:AbstractFloat,2}, ERI::FermiMDArray, Λ::FermiMDArray{<:AbstractFloat,2})
 
     Fermi.HartreeFock.print_header()
     Fermi.Geometry.print_out(molecule)
@@ -59,7 +59,6 @@ function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray, ERI::Fer
 
     # Form the density matrix from occupied subset of guess coeffs
     Co = C[:, 1:ndocc]
-    #D = Fermi.contract(Co,Co,"um","vm")
     @tensor D[u,v] := Co[u,m]*Co[v,m]
     D_old = deepcopy(D)
     
@@ -166,15 +165,13 @@ function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray, ERI::Fer
     end
     @output repeat("-",80)*"\n"
 
-    return RHF(molecule, E, ndocc, nvir, eps, ints)
+    return RHF(molecule, E, ndocc, nvir, eps, ints, C)
 end
 
 function build_fock!(F::FermiMDArray{Float64}, H::FermiMDArray{Float64}, D::FermiMDArray{Float64}, ERI::FermiMDArray{Float64}, Co)
     F .= H
     @tensor F[m,n] += 2*D[r,s]*ERI[m,n,r,s]
     @tensor F[m,n] -= D[r,s]*ERI[m,r,n,s]
-    #Fermi.contract!(F,D,ERI,1.0,1.0,2.0,"mn","rs","mnrs")
-    #Fermi.contract!(F,D,ERI,1.0,1.0,-1.0,"mn","rs","mrns")
 end
 
 function build_fock!(F::Array{Float64,2}, H::Array{Float64,2}, D::Array{Float64,2}, ERI::Array{Float64,3}, Co;build_K=true)

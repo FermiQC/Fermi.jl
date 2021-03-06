@@ -26,9 +26,9 @@ Abstract type common to all Hartree-Fock wave functions.
 
 _struct tree:_
 
-**AbstractHFWavefunction** <: AbstractReferenceWavefunction <: AbstractWavefunction
+**AbstractHFWavefunction** <: AbstractWavefunction
 """
-abstract type AbstractHFWavefunction <: Fermi.AbstractReferenceWavefunction end
+abstract type AbstractHFWavefunction <: Fermi.AbstractWavefunction end
 
 #Restricted HF
 include("RHF/RHF.jl")

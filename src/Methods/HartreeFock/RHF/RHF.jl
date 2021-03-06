@@ -67,6 +67,7 @@ struct RHF <: AbstractHFWavefunction
     nvir::Int
     eps::Array{Float64,1}
     ints::IntegralHelper
+    C::AbstractArray{Float64,2}
 end
 
 
