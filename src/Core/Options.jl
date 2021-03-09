@@ -1,6 +1,6 @@
-export @reset
-export @set
 export @get
+export @set
+export @reset
 export @molecule
 
 """
@@ -106,6 +106,68 @@ macro set(block)
 end
 
 """
+    Fermi.@reset(x="all", y...)
+
+Restores any number of option to default setting. If one argument is "all", restores all options to their default values.
+
+# Examples
+```
+julia> @set basis 6-31g
+julia> @get basis
+"6-31g"
+julia> @reset basis 
+julia> @get basis
+"sto-3g"
+
+julia> @set {
+            scf_guess core
+            diis false
+        }
+julia> @reset
+julia> @get scf_core
+"gwh"
+julia> @get diis
+true
+```
+"""
+macro reset(x="all", y...)
+    keys = [String(x)]
+    for i in y
+        push!(keys, String(i))
+    end
+
+    quote
+        for k in $keys
+            Fermi.Options.reset(k)
+        end
+    end
+end
+
+"""
+    Fermi.@molecule
+
+Set the molecule to be used in computations.
+
+# Example
+```
+@molecule {
+C                 -0.00000000     0.00000000    -0.00000000
+O                  0.00000000     0.00000000    -2.19732722
+O                 -0.00000000    -0.00000000     2.19732722
+}
+```
+"""
+macro molecule(block)
+    clean_up(s) = strip(filter(c->!occursin(c,"{}():"),s))
+    mol = repr(block)
+    mol = replace(mol, ";"=>"\n")
+    mol = String(clean_up(mol))
+    quote
+        Fermi.Options.set("molstring", $mol)
+    end
+end
+
+"""
     Fermi.Options
 
 Module to manage options in Fermi. 
@@ -131,7 +193,6 @@ for the commands above
 """
 module Options
 using Fermi.Error
-
 
 """
     Fermi.Options.Default
@@ -198,13 +259,19 @@ const Default = Dict{String,Union{Float64,Int,String,Bool,Nothing}}(
                                   "tblis" => false
                                  )
 """
-    Fermi.Current
+    Fermi.Options.Current
 
 Dictionary containing user options for Fermi. Unspecified options are obtained from 
 Fermi.Default.
 """
 Current = Dict{String,Union{Float64,Int,String,Bool,Nothing}}()
 
+"""
+    Fermi.Options.get(key)
+
+Return the current options set for the given `key`.
+See also `@get`
+"""
 function get(key::String)
 
     key = lowercase(key)
@@ -217,6 +284,12 @@ function get(key::String)
     end
 end
 
+"""
+    Fermi.Options.get(key, val)
+
+Set the options `key` to the value `val`.
+See also `@set`
+"""
 function set(key::String, val::Union{String, Bool, Float64, Int, Nothing})
     key = lowercase(key)
     if !(haskey(Default, key))
@@ -228,47 +301,20 @@ function set(key::String, val::Union{String, Bool, Float64, Int, Nothing})
 end
 
 """
-    Fermi.@reset(key="all")
+    Fermi.Options.reset(keys...)
 
-Restores `key` option to default setting. If `key == "all"`, restores all options to their default values.
+Reset all given `keys` to the default values.
+See also `@reset`
 """
-macro reset(key="all") 
+function reset(key::String="all")
     if key == "all"
-        return quote
-            for key in keys(Fermi.CurrentOptions)
-                Fermi.CurrentOptions[key] = Fermi.DefaultOptions[key]
-            end
+        for k in keys(Current)
+            delete!(Current, k)
         end
-    elseif String(key) in keys(Fermi.CurrentOptions)
-        return quote
-            Fermi.CurrentOptions[$(String(key))] = Fermi.DefaultOptions[$(String(key))]
-        end
-    else
-        return quote
-            throw(InvalidFermiOption("Invalid option "*$(String(key))))
-        end
+    elseif haskey(Current,key)
+        delete!(Current, key)
+    elseif !haskey(Default, key)
+        throw(InvalidFermiOption(key*" is not a valid option."))
     end
-end
-
-"""
-    Fermi.@molecule
-
-Set the molecule to be used in computations.
-
-# Example
-```
-@molecule {
-C                 -0.00000000     0.00000000    -0.00000000
-O                  0.00000000     0.00000000    -2.19732722
-O                 -0.00000000    -0.00000000     2.19732722
-}
-```
-"""
-macro molecule(block)
-    clean_up(s) = strip(filter(c->!occursin(c,"{}():"),s))
-    mol = repr(block)
-    mol = replace(mol, ";"=>"\n")
-    mol = clean_up(mol)
-    CurrentOptions["molstring"] = String(mol)
 end
 end #module
