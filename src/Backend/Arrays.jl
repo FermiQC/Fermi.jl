@@ -1,7 +1,7 @@
 using LinearAlgebra
 import Base: size, permutedims, getindex, setindex!, ndims, show, iterate, length, similar, adjoint, eltype, +, -, *, /, ^, BroadcastStyle
 
-export FermiMDArray, FermiMDRand, FermiMDZeros, diagonalize
+export FermiMDArray, FermiMDrand, FermiMDzeros, diagonalize
 
 """
 
@@ -26,13 +26,20 @@ function FermiMDArray(num::Number)
     return num
 end
 
-# Quick constructors for Fermi Arrays
-function FermiMDZeros(x...)
+"""
+    FermiMDzeros(x...)
+Create a Julia array as `zeros(x...)` and wrapped in a FermiMDArray.
+"""
+function FermiMDzeros(x...)
     data = zeros(x...)
     return FermiMDArray(data)
 end
 
-function FermiMDRand(x...)
+"""
+    FermiMDrand(x...)
+Create a Julia array as `rand(x...)` and wrapped in a FermiMDArray.
+"""
+function FermiMDrand(x...)
     data = rand(x...)
     return FermiMDArray(data)
 end
@@ -81,6 +88,21 @@ function permutedims!(A::FermiMDArray,tup)
     A.data .= permutedims(A.data,tup)
 end
 
+"""
+    Fermi.diagonalize
+
+Diagonalize a NxN FermiMDArray, returning eigenvalues and eigenvectors.
+
+# Example
+```
+julia> A = FermiMDArray([3 6; 6 4])
+julia> ϵ,ν = diagonalize(A)
+julia> ϵ
+Fermi Memory-held Dense Array - 2-element Array{Float64,1}:
+ -2.5207972893961488
+  9.520797289396146
+```
+"""
 function diagonalize(A::FermiMDArray; sortby=x->x)
     vals, vecs = LinearAlgebra.eigen(A.data, sortby=sortby)
     return FermiMDArray(vals), FermiMDArray(vecs)
@@ -99,7 +121,6 @@ function adjoint(A::FermiMDArray)
 end
 
 # Basic mathematical methods
-
 function Base.:+(A::FermiMDArray, B::FermiMDArray)
     return FermiMDArray(A.data + B.data)
 end

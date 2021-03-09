@@ -9,7 +9,7 @@ module Fermi
 
 include("Backend/Error.jl")
 include("Core/Options.jl")                             # Top level scope
-#include("Backend/Arrays.jl")
+include("Backend/Arrays.jl")
 #include("Backend/Contract.jl")
 #include("Backend/Output.jl")
 #include("Core/DIIS.jl")
