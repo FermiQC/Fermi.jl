@@ -166,7 +166,7 @@ function get_atoms(molstring::String; unit::String="angstrom")
     elseif unit == "angstrom"
         conv = 1.0
     else
-        throw(InvalidFermiOptions("unknown unit in molecule construction: $unit")
+        throw(InvalidFermiOptions("unknown unit in molecule construction: $unit"))
     end
 
     atoms = Atom[]
@@ -178,7 +178,7 @@ function get_atoms(molstring::String; unit::String="angstrom")
             throw(InvalidMolecule("4 columns expected on XYZ string. Got $(length(m))"))
         end
 
-        if m != nothing
+        if m !== nothing
             # Convert SubString to String
             AtomicSymbol = String(m[1])
             Z = atomic_number(AtomicSymbol)
