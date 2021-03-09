@@ -22,6 +22,11 @@ function FermiMDArray(data::AbstractArray{T,N}) where {T,N}
     FermiMDArray{T,N}(data)
 end
 
+function FermiMDArray(A::FermiMDArray{T,N}) where {T,N}
+    # If try to convert a FermiMDArray into a FermiMDArray: Do nothing
+    return A
+end
+
 function FermiMDArray(num::Number)
     return num
 end
