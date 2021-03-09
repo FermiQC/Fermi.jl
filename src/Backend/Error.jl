@@ -5,7 +5,7 @@ export MethodArgument
 export InvalidMolecule
 
 """
-    InvalidFermiOption
+    Fermi.Error.InvalidFermiOption
 
 Error flag used when an invalid option is passed to Fermi.
 """
@@ -15,7 +15,7 @@ end
 Base.showerror(io::IO, e::InvalidFermiOption) = print(io, "InvalidFermiOption: ", e.msg)
 
 """
-    MethodArgument
+    Fermi.Error.MethodArgument
 
 Error flag used when an invalid arguments are passed into a Fermi function (e.g. RHF)
 """
@@ -25,7 +25,7 @@ end
 Base.showerror(io::IO, e::MethodArgument) = print(io, "MethodArgument: ", e.msg)
 
 """
-    InvalidMolecule
+    Fermi.Error.InvalidMolecule
 
 Error flag used when it is not possible to construct a molecule with the 
 information given.
