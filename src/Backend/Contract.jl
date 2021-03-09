@@ -1,8 +1,4 @@
-"""
-
-This module contains the necessary methods to use Fermi Arrays within TensorOperations
-
-"""
+# This module contains the necessary methods to use Fermi Arrays within TensorOperations
 
 import TensorOperations: contract!
 import TensorOperations: IndexTuple
@@ -14,6 +10,10 @@ import TBLIS
 function oind2eins(oindA::NTuple{NAo}, cindA::NTuple{NAc},
           oindB::NTuple{NBo}, cindB::NTuple{NBc},
           tindC::NTuple{NCt}) where {NAo, NAc, NBo, NBc, NCt}
+
+    # This function converts the numerical scheme used in TensorOperations
+    # to represent contractions into an Einsum scheme.
+
 
     # Check contraction conssitency.
     NAo + NBo == NCt || throw(IndexError("number of outer index not consistent."))
@@ -52,7 +52,7 @@ function contract!(α,
           oindB::IndexTuple, cindB::IndexTuple,
           tindC::IndexTuple, syms::Union{Nothing, NTuple{3,Symbol}} = nothing)
 
-    if Fermi.CurrentOptions["tblis"]
+    if Fermi.Options.get("tblis")
         # Check permutation consistency.
         # This check is copied from stridedarray.jl
         pA = (oindA...,cindA...)
@@ -99,4 +99,28 @@ function contract!(α,
           tindC::IndexTuple, syms::Union{Nothing, NTuple{3,Symbol}} = nothing)
 
     contract!(α, A, conjA, B, conjB, β, FermiMDArray(C), oindA, cindA, oindB, cindB, tindC, syms)
+end
+
+function contract!(α, 
+          A::FermiMDArray, conjA::Symbol,
+          B::AbstractArray, conjB::Symbol,
+          β, 
+          C::AbstractArray, 
+          oindA::IndexTuple, cindA::IndexTuple, 
+          oindB::IndexTuple, cindB::IndexTuple,
+          tindC::IndexTuple, syms::Union{Nothing, NTuple{3,Symbol}} = nothing)
+
+    contract!(α, A, conjA, FermiMDArray(B), conjB, β, FermiMDArray(C), oindA, cindA, oindB, cindB, tindC, syms)
+end
+
+function contract!(α, 
+          A::AbstractArray, conjA::Symbol,
+          B::FermiMDArray, conjB::Symbol,
+          β, 
+          C::AbstractArray, 
+          oindA::IndexTuple, cindA::IndexTuple, 
+          oindB::IndexTuple, cindB::IndexTuple,
+          tindC::IndexTuple, syms::Union{Nothing, NTuple{3,Symbol}} = nothing)
+
+    contract!(α, FermiMDArray(A), conjA, B, conjB, β, FermiMDArray(C), oindA, cindA, oindB, cindB, tindC, syms)
 end

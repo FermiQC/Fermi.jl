@@ -7,7 +7,7 @@ export FermiMDArray, FermiMDrand, FermiMDzeros, diagonalize
 
     FermiMDArray{T,N}
 
-Fermi array concrete object held entirely in memory. Thin wrapper around a standard Julia array, representing a dense array of type T and rank N.
+Fermi array object held entirely in memory. Thin wrapper around a standard Julia array, representing a dense array of type T and rank N.
 
 _struct tree:_
 
@@ -15,11 +15,6 @@ _struct tree:_
 """
 struct FermiMDArray{T,N} <: AbstractArray{T,N}
     data::AbstractArray{T,N}
-end
-
-function FermiMDArray(data::AbstractArray{T,N}) where {T,N}
-    eltype(data) <: Number || throw(TypeError(:FermiMDArray, "data type: must be numerical", Number, eltype(data)))
-    FermiMDArray{T,N}(data)
 end
 
 function FermiMDArray(A::FermiMDArray{T,N}) where {T,N}
@@ -33,7 +28,7 @@ end
 
 """
     FermiMDzeros(x...)
-Create a Julia array as `zeros(x...)` and wrapped in a FermiMDArray.
+Create a Julia Array as `zeros(x...)` and wrapped in a FermiMDArray.
 """
 function FermiMDzeros(x...)
     data = zeros(x...)
@@ -42,7 +37,7 @@ end
 
 """
     FermiMDrand(x...)
-Create a Julia array as `rand(x...)` and wrapped in a FermiMDArray.
+Create a Julia Array as `rand(x...)` and wrapped in a FermiMDArray.
 """
 function FermiMDrand(x...)
     data = rand(x...)
