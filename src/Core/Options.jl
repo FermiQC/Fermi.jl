@@ -200,7 +200,7 @@ using Fermi.Error
 Dictionary containing default options for Fermi. Any information not given
 explicitly to Methods is obtained from here.
 """
-const Default = Dict{String,Union{Float64,Int,String,Bool,Nothing}}(
+const Default = Dict{String,Union{Float64,Int,String,Bool}}(
                                   "molstring" => """
                                   O        1.2091536548      1.7664118189     -0.0171613972
                                   H        2.1984800075      1.7977100627      0.0121161719
@@ -229,7 +229,7 @@ const Default = Dict{String,Union{Float64,Int,String,Bool,Nothing}}(
                                   "σ"      => 0.001,
                                   "γ"      => 1.0,
                                   "ζ"      => 0.95,
-                                  "ζsize"  => nothing,
+                                  "ζsize"  => 0,
                                   "e_conv" => 10,
                                   "d_conv" => 8,
                                   "cc_max_iter" => 50,
@@ -249,7 +249,7 @@ const Default = Dict{String,Union{Float64,Int,String,Bool,Nothing}}(
                                   "cc_damp_ratio" => 0.0,
                                   "cc_diis_relax" => 3,
                                   "num_frozen" => 0,
-                                  "aci_print_screen" => nothing,
+                                  "aci_print_screen" => 0,
                                   "cas_frozen" => 0,
                                   "cas_active" => -1,
                                   "cas_cutoff" => 10^-9,
@@ -264,7 +264,7 @@ const Default = Dict{String,Union{Float64,Int,String,Bool,Nothing}}(
 Dictionary containing user options for Fermi. Unspecified options are obtained from 
 Fermi.Default.
 """
-Current = Dict{String,Union{Float64,Int,String,Bool,Nothing}}()
+Current = Dict{String,Union{Float64,Int,String,Bool}}()
 
 """
     Fermi.Options.get(key)
@@ -294,6 +294,11 @@ function set(key::String, val::Union{String, Bool, Float64, Int, Nothing})
     key = lowercase(key)
     if !(haskey(Default, key))
         throw(InvalidFermiOption(key*" is not a valid option."))
+    end
+    dtype = typeof(Default[key])
+    inptype = typeof(val)
+    if inptype !== dtype
+        throw(InvalidFermiOption("Invalid data type for $key. Expected: $dtype, Got: $inptype"))
     else
         Current[key] = val
     end
