@@ -2,7 +2,8 @@ using TensorOperations
 using Lints
 using Fermi.DIIS
 using Fermi.Integrals: IntegralHelper
-using Fermi.Orbitals: CanonicalOrbital, CanonicalOrbitals, OrbDict
+using Fermi: AbstractOrbitals
+using Fermi.Geometry: Molecule
 
 # Define Algorithims
 abstract type RHFAlgorithm end
@@ -13,6 +14,16 @@ struct DFRHF <: RHFAlgorithm end
 abstract type RHFGuess end
 struct CoreGuess   <: RHFGuess end
 struct GWHGuess    <: RHFGuess end
+
+# Define RHF Orbital
+
+struct RHFOrbitals <: AbstractOrbitals
+    molecule::Molecule
+    basis::String
+    aux::String
+    eps::AbstractArray{Float64,1}
+    C::AbstractArray{Float64,2}
+end
 
 """
     Fermi.HartreeFock.RHF
@@ -39,12 +50,12 @@ These options can be set with `@set <option> <value>`
 
 | Option         | What it does                      | Type      | choices [default]     |
 |----------------|-----------------------------------|-----------|-----------------------|
-| `scf_alg`      | picks SCF algorithm               | `String`  | "df" ["conventional"] |
+| `scf_type`     | picks SCF algorithm               | `String`  | "df" ["conventional"] |
 | `scf_max_rms`  | RMS density convergence criterion |`Float64`  | [10^-10]              |
 | `scf_max_iter` | Max number of iterations          | `Int`     | [50]                  |
 | `basis`        | What basis set to use             | `String`  | ["sto-3g"]            |
 | `jkfit`        | What aux. basis set to use for JK | `String`  | ["auto"]              |
-| `oda`          | Whether to use ODA                | `Bool`    | [`True`]              |
+| `oda`          | Whether to use ODA                | `Bool`    | [`true`]              |
 | `oda_cutoff`   | When to turn ODA off (RMS)        | `Float64` | [1E-1]                |
 | `oda_shutoff`  | When to turn ODA off (iter)       | `Int`     | [20]                  |
 | `scf_guess`    | Which guess density to use        |           | "core" ["gwh"]        |
@@ -65,13 +76,11 @@ struct RHF <: AbstractHFWavefunction
     energy::Float64
     ndocc::Int
     nvir::Int
-    eps::Array{Float64,1}
-    ints::IntegralHelper
-    C::AbstractArray{Float64,2}
+    orbitals::RHFOrbitals
 end
 
 
-function select_alg(A::String)
+function select_type(A::String)
     implemented = Dict{String,Any}(
         "conventional" => (ConventionalRHF()),
         "df"           => (DFRHF())
@@ -102,27 +111,28 @@ function RHF()
 end
 
 function RHF(molecule::Molecule)
-    Alg = select_alg(Fermi.CurrentOptions["scf_alg"])
-    ints = Fermi.Integrals.IntegralHelper()
     guess = select_guess(Fermi.CurrentOptions["scf_guess"])
+    Alg = select_alg(Fermi.CurrentOptions["scf_type"])
+    ints = Fermi.Integrals.IntegralHelper()
     RHF(molecule, ints, Alg, guess)
 end
 
-function RHF(molecule::Molecule, ints::IntegralHelper, Alg::B, guess::GWHGuess) where B <: RHFAlgorithm 
+function RHF(molecule::Molecule, ints::IntegralHelper, Alg::RHFAlgorithm, guess::GWHGuess)
 
-    #form GWH guess
+    # Form GWH guess
     @output "Using GWH Guess\n"
     S = ints["S"]
     d, U = diagonalize(S, sortby = x->1/abs(x))
     Λ = S^(-1/2)
-    idxs = [abs(d[i]) > 1E-7 for i=1:size(S,1)]
-    @output "Found {} linear dependencies. Projected them out.\n" size(S,1) - sum(idxs)
+    idxs = [abs(d[i]) > 1E-7 for i = eachindex(d)]
+
+    @output "Found {} linear dependencies\n" length(d) - sum(idxs)
+
     H = Hermitian(ints["T"] + ints["V"])
     ndocc = molecule.Nα
     nvir = size(S,1) - ndocc
     F = similar(S)
-    Hmax = maximum(diag(H))
-    Hmin = minimum(diag(H))
+
     for i = 1:ndocc+nvir
         F[i,i] = H[i,i]
         for j = i+1:ndocc+nvir
@@ -139,15 +149,16 @@ function RHF(molecule::Molecule, ints::IntegralHelper, Alg::B, guess::GWHGuess) 
     C = Λ*Ct
     Co = C[:,1:ndocc]
 
-    D = @tensor D[u,v] := Co[u,m]*Co[v,m]
+    @tensor D[u,v] := Co[u,m]*Co[v,m]
+
     Eguess = RHFEnergy(D, H, F)
 
     RHF(molecule, ints, C, Λ, Alg)
 end
 
-function RHF(molecule::Molecule, ints::IntegralHelper, Alg::B, guess::CoreGuess) where B <: RHFAlgorithm
+function RHF(molecule::Molecule, ints::IntegralHelper, Alg::RHFAlgorithm, guess::CoreGuess)
 
-    #Form core guess
+    # Form Core Guess
     @output "Using Core Guess\n"
     S = ints["S"]
     Λ = S^(-1/2)
@@ -155,7 +166,7 @@ function RHF(molecule::Molecule, ints::IntegralHelper, Alg::B, guess::CoreGuess)
     Ft = Λ*F*Λ'
 
     # Get orbital energies and transformed coefficients
-    eps,Ct = diagonalize(Ft)
+    _, Ct = diagonalize(Ft)
 
     # Reverse transformation to get MO coefficients
     C = Λ*Ct
@@ -164,25 +175,25 @@ function RHF(molecule::Molecule, ints::IntegralHelper, Alg::B, guess::CoreGuess)
 end
 
 function RHF(wfn::RHF)
-    Alg = select_alg(Fermi.CurrentOptions["scf_alg"])
-    ints = Fermi.Integrals.IntegralHelper()
-    RHF(wfn, ints, Alg)
+
+    # Start RHF computation from another RHF object
+    Bints = Fermi.Integrals.IntegralHelper(wfn.molecule, wfn.orbitals.basis, wfn.orbitals.aux)
+    RHF(wfn, Bint)
 end
 
-function RHF(wfn::RHF, aoint::IntegralHelper, Alg::B) where B <: RHFAlgorithm 
+function RHF(wfn::RHF, Bint::IntegralHelper)
 
     # Projection of A→ B done using equations described in Werner 2004 
     # https://doi.org/10.1080/0026897042000274801
     @output "Using {} wave function as initial guess\n" wfn.ints.basis
 
-    Ca = Float64[]
-    for orb in wfn.ints.orbs["FU"].orbs
-        Ca = vcat(Ca, orb.C)
+    Amol = Fermi.Geometry.Molecule()
+
+    if Amol != wfn.molecule
+        throw(InvalidFermiOption(" input RHF wavefunction and Current Options have different molecules."))
     end
 
-    nbf = Int(√length(Ca))
-    Ca = reshape(Ca, (nbf, nbf))
-
+    Aint 
     Sbb = aoint["S"]
     S = Hermitian(aoint["S"])
     Λ = Array(S^(-1/2))

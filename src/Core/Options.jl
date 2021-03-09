@@ -1,20 +1,145 @@
-# default options go here
-# if user specifies option they will be overwritten
-export CurrentOptions
-export InvalidFermiOption
-export MethodArgument
 export @reset
 export @set
 export @get
 export @molecule
 
 """
-    Fermi.DefaultOptions
+    Fermi.@get
+
+Returns the current value of an option. 
+
+# Examples
+
+```
+julia> @get basis
+"sto-3g"      # Default
+
+julia> @set basis cc-pVDZ
+julia> @get basis
+"cc-pVDZ"
+```
+"""
+macro get(opt)
+    clean_up(s) = String(filter(c->!occursin(c," ():"),s))
+    A = clean_up(repr(opt))
+    quote
+        Fermi.Options.get($A)
+    end |> esc
+end
+
+"""
+    Fermi.@set
+
+Set options for Fermi computations. It saves the options into Fermi.CurrentOptions.
+
+*Usage:*  @set A B
+
+A is set to B. By default A is taken as a string. 
+
+# Examples
+
+```
+@set basis cc-pVDZ
+@set cc_max_iter 100
+@set e_conv 10^-9
+```
+B is evaluated at runtime. If the evaluation is not possible, B is converted to a string.
+# Examples
+```
+mybasis = "6-31g"
+julia> @set basis mybasis
+"6-31g"
+julia> @set basis yourbasis
+"yourbasis"
+```
+One can also use the block syntax
+```
+@set {
+    basis cc-pVDZ
+    cc_max_iter 100
+    e_conv 10^-9
+}
+```
+Note for basis set: Having * at the end of a line is considered an incomplete expression by Julia. Thus, for basis such as 6-31g*
+you should use quotes
+```
+@set basis "6-31g"
+```
+"""
+macro set(A, B)
+    clean_up(s) = String(filter(c->!occursin(c," ():"),s))
+    key = clean_up(repr(A))
+    val = clean_up(repr(B))
+    
+    quote 
+        try
+            Fermi.Options.set($key, $(esc(Meta.parse(val))))
+        catch UndefVarError
+            Fermi.Options.set($key,$val)
+        end
+    end
+end
+
+macro set(block)
+    lines = split(repr(block),";")
+    clean_up(s) = String(strip(filter(c->!occursin(c," {}():"),s)))
+    out = quote end
+    for l in lines
+        key, val = split(strip(l), " ", limit=2)
+        key = clean_up(key)
+        val = clean_up(val)
+
+        y = quote
+            try
+                Fermi.Options.set($key, $(esc(Meta.parse(val))))
+            catch UndefVarError
+                Fermi.Options.set($key,$val)
+            end
+        end
+
+        for com in y.args
+            push!(out.args, com)
+        end
+    end
+
+    return out
+end
+
+"""
+    Fermi.Options
+
+Module to manage options in Fermi. 
+
+# Functions
+
+    Fermi.set(option, value)     Set an <option> to a given <value>
+    Fermi.get(option)            Return the current value of an <option>
+    Fermi.reset()                Reset all options to default values
+    Fermi.reset(option)          Reset a specific <option> to its default value
+    Fermi.molecule(molstring)    Read in a String for the `molstring` option
+
+Alternatively, at global scope, one can use the corresponding macros that create shortcuts
+for the commands above
+
+# Macros
+
+    @set <option> <value>   Set an <option> to a given <value>
+    @get <option>           Return the current value of an <option>
+    @reset                  Reset all options to default values
+    @reset <option>         Reset a specific <option> to its default value
+    @molecule               Read in a String for the `molstring` option
+"""
+module Options
+using Fermi.Error
+
+
+"""
+    Fermi.Options.Default
 
 Dictionary containing default options for Fermi. Any information not given
 explicitly to Methods is obtained from here.
 """
-const DefaultOptions = Dict{String,Union{Float64,Int,String,Bool,Nothing}}(
+const Default = Dict{String,Union{Float64,Int,String,Bool,Nothing}}(
                                   "molstring" => """
                                   O        1.2091536548      1.7664118189     -0.0171613972
                                   H        2.1984800075      1.7977100627      0.0121161719
@@ -29,7 +154,7 @@ const DefaultOptions = Dict{String,Union{Float64,Int,String,Bool,Nothing}}(
                                   "reference" => "rhf",
                                   "scf_max_iter" => 50,
                                   "scf_max_rms" => 10^-10,
-                                  "scf_alg" => "conventional",
+                                  "scf_type" => "conventional",
                                   "oda" => true,
                                   "oda_cutoff" => 1E-1,
                                   "oda_shutoff" => 20,
@@ -50,7 +175,7 @@ const DefaultOptions = Dict{String,Union{Float64,Int,String,Bool,Nothing}}(
                                   "cc_max_rms" => 10^-10,
                                   "cc_e_conv" => 10^-10,
                                   "bcc_max_t1" => 1^-7,
-                                  "preconv_T1" => true,
+                                  "preconv_t1" => true,
                                   "drop_occ" => 0,
                                   "drop_vir" => 0,
                                   "diis" => true,
@@ -73,12 +198,34 @@ const DefaultOptions = Dict{String,Union{Float64,Int,String,Bool,Nothing}}(
                                   "tblis" => false
                                  )
 """
-    Fermi.CurrentOptions
+    Fermi.Current
 
 Dictionary containing user options for Fermi. Unspecified options are obtained from 
-Fermi.DefaultOptions.
+Fermi.Default.
 """
-CurrentOptions = deepcopy(DefaultOptions)
+Current = Dict{String,Union{Float64,Int,String,Bool,Nothing}}()
+
+function get(key::String)
+
+    key = lowercase(key)
+    if haskey(Current, key)
+        return Current[key]
+    elseif haskey(Default, key)
+        return Default[key]
+    else
+        throw(InvalidFermiOption(key*" is not a valid option."))
+    end
+end
+
+function set(key::String, val::Union{String, Bool, Float64, Int, Nothing})
+    key = lowercase(key)
+    if !(haskey(Default, key))
+        throw(InvalidFermiOption(key*" is not a valid option."))
+    else
+        Current[key] = val
+    end
+    get(key)
+end
 
 """
     Fermi.@reset(key="all")
@@ -98,126 +245,15 @@ macro reset(key="all")
         end
     else
         return quote
-            error("Invalid option "*$(String(key)))
+            throw(InvalidFermiOption("Invalid option "*$(String(key))))
         end
     end
-end
-
-"""
-    Fermi.@set
-
-Set options for Fermi computations. It saves the options into Fermi.CurrentOptions.
-
-*Usage:*  @set A B
-
-A is set to B. By default A is taken as a string. B is evaluated at runtime. If the evaluation
-is not possible, B is converted to a string.
-
-# Examples
-
-```
-@set basis cc-pVDZ
-@set cc_max_iter 100
-@set e_conv 10^-9
-```
-One can also use the block syntax
-```
-@set {
-    basis cc-pVDZ
-    cc_max_iter 100
-    e_conv 10^-9
-}
-```
-Note that for the block syntax variables are not accepted because the evaluation of B is
-done at parse time.
-```
-mybasis = 6-31g
-@set {
-    basis mybasis
-}
-```
-Will set the basis to "mybasis" not "6-31g".
-
-Note for basis set: A * at the end of a line is considered an incomplete expression by Julia. Thus, for basis such as 6-31g*
-you should use quotes
-```
-@set basis "6-31g"
-```
-"""
-macro set(opt,val)
-    clean_up(s) = String(filter(c->!occursin(c," ():"),s))
-    A = clean_up(repr(opt))
-    B = clean_up(repr(val))
-
-    # Check if the options exists
-    if !(A in keys(DefaultOptions))
-        throw(InvalidFermiOption(A*" is not a valid option."))
-    end
-
-    quote
-        try
-            CurrentOptions[$A] = $val
-        catch UndefVarError
-            CurrentOptions[$A] = $B
-        end
-    end |> esc
-end
-
-macro set(block)
-    lines = split(repr(block),";")
-    quote 
-        clean_up(s) = String(strip(filter(c->!occursin(c," {}():"),s)))
-        for l in $lines
-            opt, val = split(strip(l), " ", limit=2)
-            opt = clean_up(opt)
-            val = clean_up(val)
-
-            # Check if the options exists
-            if !(opt in keys(DefaultOptions))
-                throw(InvalidFermiOption(opt*" is not a valid option."))
-            end
-
-            try
-                CurrentOptions[opt] = eval(Meta.parse(val))
-            catch UndefVarError
-                CurrentOptions[opt] = val
-            end
-        end
-    end
-end
-
-"""
-    Fermi.@get
-
-Returns the current value of an options. 
-
-# Examples
-
-```
-julia> @get basis
-"sto-3g"      # Default
-
-julia> @set basis cc-pVDZ
-julia> @get basis
-"cc-pVDZ"
-```
-"""
-macro get(opt)
-    clean_up(s) = String(filter(c->!occursin(c," ():"),s))
-    A = clean_up(repr(opt))
-    quote
-        try
-            CurrentOptions[$A]
-        catch KeyError
-            throw(InvalidFermiOption($A*" is not a valid option."))
-        end
-    end |> esc
 end
 
 """
     Fermi.@molecule
 
-Set the molecule used in computations. String is save into Fermi.CurrentOptions
+Set the molecule to be used in computations.
 
 # Example
 ```
@@ -235,13 +271,4 @@ macro molecule(block)
     mol = clean_up(mol)
     CurrentOptions["molstring"] = String(mol)
 end
-
-struct InvalidFermiOption <: Exception
-    msg::String
-end
-Base.showerror(io::IO, e::InvalidFermiOption) = print(io, "InvalidFermiOption: ", e.msg)
-
-struct MethodArgument <: Exception
-    msg::String
-end
-Base.showerror(io::IO, e::MethodArgument) = print(io, "MethodArgument: ", e.msg)
+end #module

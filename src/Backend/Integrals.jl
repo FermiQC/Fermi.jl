@@ -54,14 +54,29 @@ mutable struct IntegralHelper{T}
     normalize::Bool
 end
 
-function IntegralHelper(;mol=Molecule())
-    IntegralHelper{Float64}(;mol=mol)
+function IntegralHelper(x...)
+    IntegralHelper{Float64}(x...)
 end
 
-function IntegralHelper{T}(;mol=Molecule()) where T <: AbstractFloat
-    cache = Dict{String, FermiMDArray{T}}() 
+function IntegralHelper{T}() where T <: AbstractFloat
+    mol = Molecule()
     basis = Fermi.CurrentOptions["basis"]
     aux = Fermi.CurrentOptions["jkfit"]
+    IntegralHelper{T}(mol, basis, aux)
+end
+
+function IntegralHelper{T}(mol::Molecule) where T <: AbstractFloat
+    basis = Fermi.CurrentOptions["basis"]
+    aux = Fermi.CurrentOptions["jkfit"]
+    IntegralHelper{T}(mol, basis, aux)
+end
+
+function IntegralHelper{T}(mol::Molecule, basis::String) where T <: AbstractFloat
+    aux = Fermi.CurrentOptions["jkfit"]
+    IntegralHelper{T}(mol, basis, aux)
+end
+
+function IntegralHelper{T}(mol::Molecule, basis::String, aux::String) where T <: AbstractFloat
     if aux == "auto"
         aux_lookup = Dict{String,String}(
                                          "cc-pvdz" => "cc-pvdz-jkfit",
@@ -71,8 +86,9 @@ function IntegralHelper{T}(;mol=Molecule()) where T <: AbstractFloat
                                         )
         aux = haskey(aux_lookup, basis) ? aux_lookup[basis] : "aug-cc-pvqz-rifit"
     end
+    cache = Dict{String, FermiMDArray{T}}() 
     lbasis = Dict{String,Lints.BasisSetAllocated}()
-    IntegralHelper{T}(mol,basis,aux,cache,false)
+    IntegralHelper{T}(mol, basis, aux, cache, false)
 end
 
 # Clears cache and change normalize key

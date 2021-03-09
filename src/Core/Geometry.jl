@@ -15,15 +15,11 @@ export Atom
 
 using Fermi
 using Fermi.Output
+using Fermi.Error
 using Fermi.PhysicalConstants: atomic_number, bohr_to_angstrom, angstrom_to_bohr
 using LinearAlgebra
 using Lints
 using Formatting
-
-struct InvalidMolecule <: Exception
-    msg::String
-end
-Base.showerror(io::IO, e::InvalidMolecule) = print(io, "InvalidMolecule: ", e.msg)
 
 """
     Fermi.Atom
@@ -124,13 +120,13 @@ function Molecule(atoms::Array{Atom,1}, charge::Int, multiplicity::Int)
     nelec -= charge
 
     if nelec ≤ 0
-        throw(Fermi.InvalidMolecule("Invalid charge ($charge) for given molecule"))
+        throw(InvalidMolecule("Invalid charge ($charge) for given molecule"))
     end
 
     αexcess = multiplicity-1
 
     if isodd(nelec) != isodd(αexcess)
-        throw(Fermi.InvalidMolecule("Incompatible charge $(charge) and multiplicity $(multiplicity)"))
+        throw(InvalidMolecule("Incompatible charge $(charge) and multiplicity $(multiplicity)"))
     end
 
     Nβ = (nelec - αexcess)/2
@@ -170,7 +166,7 @@ function get_atoms(molstring::String; unit::String="angstrom")
     elseif unit == "angstrom"
         conv = 1.0
     else
-        error("Invalid unit given to Fermi.Molecule.get_atoms: $unit")
+        throw(InvalidFermiOptions("unknown unit in molecule construction: $unit")
     end
 
     atoms = Atom[]
