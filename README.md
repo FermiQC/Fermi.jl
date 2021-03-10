@@ -9,6 +9,10 @@ of [Dr. Justin M. Turney](https://github.com/jturney) and Prof. Henry F. Schaefe
 
 This work is supported by the U.S. National Science Foundation under grant number CHE-1661604.
 
+### !! Warning
+> Fermi is going through a major refactorization. Much of the code will be non functional. 
+Please checkout at v0.2.0 version to try the code.
+
 ## Documentation
 
 [DEV](https://FermiQC.github.io/Fermi.jl/dev)
