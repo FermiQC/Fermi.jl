@@ -2,6 +2,13 @@ export @get
 export @set
 export @reset
 export @molecule
+export @lookup
+
+# Aux function to convert Symbols to Strings
+function symbol_to_string(S::Symbol) 
+    S = repr(S)
+    return String(strip(filter(c->!occursin(c," {}():"),S)))
+end
 
 """
     Fermi.@get
@@ -20,8 +27,7 @@ julia> @get basis
 ```
 """
 macro get(opt)
-    clean_up(s) = String(filter(c->!occursin(c," ():"),s))
-    A = clean_up(repr(opt))
+    A = symbol_to_string(opt)
     quote
         Fermi.Options.get($A)
     end |> esc
@@ -66,21 +72,112 @@ you should use quotes
 @set basis "6-31g"
 ```
 """
-macro set(A, B)
+macro set(A::Symbol, B::Symbol)
     clean_up(s) = String(filter(c->!occursin(c," ():"),s))
     key = clean_up(repr(A))
-    val = clean_up(repr(B))
-    
-    quote 
-        try
-            Fermi.Options.set($key, $(esc(Meta.parse(val))))
-        catch UndefVarError
+    if isdefined(Main,B)
+        return quote
+            Fermi.Options.set($key,$B)
+        end |> esc
+    else
+        val = clean_up(repr(B))
+        return quote
             Fermi.Options.set($key,$val)
+        end |> esc
+    end
+end
+
+macro set(A::Symbol, B::Union{Number, Bool})
+    clean_up(s) = String(filter(c->!occursin(c," ():"),s))
+    key = clean_up(repr(A))
+    quote
+        Fermi.Options.set($key, $B)
+    end
+end
+
+macro set(A::Symbol, B::Expr)
+    clean_up(s) = String(filter(c->!occursin(c," ():"),s))
+    key = clean_up(repr(A))
+
+    if all(x->typeof(x)<:Number, B.args[2:end])
+        quote
+            Fermi.Options.set($key, $B)
+        end
+    else
+        val = clean_up(repr(B))
+        quote
+            Fermi.Options.set($key, $val)
         end
     end
 end
 
+macro set(block::Expr)
+
+    # Create an empty quote for the output
+    out = quote end
+
+    # Each argument in the expression block is a line
+    # e.g. 
+    # @set {
+    #    A B   -> First line (Expr object)
+    #    C D   -> Second line (Expr object)
+    #}
+    lines = block.args
+
+    for line in lines
+        # args represent the arguments of each line. In the example above
+        # args = {:A, :B} and {:C, :D}
+        args = line.args
+
+        # We must assert there are only two arguments
+        length(args) == 2 || throw(InvalidFermiOption("Too many arguments for @set: $line"))
+
+        # A is the dictionary key, which is always taken as a String
+        key = symbol_to_string(args[1])
+
+        # B is the val
+        val = args[2]
+        valtype = typeof(val)
+
+        # First we check the easy case: B is a Number or Bool
+        if valtype <: Union{Number, Bool}
+            push!(out.args, quote Fermi.Options.set($key, $val) end)
+
+        # Now the case where B is a Symbol. 
+        elseif valtype === Symbol
+            # We check if it is defined in the global scope
+            if isdefined(Main, val)
+                # If it is, return an expression calling it. Noticed we need to escape it
+                push!(out.args, quote Fermi.Options.set($key,$val) end |> esc)
+            else
+                # If not, turn it into a String
+                val = symbol_to_string(val)
+                push!(out.args, quote Fermi.Options.set($key,$val) end)
+            end
+
+        # Finally, if the value is an Expression
+        elseif valtype === Expr
+
+            # If the expression is purely numerical, we just used it as it is
+            if all(x->typeof(x)<:Number, val.args[2:end])
+                push!(out.args, quote Fermi.Options.set($key,$val) end)
+
+            # If not, String it out
+            else
+                val = symbol_to_string(val)
+                push!(out.args, quote Fermi.Options.set($key,$val) end)
+            end
+        else
+            # Outside those cases the user did something sketchy
+            throw(InvalidFermiOption("Invalid input for $key: $val"))
+        end
+    end
+
+    return out
+end
+
 macro set(block)
+    println(typeof(block))
     lines = split(repr(block),";")
     clean_up(s) = String(strip(filter(c->!occursin(c," {}():"),s)))
     out = quote end
@@ -131,13 +228,13 @@ true
 ```
 """
 macro reset(x="all", y...)
-    keys = [String(x)]
+    Keys = [String(x)]
     for i in y
-        push!(keys, String(i))
+        push!(Keys, String(i))
     end
 
     quote
-        for k in $keys
+        for k in $Keys
             Fermi.Options.reset(k)
         end
     end
@@ -164,6 +261,21 @@ macro molecule(block)
     mol = String(clean_up(mol))
     quote
         Fermi.Options.set("molstring", $mol)
+    end
+end
+
+macro lookup(A::Symbol)
+    clean_up(s) = strip(filter(c->!occursin(c,"{}():"),s))
+    A = clean_up(repr(A))
+    Keys = collect(keys(Fermi.Options.Default))
+    filter!(s->occursin(A, s), Keys)
+
+    if length(Keys) == 0
+        println("No keywords found containing: $A")
+    end
+
+    for k in Keys
+        println("$k\nCurrently set to: $(Fermi.Options.get(k))\n")
     end
 end
 
@@ -268,6 +380,7 @@ Fermi.Default.
 """
 Current = Dict{String,Union{Float64,Int,String,Bool}}()
 
+
 """
     Fermi.Options.get(key)
 
@@ -287,20 +400,35 @@ function get(key::String)
 end
 
 """
-    Fermi.Options.get(key, val)
+    Fermi.Options.set(key, val)
 
-Set the options `key` to the value `val`.
+Set the option `key` to the value `val`.
 See also `@set`
 """
-function set(key::String, val::Union{String, Bool, Float64, Int, Nothing})
+function set(key::String, val::Union{String, Bool, Float64, Int})
     key = lowercase(key)
     if !(haskey(Default, key))
         throw(InvalidFermiOption(key*" is not a valid option."))
     end
+
+    # Check if the type of the variable passed matches the type
+    # saved in the Default dictionary
     dtype = typeof(Default[key])
-    inptype = typeof(val)
-    if inptype !== dtype
-        throw(InvalidFermiOption("Invalid data type for $key. Expected: $dtype, Got: $inptype"))
+    if !isa(val, dtype)
+        # If it does not match...
+
+        # If the expected type is not a String we try to make a conversion
+        if dtype !== String
+            try newval = dtype(val)
+                # Recall the function with the new variable with adjusted type
+                return set(key, newval)
+            catch InexactError
+                # If the conversion is not possible
+                throw(InvalidFermiOption("Impossible to convert data type for $key. Expected: $dtype, Got: $(typeof(val))"))
+            end
+        # Otherwise, throw an error
+        throw(InvalidFermiOption("Invalid data type for $key. Expected: $dtype, Got: $(typeof(val))"))
+        end
     else
         Current[key] = val
     end
@@ -308,9 +436,9 @@ function set(key::String, val::Union{String, Bool, Float64, Int, Nothing})
 end
 
 """
-    Fermi.Options.reset(keys...)
+    Fermi.Options.reset(key...)
 
-Reset all given `keys` to the default values.
+Reset all given `key` to the default values.
 See also `@reset`
 """
 function reset(key::String="all")
