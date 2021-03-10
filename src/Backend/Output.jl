@@ -1,84 +1,60 @@
-module Output
-import Fermi
+using Fermi.Options
+using Fermi.Error
 using Formatting
-#using Fermi.Options
-
-#printstyle = Fermi.Options.printstyle
-if !isdefined(Fermi.Output,:printstyle)
-    if isinteractive()
-        printstyle = ["stdout"]
-    else
-        printstyle = ["file"]
-    end
-end
 
 export output
-export @output
 
 """
-    set_print(pstyle)
+    Fermi.output(str, x...; ending="\\n")
 
-Used to set the print style for @output and output calls. 
-Options are "none","file","stdout","both"
+Writes a Python-style String `str` formatted with the values `x...`. The formatting is done through the package Formatting.jl.
+The string is printed into the standard output or written into a file depending on the `printstyle` option. See below:
+
+    printstyle: 
+    "stdout"  Default - Returns the string into the Julia REPL (standard output)
+    "file"    Write the string into a file. Path must be specified with the keyword `output`
+    "both"    Returns the value into stdout and also writes to file
+    "none"    Does not write or print anything
+
+In order to write to a file, the keyword `output` must be the path to the destination file.
+The default path is "output.jl". For help setting options see `@set`.
+
+# Examples
+```
+julia> @set {
+    printstyle file
+    output hydrogen.jl
+}
+julia> output("The Hydrogen Atom")
+julia> output("1s Energy", ending=":") 
+julia> output(" {:2.2f} hartrees",-0.5)
+shell> cat hydrogen.jl
+The Hydrogen Atom
+1s Energy: -0.50 hartrees
+```
 """
-function set_print(pstyle)
-    if pstyle in ["none","file","stdout","both"]
-        Fermi.Output.printstyle[1] = pstyle
-        #revise(Fermi.Output)
+function output(str, x...; ending="\n")
+
+    style = Options.get("printstyle")
+    f = format(str*ending, x...)
+
+    if style == "none"
+        nothing
+    elseif style == "stdout"
+        print(f)
+    elseif style == "file"
+        open(path, "a") do io
+            write(io, f)
+            flush(io)
+        end
+    elseif style == "both"
+        path = Options.get("output")
+        open(path, "a") do io
+            write(io, f)
+            flush(io)
+        end
+        print(f)
     else
-        return false
+        throw(InvalidFermiOption("printing style not recognized: $style. Accepted `printstyle` values: stdout, file, both, and none"))
     end
 end
-
-function output(str,x...)
-    if Fermi.Output.printstyle[1] == "stdout"
-        f = format(str,x...)
-        print(f)
-    elseif Fermi.Output.printstyle[1] == "file"
-        f = format(str,x...)
-        open("output.dat","a") do file
-            write(file,f)
-            flush(file)
-        end
-    elseif Fermi.Output.printstyle[1] == "both"
-        f = format(str,x...)
-        print(f)
-        open("output.dat","a") do file
-            write(file,f)
-            flush(file)
-        end
-    elseif Fermi.Output.printstyle[1] == "none"
-    end
-end
-
-macro output(str,x...)
-    return quote
-        if Fermi.Output.printstyle[1] == "stdout"
-                local f = format($str, $([esc(i) for i in x]...))
-                print(f)
-        elseif Fermi.Output.printstyle[1] == "file"
-                local f = format($str, $([esc(i) for i in x]...))
-                open("output.dat","a") do file
-                    write(file,f)
-                    flush(file)
-                end
-        elseif Fermi.Output.printstyle[1] == "both"
-            if length(x) >= 1
-                local f = format($str, $([esc(i) for i in x]...))
-                open("output.dat","a") do file
-                    write(file,f)
-                    flush(file)
-                end
-                print(f)
-            else
-                local f = format($str)
-                open("output.dat","a") do file
-                    write(file,f)
-                    flush(file)
-                end
-            end
-        elseif Fermi.Output.printstyle[1] == "none"
-        end
-    end
-end
-end #module

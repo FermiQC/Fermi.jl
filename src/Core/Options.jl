@@ -206,6 +206,8 @@ const Default = Dict{String,Union{Float64,Int,String,Bool}}(
                                   H        2.1984800075      1.7977100627      0.0121161719
                                   H        0.9197881882      2.4580185570      0.6297938832
                                   """,
+                                  "printstyle" => "stdout",
+                                  "output" => "output.jl",
                                   "basis" => "sto-3g",
                                   "jkfit" => "auto",
                                   "rifit" => "auto",
