@@ -89,7 +89,7 @@ function permutedims!(A::FermiMDArray,tup)
 end
 
 """
-    Fermi.diagonalize
+    Fermi.diagonalize(A::FermiMDArray; sortby=x->x)
 
 Diagonalize a NxN FermiMDArray, returning eigenvalues and eigenvectors.
 
