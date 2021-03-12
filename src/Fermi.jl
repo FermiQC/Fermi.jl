@@ -15,8 +15,8 @@ include("Backend/Output.jl")
 include("Core/DIIS.jl")
 include("Core/PhysicalConstants.jl")
 include("Core/Geometry.jl")                               
-#include("Core/AuxiliarStructs.jl")                  
-#include("Backend/Integrals.jl")
+include("Core/AuxiliarStructs.jl")                  
+include("Backend/Integrals.jl")
 #include("Methods/HartreeFock/HartreeFock.jl")
 #include("Methods/MollerPlesset/MollerPlesset.jl")
 #include("Methods/ConfigurationInteraction/ConfigurationInteraction.jl")
@@ -24,6 +24,5 @@ include("Core/Geometry.jl")
 #include("Methods/FocalPointAnalysis/FocalPointAnalysis.jl")
 
 #include("Core/SinglePointEnergy.jl")
-include("Backend/Intefaces.jl")
 
 end # module

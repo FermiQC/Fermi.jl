@@ -59,8 +59,8 @@ end
 function GeneralRestrictedOrbitals(C::AbstractArray{T,2}; mol=nothing, name="Custom", basis="undef", aux="undef") where T <: AbstractFloat
 
     mol === nothing ? mol = Fermi.Geometry.Molecule() : nothing
-    basis == "undef" ? basis = Fermi.CurrentOptions["basis"] : nothing
-    aux == "undef" ? basis = Fermi.CurrentOptions["aux"] : nothing
+    basis == "undef" ? basis = Fermi.Options.get("basis") : nothing
+    aux == "undef" ? basis = Fermi.Options.get("aux") : nothing
 
     GeneralRestrictedOrbitals{T}(name, basis, mol, C)
 end

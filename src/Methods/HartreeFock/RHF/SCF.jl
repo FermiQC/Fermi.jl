@@ -14,16 +14,16 @@ end
 
 function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray{<:AbstractFloat,2}, ERI::FermiMDArray, Λ::FermiMDArray{<:AbstractFloat,2})
 
-    Fermi.HartreeFock.print_header()
-    Fermi.Geometry.print_out(molecule)
+    Fermi.HartreeFock.scf_header()
+    output(Fermi.Geometry.get_string(molecule))
     # Grab some options
-    maxit = Fermi.CurrentOptions["scf_max_iter"]
-    Etol  = 10.0^(-Fermi.CurrentOptions["e_conv"])
-    Dtol  = Fermi.CurrentOptions["scf_max_rms"]
-    do_diis = Fermi.CurrentOptions["diis"]
-    oda = Fermi.CurrentOptions["oda"]
-    oda_cutoff = Fermi.CurrentOptions["oda_cutoff"]
-    oda_shutoff = Fermi.CurrentOptions["oda_shutoff"]
+    maxit = Fermi.Options.get("scf_max_iter")
+    Etol  = 10.0^(-Fermi.Options.get("e_conv"))
+    Dtol  = Fermi.Options.get("scf_max_rms")
+    do_diis = Fermi.Options.get("diis")
+    oda = Fermi.Options.get("oda")
+    oda_cutoff = Fermi.Options.get("oda_cutoff")
+    oda_shutoff = Fermi.Options.get("oda_shutoff")
 
     # Variables that will get updated iteration-to-iteration
     ite = 1
@@ -36,8 +36,8 @@ function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray{<:Abstrac
     converged = false
     
     # Build a diis_manager, if needed
-    do_diis ? DM = Fermi.DIIS.DIISManager{Float64,Float64}(size=Fermi.CurrentOptions["ndiis"]) : nothing 
-    do_diis ? diis_start = Fermi.CurrentOptions["diis_start"] : nothing
+    do_diis ? DM = Fermi.DIIS.DIISManager{Float64,Float64}(size=Fermi.Options.get("ndiis")) : nothing 
+    do_diis ? diis_start = Fermi.Options.get("diis_start") : nothing
 
     #grab ndocc,nvir
     ndocc = try

@@ -323,6 +323,7 @@ const Default = Dict{String,Union{Float64,Int,String,Bool}}(
                                   "basis" => "sto-3g",
                                   "jkfit" => "auto",
                                   "rifit" => "auto",
+                                  "aux" => "auto",
                                   "charge" => 0,
                                   "multiplicity" => 1,
                                   "unit" => "angstrom",

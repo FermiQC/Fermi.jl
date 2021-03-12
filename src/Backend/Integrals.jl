@@ -6,7 +6,6 @@ Module to compute integrals using Lints.jl
 module Integrals
 
 using Fermi
-using Fermi.Output
 using Fermi.Geometry: Molecule
 using LinearAlgebra
 using TensorOperations
@@ -45,6 +44,7 @@ bases, such as MO or NO.
     mol::Molecule                                    attached Molecule object.
     orbs::Dict{String,O} where O < AbstractOrbitals  orbitals of various kinds
     basis::Dict{String,Lints.BasisSetAllocated}      basis sets for various purposes
+    CHECK
 """
 mutable struct IntegralHelper{T}
     mol::Molecule
@@ -60,19 +60,19 @@ end
 
 function IntegralHelper{T}() where T <: AbstractFloat
     mol = Molecule()
-    basis = Fermi.CurrentOptions["basis"]
-    aux = Fermi.CurrentOptions["jkfit"]
+    basis = Fermi.Options.get("basis")
+    aux = Fermi.Options.get("jkfit")
     IntegralHelper{T}(mol, basis, aux)
 end
 
 function IntegralHelper{T}(mol::Molecule) where T <: AbstractFloat
-    basis = Fermi.CurrentOptions["basis"]
-    aux = Fermi.CurrentOptions["jkfit"]
+    basis = Fermi.Options.get("basis")
+    aux = Fermi.Options.get("jkfit")
     IntegralHelper{T}(mol, basis, aux)
 end
 
 function IntegralHelper{T}(mol::Molecule, basis::String) where T <: AbstractFloat
-    aux = Fermi.CurrentOptions["jkfit"]
+    aux = Fermi.Options.get("jkfit")
     IntegralHelper{T}(mol, basis, aux)
 end
 
@@ -102,12 +102,12 @@ function normalize!(I::IntegralHelper,normalize::Bool)
 end
 
 """
-    aux_ri!(I::IntegralHelper, ri=Fermi.CurrentOptions["rifit"])
+    aux_ri!(I::IntegralHelper, ri=Fermi.Options.get["rifit"])
 
 Clears the integral cache and switches auxiliary DF integrals to use the
 current RI fitting basis set. Used between DF-RHF and DF-post HF.
 """
-function aux_ri!(I::IntegralHelper,ri=Fermi.CurrentOptions["rifit"])
+function aux_ri!(I::IntegralHelper,ri=Fermi.Options.get("rifit"))
     delete!(I.cache,"B") #clear out old aux basis
     GC.gc()
     if ri == "auto"
@@ -118,7 +118,7 @@ function aux_ri!(I::IntegralHelper,ri=Fermi.CurrentOptions["rifit"])
                                          "cc-pv5z" => "cc-pv5z-rifit"
                                         )
         I.bname["aux"] = try
-            aux_lookup[Fermi.CurrentOptions["basis"]]
+            aux_lookup[Fermi.Options.get("basis")]
         catch KeyError
             "aug-cc-pvqz-rifit" # default to large DF basis
         end
@@ -127,13 +127,13 @@ function aux_ri!(I::IntegralHelper,ri=Fermi.CurrentOptions["rifit"])
     end
 end
 """
-    aux_ri!(I::IntegralHelper, jk=Fermi.CurrentOptions["jkfit"])
+    aux_ri!(I::IntegralHelper, jk=Fermi.Options.get["jkfit"])
 
 Clears the integral cache and switches auxiliary DF integrals to use the
 current JK fitting basis set. Used to ensure JK integrals are used in
 DF-RHF.
 """
-function aux_jk!(I::IntegralHelper, jk = Fermi.CurrentOptions["jkfit"])
+function aux_jk!(I::IntegralHelper, jk = Fermi.Options.get("jkfit"))
     delete!(I,"B") #clear out old aux basis
     if jk == "auto"
         aux_lookup = Dict{String,String}(
@@ -143,7 +143,7 @@ function aux_jk!(I::IntegralHelper, jk = Fermi.CurrentOptions["jkfit"])
                                          "cc-pv5z" => "cc-pv5z-jkfit"
                                         )
         I.bname["aux"] = try
-            aux_lookup[Fermi.CurrentOptions["basis"]]
+            aux_lookup[Fermi.Options.get("basis")]
         catch KeyError
             "aug-cc-pvqz-rifit" # default to large DF basis
         end

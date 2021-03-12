@@ -111,8 +111,8 @@ function RHF()
 end
 
 function RHF(molecule::Molecule)
-    guess = select_guess(Fermi.CurrentOptions["scf_guess"])
-    Alg = select_alg(Fermi.CurrentOptions["scf_type"])
+    guess = select_guess(Fermi.Options("scf_guess"))
+    Alg = select_alg(Fermi.Options("scf_type"))
     ints = Fermi.Integrals.IntegralHelper()
     RHF(molecule, ints, Alg, guess)
 end
