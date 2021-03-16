@@ -1,29 +1,29 @@
 function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray{<:AbstractFloat,2}, Λ::FermiMDArray{<:AbstractFloat,2}, Alg::ConventionalRHF)
-    @output "Computing integrals ..."
+    output("Computing integrals...")
     t = @elapsed ints["ERI"]
-    @output " done in {:>5.2f} s\n" t
+    output(" done in {:>5.2f} s", t)
     RHF(molecule, ints, C, ints["ERI"], Λ)
 end
 
 function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray{<:AbstractFloat,2}, Λ::FermiMDArray{<:AbstractFloat,2}, Alg::DFRHF)
-    @output "Computing integrals ..."
+    output("Computing integrals...")
     t = @elapsed ints["B"]
-    @output " done in {:>5.2f} s\n" t
+    output(" done in {:>5.2f} s", t)
     RHF(molecule, ints, C, ints["B"], Λ)
 end
 
 function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray{<:AbstractFloat,2}, ERI::FermiMDArray, Λ::FermiMDArray{<:AbstractFloat,2})
 
-    Fermi.HartreeFock.scf_header()
+    Fermi.HartreeFock.hf_header()
     output(Fermi.Geometry.get_string(molecule))
     # Grab some options
-    maxit = Fermi.Options.get("scf_max_iter")
-    Etol  = 10.0^(-Fermi.Options.get("e_conv"))
-    Dtol  = Fermi.Options.get("scf_max_rms")
-    do_diis = Fermi.Options.get("diis")
-    oda = Fermi.Options.get("oda")
-    oda_cutoff = Fermi.Options.get("oda_cutoff")
-    oda_shutoff = Fermi.Options.get("oda_shutoff")
+    maxit = Options.get("scf_max_iter")
+    Etol  = 10.0^(-Options.get("e_conv"))
+    Dtol  = Options.get("scf_max_rms")
+    do_diis = Options.get("diis")
+    oda = Options.get("oda")
+    oda_cutoff = Options.get("oda_cutoff")
+    oda_shutoff = Options.get("oda_shutoff")
 
     # Variables that will get updated iteration-to-iteration
     ite = 1
@@ -36,8 +36,8 @@ function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray{<:Abstrac
     converged = false
     
     # Build a diis_manager, if needed
-    do_diis ? DM = Fermi.DIIS.DIISManager{Float64,Float64}(size=Fermi.Options.get("ndiis")) : nothing 
-    do_diis ? diis_start = Fermi.Options.get("diis_start") : nothing
+    do_diis ? DM = Fermi.DIIS.DIISManager{Float64,Float64}(size=Options.get("ndiis")) : nothing 
+    do_diis ? diis_start = Options.get("diis_start") : nothing
 
     #grab ndocc,nvir
     ndocc = try
@@ -48,9 +48,9 @@ function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray{<:Abstrac
     nvir = size(C,2) - ndocc
     nao = size(C,1)
 
-    @output " Number of AOs:                        {:5.0d}\n" nao
-    @output " Number of Doubly Occupied Orbitals:   {:5.0d}\n" ndocc
-    @output " Number of Virtual Spatial Orbitals:   {:5.0d}\n" nvir
+    output(" Number of AOs:                        {:5.0d}", nao)
+    output(" Number of Doubly Occupied Orbitals:   {:5.0d}", ndocc)
+    output(" Number of Virtual Spatial Orbitals:   {:5.0d}", nvir)
 
     
     S = ints["S"]
@@ -62,16 +62,16 @@ function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray{<:Abstrac
     @tensor D[u,v] := Co[u,m]*Co[v,m]
     D_old = deepcopy(D)
     
-    eps = FermiMDZeros(Float64,ndocc+nvir)
+    eps = FermiMDzeros(Float64,ndocc+nvir)
     # Build the inital Fock Matrix and diagonalize
-    F = FermiMDZeros(Float64,nao,nao)
+    F = FermiMDzeros(Float64,nao,nao)
     build_fock!(F, T + V, D, ERI, Co)
     F̃ = deepcopy(F)
     D̃ = deepcopy(D)
-    @output " Guess Energy {:20.14f}\n" RHFEnergy(D,T+V,F)
+    output(" Guess Energy {:20.14f}", RHFEnergy(D,T+V,F))
 
-    @output "\n Iter.   {:>15} {:>10} {:>10} {:>8} {:>8} {:>8}\n" "E[RHF]" "ΔE" "√|ΔD|²" "t" "DIIS" "damp"
-    @output repeat("-",80)*"\n"
+    output("\n Iter.   {:>15} {:>10} {:>10} {:>8} {:>8} {:>8}", "E[RHF]", "ΔE", "√|ΔD|²", "t", "DIIS", "damp")
+    output(repeat("-",80))
     t = @elapsed while ite ≤ maxit
         t_iter = @elapsed begin
             # Produce Ft
@@ -82,17 +82,14 @@ function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray{<:Abstrac
             end
 
             # Get orbital energies and transformed coefficients
-            eps,Ct = diagonalize(Ft)
+            eps,Ct = diagonalize(Ft, hermitian=true)
 
             # Reverse transformation to get MO coefficients
             C = Λ*Ct
-            #Ct = real.(Ct)
 
             # Produce new Density Matrix
             Co = C[:,1:ndocc]
-            #D = Fermi.contract(Co,Co,"um","vm")
             @tensor D[u,v] = Co[u,m]*Co[v,m]
-            #Fermi.contract!(D,Co,Co,0.0,1.0,1.0,"uv","um","vm")
 
             # Build the Fock Matrix
             build_fock!(F, T + V, D, ERI, Co)
@@ -124,12 +121,11 @@ function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray{<:Abstrac
                 D̃ = D
                 do_diis ? err = transpose(Λ)*(F*D*ints["S"] - ints["S"]*D*F)*Λ : nothing
                 do_diis ? push!(DM, F, err) : nothing
-                #do_diis && ite > diis_start ? F,_ = Fermi.DIIS.extrapolate(DM) : nothing
+
                 if do_diis && ite > diis_start
                     F = Fermi.DIIS.extrapolate(DM)
                 end
             end
-            #FPrms = sqrt(sum(err.^2))
 
             # Compute the Density RMS
             ΔD = D - D_old
@@ -140,7 +136,7 @@ function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray{<:Abstrac
             E = Enew
             D_old .= D
         end
-        @output "    {:<3} {:>15.10f} {:>11.3e} {:>11.3e} {:>8.2f} {:>8}    {:5.4f}\n" ite E ΔE Drms t_iter diis damp
+        output("    {:<3} {:>15.10f} {:>11.3e} {:>11.3e} {:>8.2f} {:>8}    {:5.4f}", ite, E, ΔE, Drms, t_iter, diis, damp)
         ite += 1
 
         if (abs(ΔE) < Etol) & (Drms < Dtol) & (ite > 5)
@@ -149,23 +145,25 @@ function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray{<:Abstrac
         end
     end
 
-    @output repeat("-",80)*"\n"
-    @output "    RHF done in {:>5.2f}s\n" t
-    @output "    @E[RHF] = {:>20.16f}\n" E
-    @output "\n   • Orbitals Summary\n"
-    @output "\n {:>10}   {:>15}   {:>10}\n" "Orbital" "Energy" "Occupancy"
+    output(repeat("-",80))
+    output("    RHF done in {:>5.2f}s", t)
+    output("    @E[RHF] = {:>20.16f}", E)
+    output("\n   • Orbitals Summary",)
+    output("\n {:>10}   {:>15}   {:>10}", "Orbital", "Energy", "Occupancy")
     for i in eachindex(eps)
-        @output " {:>10}   {:> 15.10f}   {:>6}\n" i eps[i] (i ≤ ndocc ? "↿⇂" : "")
+        output(" {:>10}   {:> 15.10f}   {:>6}", i, eps[i], (i ≤ ndocc ? "↿⇂" : ""))
     end
-    @output "\n"
+    output("")
     if converged
-        @output "   ✔  SCF Equations converged 😄\n" 
+        output("   ✔  SCF Equations converged 😄")
     else
-        @output "❗ SCF Equations did not converge in {:>5} iterations ❗\n" maxit
+        output("❗ SCF Equations did not converge in {:>5} iterations ❗", maxit)
     end
-    @output repeat("-",80)*"\n"
+    output(repeat("-",80))
 
-    return RHF(molecule, E, ndocc, nvir, eps, ints, C)
+    Orbitals = RHFOrbitals(molecule, ints.basis, ints.aux, eps, C)
+
+    return RHF(molecule, E, ndocc, nvir, Orbitals)
 end
 
 function build_fock!(F::FermiMDArray{Float64}, H::FermiMDArray{Float64}, D::FermiMDArray{Float64}, ERI::FermiMDArray{Float64}, Co)

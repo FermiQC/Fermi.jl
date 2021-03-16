@@ -1,8 +1,9 @@
 using TensorOperations
+using LinearAlgebra
 using Lints
 using Fermi.DIIS
 using Fermi.Integrals: IntegralHelper
-using Fermi: AbstractOrbitals
+using Fermi: AbstractOrbitals, Options
 using Fermi.Geometry: Molecule
 
 # Define Algorithims
@@ -89,7 +90,7 @@ function select_type(A::String)
     try
         return implemented[A]
     catch KeyError
-        throw(Fermi.InvalidFermiOption("Invalid RHF algorithm: $(A)"))
+        throw(Fermi.InvalidFermiOption("Invalid RHF type: $(A)"))
     end
 end
 
@@ -111,8 +112,8 @@ function RHF()
 end
 
 function RHF(molecule::Molecule)
-    guess = select_guess(Fermi.Options("scf_guess"))
-    Alg = select_alg(Fermi.Options("scf_type"))
+    guess = select_guess(Options.get("scf_guess"))
+    Alg = select_type(Options.get("scf_type"))
     ints = Fermi.Integrals.IntegralHelper()
     RHF(molecule, ints, Alg, guess)
 end
@@ -120,15 +121,15 @@ end
 function RHF(molecule::Molecule, ints::IntegralHelper, Alg::RHFAlgorithm, guess::GWHGuess)
 
     # Form GWH guess
-    @output "Using GWH Guess\n"
+    output("Using GWH Guess")
     S = ints["S"]
     d, U = diagonalize(S, sortby = x->1/abs(x))
     Λ = S^(-1/2)
     idxs = [abs(d[i]) > 1E-7 for i = eachindex(d)]
 
-    @output "Found {} linear dependencies\n" length(d) - sum(idxs)
+    output("Found {} linear dependencies", length(d) - sum(idxs))
 
-    H = Hermitian(ints["T"] + ints["V"])
+    H = real.(ints["T"] + ints["V"])
     ndocc = molecule.Nα
     nvir = size(S,1) - ndocc
     F = similar(S)
@@ -143,7 +144,7 @@ function RHF(molecule::Molecule, ints::IntegralHelper, Alg::RHFAlgorithm, guess:
     Ft = Λ'*F*Λ
 
     # Get orbital energies and transformed coefficients
-    eps, Ct = diagonalize(Hermitian(Ft))
+    eps, Ct = diagonalize(Ft, hermitian=true)
 
     # Reverse transformation to get MO coefficients
     C = Λ*Ct
@@ -159,14 +160,14 @@ end
 function RHF(molecule::Molecule, ints::IntegralHelper, Alg::RHFAlgorithm, guess::CoreGuess)
 
     # Form Core Guess
-    @output "Using Core Guess\n"
+    output("Using Core Guess")
     S = ints["S"]
     Λ = S^(-1/2)
     F = ints["T"] + ints["V"]
     Ft = Λ*F*Λ'
 
     # Get orbital energies and transformed coefficients
-    _, Ct = diagonalize(Ft)
+    _, Ct = diagonalize(Ft, hermitian=true)
 
     # Reverse transformation to get MO coefficients
     C = Λ*Ct
@@ -185,7 +186,7 @@ function RHF(wfn::RHF, Bint::IntegralHelper)
 
     # Projection of A→ B done using equations described in Werner 2004 
     # https://doi.org/10.1080/0026897042000274801
-    @output "Using {} wave function as initial guess\n" wfn.ints.basis
+    output("Using {} wave function as initial guess", wfn.ints.basis)
 
     Amol = Fermi.Geometry.Molecule()
 

@@ -5,7 +5,7 @@ export @molecule
 export @lookup
 
 # Aux function to convert Symbols to Strings
-function symbol_to_string(S::Symbol) 
+function symbol_to_string(S)
     S = repr(S)
     return String(strip(filter(c->!occursin(c," {}():"),S)))
 end

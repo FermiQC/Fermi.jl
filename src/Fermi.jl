@@ -17,12 +17,12 @@ include("Core/PhysicalConstants.jl")
 include("Core/Geometry.jl")                               
 include("Core/AuxiliarStructs.jl")                  
 include("Backend/Integrals.jl")
-#include("Methods/HartreeFock/HartreeFock.jl")
+include("Methods/HartreeFock/HartreeFock.jl")
 #include("Methods/MollerPlesset/MollerPlesset.jl")
 #include("Methods/ConfigurationInteraction/ConfigurationInteraction.jl")
 #include("Methods/CoupledCluster/CoupledCluster.jl")
 #include("Methods/FocalPointAnalysis/FocalPointAnalysis.jl")
 
-#include("Core/SinglePointEnergy.jl")
+include("Core/SinglePointEnergy.jl")
 
 end # module

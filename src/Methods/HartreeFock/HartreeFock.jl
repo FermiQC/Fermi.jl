@@ -4,6 +4,7 @@
 Module for running Hartree--Fock computations in Fermi.
 """
 module HartreeFock
+using Fermi
 import Fermi: AbstractWavefunction
 
 function hf_header()

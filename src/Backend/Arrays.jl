@@ -1,5 +1,6 @@
 using LinearAlgebra
-import Base: size, permutedims, getindex, setindex!, ndims, show, iterate, length, similar, adjoint, eltype, +, -, *, /, ^, BroadcastStyle
+import Base: size, permutedims, getindex, setindex!, ndims, show
+import Base: iterate, length, similar, adjoint, eltype, +, -, *, /, ^, BroadcastStyle
 
 export FermiMDArray, FermiMDrand, FermiMDzeros, diagonalize
 
@@ -103,9 +104,14 @@ Fermi Memory-held Dense Array - 2-element Array{Float64,1}:
   9.520797289396146
 ```
 """
-function diagonalize(A::FermiMDArray; sortby=x->x)
-    vals, vecs = LinearAlgebra.eigen(A.data, sortby=sortby)
-    return FermiMDArray(vals), FermiMDArray(vecs)
+function diagonalize(A::FermiMDArray; sortby=x->x, hermitian=true)
+    if hermitian
+        vals, vecs = LinearAlgebra.eigen(Hermitian(A.data), sortby=sortby)
+        return FermiMDArray(vals), FermiMDArray(vecs)
+    else
+        vals, vecs = LinearAlgebra.eigen(A.data, sortby=sortby)
+        return FermiMDArray(vals), FermiMDArray(vecs)
+    end
 end
 
 function LinearAlgebra.Hermitian(A::FermiMDArray)

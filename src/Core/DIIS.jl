@@ -73,7 +73,7 @@ function extrapolate(M::DIISManager{T1,T2}; add_res=false) where {T1 <: Abstract
     resid[end] = one(T1) 
 
     # Get coefficients
-    ci = B/resid
+    ci = B\resid
     out = zero(M.vecs[1])
 
     # Compute the new vector as Pnew = ∑ ci * Pi

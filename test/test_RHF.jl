@@ -5,13 +5,13 @@
         @test isapprox(wf1.energy, -74.9650028737304410, rtol=tol)
     end
     
-    @testset "DF" begin
-        @set {
-              scf_alg df
-              basis cc-pvdz
-              jkfit cc-pvdz-jkfit
-             }
-        wf2 = @energy rhf;
-        @test isapprox(wf2.energy, -76.02317515357174, rtol=tol)
-    end
+    #@testset "DF" begin
+    #    @set {
+    #          scf_alg df
+    #          basis cc-pvdz
+    #          jkfit cc-pvdz-jkfit
+    #         }
+    #    wf2 = @energy rhf;
+    #    @test isapprox(wf2.energy, -76.02317515357174, rtol=tol)
+    #end
 end
