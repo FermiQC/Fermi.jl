@@ -19,38 +19,30 @@ include("Lints.jl")
 
 Structure to assist with computing and storing integrals. 
 Accesss like a dictionary e.g.,
-    ints["B"]
-to get DF ERI integrals. A number of characters can be added to denote orbitals in various
-bases, such as MO or NO.
-     O               -> occ,alpha,ERI
-     o               -> occ,beta,ERI
-     V               -> vir,alpha,ERI
-     v               -> vir,beta,ERI
-     P               -> all,alpha,ERI
-     p               -> all,beta,ERI
-     B               -> DF-ERI
-     μ               -> ao,ERI
-     Ω               -> NO,occ,alpha
-     ω               -> NO,occ,beta
-     U               -> NO,vir,alpha
-     u               -> NO,vir,beta
-     S               -> AO,overlap
-     T               -> AO,kinetic
-     V               -> AO,nuclear
+    ints["S"]
+
+A key is associated with each type of integral
+
+    "S"           -> AO overlap integral
+    "T"           -> AO electron kinetic energy integral
+    "V"           -> AO electron-nuclei attraction integral
+    "ERI"         -> AO electron repulsion integral
+    "DFERI"       -> AO density fitted electron repulsion integral
 
 # Fields
-    cache::Dict{String,Array}                        previously computed integrals
-    bname::Dict{String,String}                       basis set names for various purposes
-    mol::Molecule                                    attached Molecule object.
-    orbs::Dict{String,O} where O < AbstractOrbitals  orbitals of various kinds
-    basis::Dict{String,Lints.BasisSetAllocated}      basis sets for various purposes
-    CHECK
+    mol                         Associated Fermi Molecule object
+    basis                       Basis set used within the helper
+    aux                         Auxiliar basis set used in density fitting
+    cache                       Holds integrals already computed 
+    notation                    `chem` or `phys` for ERI notation
+    normalize                   Do normalize integrals? `true` or `false`
 """
 mutable struct IntegralHelper{T}
     mol::Molecule
     basis::String
     aux::String
     cache::Dict{String,FermiMDArray{T}} 
+    notation::String
     normalize::Bool
 end
 
@@ -87,8 +79,7 @@ function IntegralHelper{T}(mol::Molecule, basis::String, aux::String) where T <:
         aux = haskey(aux_lookup, basis) ? aux_lookup[basis] : "aug-cc-pvqz-rifit"
     end
     cache = Dict{String, FermiMDArray{T}}() 
-    lbasis = Dict{String,Lints.BasisSetAllocated}()
-    IntegralHelper{T}(mol, basis, aux, cache, false)
+    IntegralHelper{T}(mol, basis, aux, cache, "chem", false)
 end
 
 # Clears cache and change normalize key
@@ -98,57 +89,6 @@ function normalize!(I::IntegralHelper,normalize::Bool)
         for entry in keys(I.cache)
             delete!(I.cache, entry)
         end
-    end
-end
-
-"""
-    aux_ri!(I::IntegralHelper, ri=Fermi.Options.get["rifit"])
-
-Clears the integral cache and switches auxiliary DF integrals to use the
-current RI fitting basis set. Used between DF-RHF and DF-post HF.
-"""
-function aux_ri!(I::IntegralHelper,ri=Fermi.Options.get("rifit"))
-    delete!(I.cache,"B") #clear out old aux basis
-    GC.gc()
-    if ri == "auto"
-        aux_lookup = Dict{String,String}(
-                                         "cc-pvdz" => "cc-pvdz-rifit",
-                                         "cc-pvtz" => "cc-pvtz-rifit",
-                                         "cc-pvqz" => "cc-pvqz-rifit",
-                                         "cc-pv5z" => "cc-pv5z-rifit"
-                                        )
-        I.bname["aux"] = try
-            aux_lookup[Fermi.Options.get("basis")]
-        catch KeyError
-            "aug-cc-pvqz-rifit" # default to large DF basis
-        end
-    else
-        I.bname["aux"] = ri
-    end
-end
-"""
-    aux_ri!(I::IntegralHelper, jk=Fermi.Options.get["jkfit"])
-
-Clears the integral cache and switches auxiliary DF integrals to use the
-current JK fitting basis set. Used to ensure JK integrals are used in
-DF-RHF.
-"""
-function aux_jk!(I::IntegralHelper, jk = Fermi.Options.get("jkfit"))
-    delete!(I,"B") #clear out old aux basis
-    if jk == "auto"
-        aux_lookup = Dict{String,String}(
-                                         "cc-pvdz" => "cc-pvdz-jkfit",
-                                         "cc-pvtz" => "cc-pvtz-jkfit",
-                                         "cc-pvqz" => "cc-pvqz-jkfit",
-                                         "cc-pv5z" => "cc-pv5z-jkfit"
-                                        )
-        I.bname["aux"] = try
-            aux_lookup[Fermi.Options.get("basis")]
-        catch KeyError
-            "aug-cc-pvqz-rifit" # default to large DF basis
-        end
-    else
-        I.aux = jk
     end
 end
 
@@ -268,6 +208,57 @@ end
 #    Bia = zeros(T,naux,i,a)
 #    Fermi.contract!(Bia,C2,Bin,"Qia","va","Qiv")
 #    Bia
+#end
+
+#"""
+#    aux_ri!(I::IntegralHelper, ri=Fermi.Options.get["rifit"])
+#
+#Clears the integral cache and switches auxiliary DF integrals to use the
+#current RI fitting basis set. Used between DF-RHF and DF-post HF.
+#"""
+#function aux_ri!(I::IntegralHelper,ri=Fermi.Options.get("rifit"))
+#    delete!(I.cache,"B") #clear out old aux basis
+#    GC.gc()
+#    if ri == "auto"
+#        aux_lookup = Dict{String,String}(
+#                                         "cc-pvdz" => "cc-pvdz-rifit",
+#                                         "cc-pvtz" => "cc-pvtz-rifit",
+#                                         "cc-pvqz" => "cc-pvqz-rifit",
+#                                         "cc-pv5z" => "cc-pv5z-rifit"
+#                                        )
+#        I.bname["aux"] = try
+#            aux_lookup[Fermi.Options.get("basis")]
+#        catch KeyError
+#            "aug-cc-pvqz-rifit" # default to large DF basis
+#        end
+#    else
+#        I.bname["aux"] = ri
+#    end
+#end
+#"""
+#    aux_ri!(I::IntegralHelper, jk=Fermi.Options.get["jkfit"])
+#
+#Clears the integral cache and switches auxiliary DF integrals to use the
+#current JK fitting basis set. Used to ensure JK integrals are used in
+#DF-RHF.
+#"""
+#function aux_jk!(I::IntegralHelper, jk = Fermi.Options.get("jkfit"))
+#    delete!(I,"B") #clear out old aux basis
+#    if jk == "auto"
+#        aux_lookup = Dict{String,String}(
+#                                         "cc-pvdz" => "cc-pvdz-jkfit",
+#                                         "cc-pvtz" => "cc-pvtz-jkfit",
+#                                         "cc-pvqz" => "cc-pvqz-jkfit",
+#                                         "cc-pv5z" => "cc-pv5z-jkfit"
+#                                        )
+#        I.bname["aux"] = try
+#            aux_lookup[Fermi.Options.get("basis")]
+#        catch KeyError
+#            "aug-cc-pvqz-rifit" # default to large DF basis
+#        end
+#    else
+#        I.aux = jk
+#    end
 #end
 
 end #module

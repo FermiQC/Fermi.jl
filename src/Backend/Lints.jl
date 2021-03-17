@@ -1,5 +1,4 @@
 # Interface with Lints
-
 using Lints
 using LinearAlgebra
 
@@ -7,11 +6,12 @@ using LinearAlgebra
     ao_kinetic(molecule::Fermi.Molecule, basis::String)
 
 Computes AO basis kinetic energy ⟨μ|T̂|ν⟩ integrals for the given basis and molecule.
-Can be accessed at a higher level by calling
+Can be conveniently accessed using the IntegralHelper:
     
-    helper["T"]
-
-where `helper` is bound to the desired molecule and basis set.
+```
+ints = Fermi.Integrals.IntegralHelper()
+ints["T"]
+```
 """
 function ao_kinetic(molecule::Molecule, basis::String; normalize=false)
 
@@ -27,11 +27,12 @@ end
     ao_overlap(molecule::Fermi.Molecule, basis::String)
 
 Computes AO basis overlap ⟨p|q⟩ integrals for the given basis and molecule.
-Can be accessed at a higher level by calling
+Can be conveniently accessed using the IntegralHelper:
     
-    helper["S"]
-
-where `helper` is bound to the desired molecule and basis set.
+```
+ints = Fermi.Integrals.IntegralHelper()
+ints["S"]
+```
 """
 function ao_overlap(molecule::Molecule, basis::String; normalize=false)
 
@@ -47,11 +48,12 @@ end
     ao_nuclear(molecule::Fermi.Molecule, basis::String)
 
 Computes AO basis nuclear attraction ⟨μ|V̂|ν⟩ integrals for the given basis and molecule.
-Can be accessed at a higher level by calling
+Can be conveniently accessed using the IntegralHelper:
     
-    helper["V"]
-
-where `helper` is bound to the desired molecule and basis set.
+```
+ints = Fermi.Integrals.IntegralHelper()
+ints["V"]
+```
 """
 function ao_nuclear(molecule::Molecule, basis::String; normalize=false)
 
@@ -67,11 +69,12 @@ end
     ao_eri(molecule::Fermi.Molecule, basis::String)
 
 Computes AO basis electron repulsion integrals ⟨μν|Ô₂|ρσ⟩ integrals for the given basis and molecule.
-Can be accessed at a higher level by calling
+Can be conveniently accessed using the IntegralHelper:
     
-    helper["μ"]
-
-where `helper` is bound to the desired molecule and basis set.
+```
+ints = Fermi.Integrals.IntegralHelper()
+ints["ERI"]
+```
 """
 function ao_eri(molecule::Molecule, basis::String; normalize=false)
 
@@ -88,11 +91,12 @@ end
 
 Computes AO basis density fitted electron repulsion integrals ⟨μν|Ô₂|P⟩J(P,Q)^-1/2 integrals for the given basis and molecule.
 Note that the returned integrals DO NOT need to be combined with the Coulomb metric J(P,Q). In common notation, this is B(Q,μ,ν).
-Can be accessed at a higher level by calling
+Can be conveniently accessed using the IntegralHelper:
     
-    helper["B"]
-
-where `helper` is bound to the desired molecule and basis set.
+```
+ints = Fermi.Integrals.IntegralHelper()
+ints["DFERI"]
+```
 """
 function df_ao_eri(molecule::Molecule, basis::String, aux::String; normalize=false)
 
@@ -104,17 +108,15 @@ function df_ao_eri(molecule::Molecule, basis::String, aux::String; normalize=fal
         J = Lints.make_ERI2(dfbas; normalize=normalize)
     end
     Jh = Array(Hermitian(J)^(-1/2)) #sometimes Jh becomes complex slightly if J is not ~~exactly~~ hermitian 💔
-    sz = Lints.nao(bas)
-    for p=1:sz
-        for q=1:sz
-            auxP = Pqp[:,p,q]
-            auxQ = Jh*auxP
-            Pqp[:,p,q] .= auxQ
-        end
-    end
-    return Pqp
+    @tensor b[Q,p,q] := Pqp[P,p,q]*Jh[P,Q]
+    return b
 end
 
+"""
+    mol_to_lints(M::Molecule)
+
+Convert a `Fermi.Molecule` into a `Lints.Molecule` object necessary for integrals computation.
+"""
 function mol_to_lints_molecule(M::Molecule)
     natoms = length(M.atoms)
     zs = zeros(Int64,natoms)
@@ -124,4 +126,22 @@ function mol_to_lints_molecule(M::Molecule)
         pos[i] = collect(M.atoms[i].xyz)
     end
     Lints.Molecule(zs,pos)
+end
+
+"""
+    projector(molA::Molecule, basisA::String, molB::Molecule, basisB::String)
+
+Compute the ao overlap matrix of two different basis set.
+"""
+function projector(molA::Molecule, basisA::String, molB::Molecule, basisB::String)
+
+    @lints begin
+        LmolA = mol_to_lints_molecule(molA)
+        LmolB = mol_to_lints_molecule(molB)
+        basA = Lints.BasisSet(basisA, LmolA)
+        basB = Lints.BasisSet(basisB, LmolB)
+        Sab = Lints.projector(basA, basB)
+    end
+
+    return Sab
 end

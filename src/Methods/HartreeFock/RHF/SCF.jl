@@ -1,15 +1,18 @@
-function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray{<:AbstractFloat,2}, Λ::FermiMDArray{<:AbstractFloat,2}, Alg::ConventionalRHF)
-    output("Computing integrals...")
-    t = @elapsed ints["ERI"]
-    output(" done in {:>5.2f} s", t)
-    RHF(molecule, ints, C, ints["ERI"], Λ)
-end
+function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray{<:AbstractFloat,2}, Λ::FermiMDArray{<:AbstractFloat,2})
+    scf_type = Options.get("scf_type")
 
-function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray{<:AbstractFloat,2}, Λ::FermiMDArray{<:AbstractFloat,2}, Alg::DFRHF)
     output("Computing integrals...")
-    t = @elapsed ints["B"]
+    if scf_type == "conventional"
+        t = @elapsed ERI = ints["ERI"]
+    elseif scf_type == "df"
+        output("Density Fitting emplying the auxiliar basis $(ints.aux)")
+        t = @elapsed ERI = ints["DFERI"]
+    else
+        throw(InvalidFermiOption(" invalid SCF type requested: $scf_type."))
+    end
     output(" done in {:>5.2f} s", t)
-    RHF(molecule, ints, C, ints["B"], Λ)
+
+    RHF(molecule, ints, C, ERI, Λ)
 end
 
 function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray{<:AbstractFloat,2}, ERI::FermiMDArray, Λ::FermiMDArray{<:AbstractFloat,2})
@@ -61,11 +64,11 @@ function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray{<:Abstrac
     Co = C[:, 1:ndocc]
     @tensor D[u,v] := Co[u,m]*Co[v,m]
     D_old = deepcopy(D)
-    
     eps = FermiMDzeros(Float64,ndocc+nvir)
+
     # Build the inital Fock Matrix and diagonalize
     F = FermiMDzeros(Float64,nao,nao)
-    build_fock!(F, T + V, D, ERI, Co)
+    build_fock!(F, T + V, D, ERI)
     F̃ = deepcopy(F)
     D̃ = deepcopy(D)
     output(" Guess Energy {:20.14f}", RHFEnergy(D,T+V,F))
@@ -92,7 +95,7 @@ function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray{<:Abstrac
             @tensor D[u,v] = Co[u,m]*Co[v,m]
 
             # Build the Fock Matrix
-            build_fock!(F, T + V, D, ERI, Co)
+            build_fock!(F, T + V, D, ERI)
             Eelec = RHFEnergy(D, T + V, F)
 
             # Compute Energy
@@ -164,39 +167,4 @@ function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray{<:Abstrac
     Orbitals = RHFOrbitals(molecule, ints.basis, ints.aux, eps, C)
 
     return RHF(molecule, E, ndocc, nvir, Orbitals)
-end
-
-function build_fock!(F::FermiMDArray{Float64}, H::FermiMDArray{Float64}, D::FermiMDArray{Float64}, ERI::FermiMDArray{Float64}, Co)
-    F .= H
-    @tensor F[m,n] += 2*D[r,s]*ERI[m,n,r,s]
-    @tensor F[m,n] -= D[r,s]*ERI[m,r,n,s]
-end
-
-function build_fock!(F::Array{Float64,2}, H::Array{Float64,2}, D::Array{Float64,2}, ERI::Array{Float64,3}, Co;build_K=true)
-    F .= H
-    sz = size(F,1)
-    dfsz = size(ERI,1)
-    no = size(Co,2)
-    Fp = zeros(dfsz)
-    Fermi.contract!(Fp,D,ERI,1.0,1.0,2.0,"Q","rs","Qrs")
-    Fermi.contract!(F,Fp,ERI,1.0,1.0,1.0,"mn","Q","Qmn")
-    ρ = zeros(dfsz,sz,no)
-    Fermi.contract!(ρ,Co,ERI,"Qmc","rc","Qmr")
-    Fermi.contract!(F,ρ,ρ,1.0,1.0,-1.0,"mn","Qmc","Qnc")
-end
-
-function build_J!(J::Array{Float64,2},D::Array{Float64,2},ERI::Array{Float64,3})
-    sz = size(ERI,2)
-    dfsz = size(ERI,1)
-    Fp = FermiMDZeros(dfsz)
-    Fermi.contract!(Fp,D,ERI,1.0,1.0,2.0,"Q","rs","Qrs")
-    Fermi.contract!(J,Fp,ERI,1.0,1.0,1.0,"mn","Q","Qmn")
-end
-
-function build_K!(K::Array{Float64,2},D::Array{Float64,2},ERI::Array{Float64,3})
-    sz = size(ERI,2)
-    dfsz = size(ERI,1)
-    Fp = zeros(dfsz,sz,sz)
-    Fermi.contract!(Fp,D,ERI,0.0,1.0,-1.0,"Qrn","rs","Qns")
-    Fermi.contract!(K,ERI,Fp,1.0,1.0,1.0,"mn","Qmr","Qrn")
 end

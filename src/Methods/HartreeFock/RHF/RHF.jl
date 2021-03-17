@@ -2,14 +2,9 @@ using TensorOperations
 using LinearAlgebra
 using Lints
 using Fermi.DIIS
-using Fermi.Integrals: IntegralHelper
+using Fermi.Integrals: IntegralHelper, projector
 using Fermi: AbstractOrbitals, Options
 using Fermi.Geometry: Molecule
-
-# Define Algorithims
-abstract type RHFAlgorithm end
-struct ConventionalRHF <: RHFAlgorithm end
-struct DFRHF <: RHFAlgorithm end
 
 # Define Guesses
 abstract type RHFGuess end
@@ -80,20 +75,6 @@ struct RHF <: AbstractHFWavefunction
     orbitals::RHFOrbitals
 end
 
-
-function select_type(A::String)
-    implemented = Dict{String,Any}(
-        "conventional" => (ConventionalRHF()),
-        "df"           => (DFRHF())
-       )
-
-    try
-        return implemented[A]
-    catch KeyError
-        throw(Fermi.InvalidFermiOption("Invalid RHF type: $(A)"))
-    end
-end
-
 function select_guess(A::String)
     implemented = Dict{String,Any}(
         "gwh"  => GWHGuess(),
@@ -113,12 +94,11 @@ end
 
 function RHF(molecule::Molecule)
     guess = select_guess(Options.get("scf_guess"))
-    Alg = select_type(Options.get("scf_type"))
     ints = Fermi.Integrals.IntegralHelper()
-    RHF(molecule, ints, Alg, guess)
+    RHF(molecule, ints, guess)
 end
 
-function RHF(molecule::Molecule, ints::IntegralHelper, Alg::RHFAlgorithm, guess::GWHGuess)
+function RHF(molecule::Molecule, ints::IntegralHelper, guess::GWHGuess)
 
     # Form GWH guess
     output("Using GWH Guess")
@@ -154,10 +134,10 @@ function RHF(molecule::Molecule, ints::IntegralHelper, Alg::RHFAlgorithm, guess:
 
     Eguess = RHFEnergy(D, H, F)
 
-    RHF(molecule, ints, C, Λ, Alg)
+    RHF(molecule, ints, C, Λ)
 end
 
-function RHF(molecule::Molecule, ints::IntegralHelper, Alg::RHFAlgorithm, guess::CoreGuess)
+function RHF(molecule::Molecule, ints::IntegralHelper, guess::CoreGuess)
 
     # Form Core Guess
     output("Using Core Guess")
@@ -178,57 +158,40 @@ end
 function RHF(wfn::RHF)
 
     # Start RHF computation from another RHF object
-    Bints = Fermi.Integrals.IntegralHelper(wfn.molecule, wfn.orbitals.basis, wfn.orbitals.aux)
-    RHF(wfn, Bint)
+    ints = Fermi.Integrals.IntegralHelper(wfn.molecule, wfn.orbitals.basis, wfn.orbitals.aux)
+    RHF(wfn, ints)
 end
 
-function RHF(wfn::RHF, Bint::IntegralHelper)
+function RHF(wfn::RHF, Bints::IntegralHelper)
 
     # Projection of A→ B done using equations described in Werner 2004 
     # https://doi.org/10.1080/0026897042000274801
-    output("Using {} wave function as initial guess", wfn.ints.basis)
 
-    Amol = Fermi.Geometry.Molecule()
+    output("Using {} wave function as initial guess", wfn.orbitals.basis)
 
-    if Amol != wfn.molecule
+    molB = Fermi.Geometry.Molecule()
+
+    # Assert both A and B have the same molecule.
+    if molB != wfn.molecule
         throw(InvalidFermiOption(" input RHF wavefunction and Current Options have different molecules."))
     end
 
-    Aint 
-    Sbb = aoint["S"]
-    S = Hermitian(aoint["S"])
-    Λ = Array(S^(-1/2))
+    basisB = Options.get("basis")
+    intsB = Fermi.Integrals.IntegralHelper()
 
-    open("/tmp/molfile1.xyz","w") do molfile
-        natom = length(wfn.molecule.atoms)
-        write(molfile,"$natom\n\n")
-        write(molfile,Fermi.Geometry.get_xyz(wfn.molecule))
-    end
+    Sbb = intsB["S"]
+    Λ = Array(Sbb^(-1/2))
 
-    Lints.libint2_init()
-    wfnmol = Lints.Molecule("/tmp/molfile1.xyz")
-    wfnbas = Lints.BasisSet(wfn.ints.bname["primary"], wfnmol)
+    Ca = wfn.orbitals.C
+    Sab = projector(wfn.molecule, wfn.orbitals.basis, molB, basisB)
 
-    molecule = Fermi.Geometry.Molecule()
-    open("/tmp/molfile2.xyz","w") do molfile
-        natom = length(molecule.atoms)
-        write(molfile,"$natom\n\n")
-        write(molfile,Fermi.Geometry.get_xyz(molecule))
-    end
-
-    mol = Lints.Molecule("/tmp/molfile2.xyz")
-    bas = Lints.BasisSet(aoint.bname["primary"], wfnmol)
-
-    Sab = Lints.projector(wfnbas, bas)
-    T = transpose(Ca)*Sab*(Sbb^-1)*transpose(Sab)*Ca
-    Cb = (Sbb^-1)*transpose(Sab)*Ca*T^(-1/2)
+    T = transpose(Ca)*Sab*(Sbb^-1.0)*transpose(Sab)*Ca
+    Cb = (Sbb^-1.0)*transpose(Sab)*Ca*T^(-1/2)
     Cb = real.(Cb)
-    RHF(molecule, aoint, Cb, Λ, Alg)
+
+    RHF(molB, intsB, FermiMDArray(Cb), FermiMDArray(Λ))
 end
 
-function RHFEnergy(D::FermiMDArray{Float64}, H::FermiMDArray{Float64},F::FermiMDArray{Float64})
-    return sum(D .* (H .+ F))
-end
-
-#actual HF routine is in here
+include("AuxRHF.jl")
+# Actual HF routine is in here
 include("SCF.jl")
