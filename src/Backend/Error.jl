@@ -17,7 +17,7 @@ Base.showerror(io::IO, e::InvalidFermiOption) = print(io, "InvalidFermiOption: "
 """
     Fermi.Error.MethodArgument
 
-Error flag used when an invalid arguments are passed into a Fermi function (e.g. RHF)
+Error flag used when an invalid arguments are passed into a Fermi function.
 """
 struct MethodArgument <: Exception
     msg::String

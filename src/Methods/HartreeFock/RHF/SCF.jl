@@ -102,7 +102,7 @@ function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray{<:Abstrac
             Enew = Eelec + molecule.Vnuc
 
 
-            #branch for ODA vs DIIS convergence aids
+            # Branch for ODA vs DIIS convergence aids
             if oda && Drms > oda_cutoff && ite < oda_shutoff
                 diis = false
                 dD = D - D̃

@@ -27,8 +27,11 @@ end
 Wave function object for Restricted Hartree-Fock methods
 
 # High Level Interface 
-    RHF()
-
+```
+julia> @energy rhf
+# Equivalent to
+julia> Fermi.HartreeFock.RHF()
+```
 Computes RHF using information from Fermi.CurrentOptions.
 
 # Fields:
@@ -37,8 +40,7 @@ Computes RHF using information from Fermi.CurrentOptions.
     energy      RHF Energy
     ndocc       Number of doubly occupied spatial orbitals
     nvir        Number of virtual spatial orbitals
-    C           Array with MO coefficients
-    eps         Array with MO energies
+    orbitals    RHF Orbitals
 
 # Relevant options 
 
@@ -61,7 +63,7 @@ These options can be set with `@set <option> <value>`
     RHF(molecule::Molecule, aoint::IntegralHelper, C::Array{Float64,2}, ERI::Array{Float64,N}, Λ::Array{Float64,2}) where N
 
 The RHF kernel. Computes RHF on the given `molecule` with integral information defined in `aoint`. Starts from
-the given C matrix. 
+the given C matrix as orbitals coefficients. Λ is the orthogonalizer (S^-1/2).
 
 _struct tree:_
 

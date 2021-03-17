@@ -8,6 +8,7 @@ Module for storing physical constants and conversion factors used in computation
     atomic_number   Given an element symbol, return the atomic number.
 """
 module PhysicalConstants
+using Fermi.Error
 
 export atomic_number
 
@@ -76,12 +77,11 @@ Given a string with the element symbol, return its atomic number
 """
 function atomic_number(atom::String)
     
-    try 
+    if haskey(atom_num, atom)
         return atom_num[atom]
-    catch
-        error("Invalid atom: $atom")
+    else
+        throw(InvalidFermiOption("atomic symbol $atom not defined."))
     end
-
 end
 
 atom_num = Dict(

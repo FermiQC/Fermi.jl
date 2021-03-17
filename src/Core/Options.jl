@@ -176,32 +176,6 @@ macro set(block::Expr)
     return out
 end
 
-macro set(block)
-    println(typeof(block))
-    lines = split(repr(block),";")
-    clean_up(s) = String(strip(filter(c->!occursin(c," {}():"),s)))
-    out = quote end
-    for l in lines
-        key, val = split(strip(l), " ", limit=2)
-        key = clean_up(key)
-        val = clean_up(val)
-
-        y = quote
-            try
-                Fermi.Options.set($key, $(esc(Meta.parse(val))))
-            catch UndefVarError
-                Fermi.Options.set($key,$val)
-            end
-        end
-
-        for com in y.args
-            push!(out.args, com)
-        end
-    end
-
-    return out
-end
-
 """
     Fermi.@reset(x="all", y...)
 
