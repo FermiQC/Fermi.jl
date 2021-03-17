@@ -27,7 +27,7 @@ Currently, we have implementations of:
 | Method    | Conv. | DF |
 |-----------|-------|----|
 | RHF       |  Y    |  Y |
-| RMP2      |  Y    |  Y |
+<!--- | RMP2      |  Y    |  Y |
 | RMP3      |  N    |  Y |
 | RCCSD     |  Y    |  Y |
 | RCCSD(T)  |  Y    |  Y |
@@ -36,6 +36,7 @@ Currently, we have implementations of:
 | ACI       |  Y    |  N |
 | ecCCSD    |  Y    |  N |
 | ecCCSD(T) |  Y    |  N |
+-->
 
 
 
