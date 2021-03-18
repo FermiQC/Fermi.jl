@@ -5,8 +5,8 @@ function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray{<:Abstrac
     if scf_type == "conventional"
         t = @elapsed ERI = ints["ERI"]
     elseif scf_type == "df"
-        output("Density Fitting emplying the auxiliar basis $(ints.aux)")
-        t = @elapsed ERI = ints["DFERI"]
+        output("Density Fitting emplying the auxiliar basis $(ints.auxjk)")
+        t = @elapsed ERI = ints["JKERI"]
     else
         throw(InvalidFermiOption(" invalid SCF type requested: $scf_type."))
     end
@@ -150,7 +150,7 @@ function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray{<:Abstrac
 
     output(repeat("-",80))
     output("    RHF done in {:>5.2f}s", t)
-    output("    @E[RHF] = {:>20.16f}", E)
+    output("    @Final RHF Energy     {:>20.12f} Eₕ", E)
     output("\n   • Orbitals Summary",)
     output("\n {:>10}   {:>15}   {:>10}", "Orbital", "Energy", "Occupancy")
     for i in eachindex(eps)
@@ -164,7 +164,7 @@ function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray{<:Abstrac
     end
     output(repeat("-",80))
 
-    Orbitals = RHFOrbitals(molecule, ints.basis, ints.aux, eps, C)
+    Orbitals = RHFOrbitals(molecule, ints.basis, eps, C)
 
     return RHF(molecule, E, ndocc, nvir, Orbitals)
 end

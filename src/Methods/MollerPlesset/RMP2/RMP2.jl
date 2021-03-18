@@ -4,7 +4,6 @@ struct RMP2{T} <: AbstractMPWavefunction# where T <: AbstractFloat
     reference::RHF
     correlation::T
     energy::T
-    T2::FermiMDArray{T,4}
 end
 
 function RMP2(x...)
@@ -20,7 +19,7 @@ end
 
 function RMP2{Float64}()
 
-    output("Computing MP2 using double precision")
+    output("MP2 will be computed using double precision")
 
     # Compute Restricted Hartree-Fock 
     mol = Molecule()
@@ -28,7 +27,7 @@ function RMP2{Float64}()
     refwfn = Fermi.HartreeFock.RHF(mol, ints)
 
     # Get rid of integrals that will be no longer used
-    delete!(ints, "JKFIT", "S", "T", "V")
+    delete!(ints, "JKERI", "S", "T", "V")
 
     # MP2 only needs a reference and ERI
     mp2_type = Options.get("mp2_type")
@@ -49,7 +48,7 @@ end
 
 function RMP2{Float32}()
 
-    output("Computing MP2 using single precision")
+    output("MP2 will be computed using single precision")
 
     # Compute Restricted Hartree-Fock 
     refwfn = Fermi.HartreeFock.RHF()

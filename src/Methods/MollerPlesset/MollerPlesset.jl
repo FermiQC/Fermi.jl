@@ -1,37 +1,26 @@
 """
-    Fermi.MollerPlesset
+    Fermi.MøllerPlesset
 
-module for running MP2 energies on restricted and unrestricted HF references.
-## methods
-    do_rmp2 -> see docstring ?Fermi.MollerPlesset.do_rmp2
-    do_ump2 -> see docstring ?Fermi.MollerPlesset.do_ump2
+Module for running Møller--Plesset perturbation theory computations.
 """
+
 module MollerPlesset
-
+# Import Fermi basics
 using Fermi
-#using Fermi.Direct
-using Fermi.Output
-using TensorOperations
+using Fermi.Options
+using Fermi.Error
+using Fermi: AbstractWavefunction
+using Fermi.Geometry: Molecule
+using Fermi.Integrals
 
-export RMP2
-export RMP3
-
-function print_header()
-    @output "================================================================================\n" 
-    @output "|   Moller-Plesset Perturbation Theory                                         |\n"
-    @output "|       module written by M.M. Davis                                           |\n"
-    @output "================================================================================\n" 
+function mp_header()
+    output("\n================================================================================")
+    output("|   Møller-Plesset Perturbation Theory                                         |")
+    output("|       Module written by G.J.R. Aroeira and M.M. Davis                        |")
+    output("================================================================================") 
 end
 
-abstract type MP2Algorithm end
+abstract type AbstractMPWavefunction <: Fermi.AbstractWavefunction end
 
-struct Conventional <: MP2Algorithm end
-struct DF           <: MP2Algorithm end
-struct Direct       <: MP2Algorithm end
-
-abstract type AbstractMPWavefunction <: Fermi.AbstractCorrelatedWavefunction end
-
-include("RMP2.jl")
-include("RMP3.jl")
-
+include("RMP2/RMP2.jl")
 end #module

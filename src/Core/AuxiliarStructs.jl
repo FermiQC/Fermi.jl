@@ -41,7 +41,6 @@ Alternatively, one can pass these informations explicitly:
 
     name      String with a label for the orbital
     basis     String indicating the basis set used to construct the orbitals
-    aux       String indicating the auxiliar basis set used for density fitting
     molecule  Molecule object for which the orbitals were constructed
     C         NxN AbstractArray with the AO(lines) → MO(orbitals) coefficients
 
@@ -52,7 +51,6 @@ _struct tree:_
 struct GeneralRestrictedOrbitals{T} <: AbstractOrbitals 
     name::String
     basis::String
-    aux::String
     molecule::Molecule
     C::AbstractArray{T,2}
 end

@@ -12,6 +12,13 @@ using TensorOperations
 
 import Base: getindex, setindex!, delete!
 
+export IntegralHelper
+export delete!
+export ao_to_mo_eri
+export ao_to_mo_rieri
+export ao_to_mo_eri!
+export ao_to_mo_rieri!
+
 include("Lints.jl")
 
 """
@@ -27,7 +34,8 @@ A key is associated with each type of integral
     "T"           -> AO electron kinetic energy integral
     "V"           -> AO electron-nuclei attraction integral
     "ERI"         -> AO electron repulsion integral
-    "DFERI"       -> AO density fitted electron repulsion integral
+    "JKERI"       -> AO JK density fitted electron repulsion integral
+    "RIERI"       -> AO RI density fitted electron repulsion integral
 
 # Fields
     mol                         Associated Fermi Molecule object
@@ -40,7 +48,8 @@ A key is associated with each type of integral
 mutable struct IntegralHelper{T}
     mol::Molecule
     basis::String
-    aux::String
+    auxjk::String
+    auxri::String
     cache::Dict{String,FermiMDArray{T}} 
     notation::String
     normalize::Bool
@@ -53,33 +62,36 @@ end
 function IntegralHelper{T}() where T <: AbstractFloat
     mol = Molecule()
     basis = Fermi.Options.get("basis")
-    aux = Fermi.Options.get("jkfit")
-    IntegralHelper{T}(mol, basis, aux)
+    auxjk = Fermi.Options.get("jkfit")
+    auxri = Fermi.Options.get("rifit")
+    IntegralHelper{T}(mol, basis, auxjk, auxri)
 end
 
 function IntegralHelper{T}(mol::Molecule) where T <: AbstractFloat
     basis = Fermi.Options.get("basis")
-    aux = Fermi.Options.get("jkfit")
-    IntegralHelper{T}(mol, basis, aux)
+    auxjk = Fermi.Options.get("jkfit")
+    auxri = Fermi.Options.get("rifit")
+    IntegralHelper{T}(mol, basis, auxjk, auxri)
 end
 
 function IntegralHelper{T}(mol::Molecule, basis::String) where T <: AbstractFloat
-    aux = Fermi.Options.get("jkfit")
-    IntegralHelper{T}(mol, basis, aux)
+    auxjk = Fermi.Options.get("jkfit")
+    auxri = Fermi.Options.get("rifit")
+    IntegralHelper{T}(mol, basis, auxjk, auxri)
 end
 
-function IntegralHelper{T}(mol::Molecule, basis::String, aux::String) where T <: AbstractFloat
-    if aux == "auto"
-        aux_lookup = Dict{String,String}(
-                                         "cc-pvdz" => "cc-pvdz-jkfit",
-                                         "cc-pvtz" => "cc-pvtz-jkfit",
-                                         "cc-pvqz" => "cc-pvqz-jkfit",
-                                         "cc-pv5z" => "cc-pv5z-jkfit"
-                                        )
-        aux = haskey(aux_lookup, basis) ? aux_lookup[basis] : "aug-cc-pvqz-rifit"
+function IntegralHelper{T}(mol::Molecule, basis::String, auxjk::String, auxri::String) where T <: AbstractFloat
+    if auxjk == "auto"
+        std_name = Regex("cc-pv.z")
+        auxjk = occursin(std_name, basis) ? basis*"-jkfit" : "cc-pvqz-jkfit"
+    end
+
+    if auxri == "auto"
+        std_name = Regex("cc-pv.z")
+        auxri = occursin(std_name, basis) ? basis*"-rifit" : "cc-pvqz-rifit"
     end
     cache = Dict{String, FermiMDArray{T}}() 
-    IntegralHelper{T}(mol, basis, aux, cache, "chem", false)
+    IntegralHelper{T}(mol, basis, auxjk, auxri, cache, "chem", false)
 end
 
 # Clears cache and change normalize key
@@ -107,12 +119,14 @@ function getindex(I::IntegralHelper,entry::String)
     end
 end
 
-function delete!(I::IntegralHelper, key)
-    delete!(I.cache, key)
+function delete!(I::IntegralHelper, keys...)
+    for k in keys
+        delete!(I.cache, k)
+    end
     GC.gc()
 end
 
-function compute!(I::IntegralHelper, entry::String)
+function compute!(I::IntegralHelper{Float64}, entry::String)
 
     if entry == "S" #AO basis overlap
         I.cache["S"] = FermiMDArray(ao_overlap(I.mol, I.basis, normalize = I.normalize))
@@ -126,12 +140,102 @@ function compute!(I::IntegralHelper, entry::String)
     elseif entry == "ERI" 
         I.cache["ERI"] = FermiMDArray(ao_eri(I.mol, I.basis, normalize = I.normalize))
 
-    elseif entry == "DFERI"
-        I.cache["DFERI"] = FermiMDArray(df_ao_eri(I.mol, I.basis, I.aux, normalize = I.normalize))
+    elseif entry == "JKERI"
+        I.cache["JKERI"] = FermiMDArray(df_ao_eri(I.mol, I.basis, I.auxjk, normalize = I.normalize))
+
+    elseif entry == "RIERI"
+        I.cache["RIERI"] = FermiMDArray(df_ao_eri(I.mol, I.basis, I.auxri, normalize = I.normalize))
 
     else
         throw(Fermi.InvalidFermiOption("Invalid key for IntegralHelper: $(entry)."))
     end
+end
+
+function compute!(I::IntegralHelper{Float32}, entry::String)
+
+    if entry == "S" #AO basis overlap
+        I.cache["S"] = FermiMDArray(Float32.(ao_overlap(I.mol, I.basis, normalize = I.normalize)))
+
+    elseif entry == "T" #AO basis kinetic
+        I.cache["T"] = FermiMDArray(Float32.(ao_kinetic(I.mol, I.basis, normalize = I.normalize)))
+
+    elseif entry == "V" #AO basis nuclear
+        I.cache["V"] = FermiMDArray(Float32.(ao_nuclear(I.mol, I.basis, normalize = I.normalize)))
+
+    elseif entry == "ERI" 
+        I.cache["ERI"] = FermiMDArray(Float32.(ao_eri(I.mol, I.basis, normalize = I.normalize)))
+
+    elseif entry == "JKERI"
+        I.cache["JKERI"] = FermiMDArray(Float32.(df_ao_eri(I.mol, I.basis, I.auxjk, normalize = I.normalize)))
+
+    elseif entry == "RIERI"
+        I.cache["RIERI"] = FermiMDArray(Float32.(df_ao_eri(I.mol, I.basis, I.auxri, normalize = I.normalize)))
+
+    else
+        throw(Fermi.InvalidFermiOption("Invalid key for IntegralHelper: $(entry)."))
+    end
+end
+
+function ao_to_mo_eri(I::IntegralHelper, C::AbstractArray{T,2}; name::String="MOERI") where T <: AbstractFloat
+
+    if !(haskey(I.cache, "ERI"))
+        output("No previous ERI found.")
+        output("Computing ERI...")
+        t = @elapsed I["ERI"]
+        output("Done in {:5.5f}", t)
+    end
+
+    AOERI = I["ERI"]
+    @tensoropt MOERI[p,q,r,s] :=  AOERI[μ, ν, ρ, σ]*C[μ, p]*C[ν, q]*C[ρ, r]*C[σ, s]
+
+    I.cache[name] = MOERI
+end
+
+function ao_to_mo_eri(I::IntegralHelper, C1::AbstractArray{T,2}, C2::AbstractArray{T,2}, 
+                     C3::AbstractArray{T,2}, C4::AbstractArray{T,2}; name::String="MOERI") where T <: AbstractFloat
+
+    if !(haskey(I.cache, "ERI"))
+        output("No previous ERI found.")
+        output("Computing ERI...")
+        t = @elapsed I["ERI"]
+        output("Done in {:5.5f}", t)
+    end
+
+    AOERI = I["ERI"]
+    @tensoropt MOERI[p,q,r,s] :=  AOERI[μ, ν, ρ, σ]*C1[μ, p]*C2[ν, q]*C3[ρ, r]*C4[σ, s]
+
+    I.cache[name] = MOERI
+end
+
+function ao_to_mo_eri!(I::IntegralHelper, C...; name="MOERI") where T <: AbstractFloat
+
+    ao_to_mo_eri(I, C..., name=name)
+    delete!(I, "ERI")
+
+    return I[name]
+end
+
+function ao_to_mo_rieri(I::IntegralHelper, C1::AbstractArray{T,2}, C2::AbstractArray{T,2}; name::String="MORIERI") where T <: AbstractFloat
+
+    if !(haskey(I.cache, "RIERI"))
+        output("No previous RI-ERI found.")
+        output("Computing RI-ERI...")
+        t = @elapsed I["RIERI"]
+        output("Done in {:5.5f}", t)
+    end
+
+    AOERI = I["RIERI"]
+    @tensoropt MOERI[P,p,q] :=  AOERI[P,μ, ν]*C1[μ, p]*C2[ν, q]
+
+    I.cache[name] = MOERI
+end
+
+function ao_to_mo_rieri!(I::IntegralHelper, C1::AbstractArray{T,2}, C2::AbstractArray{T,2}; name::String="MORIERI") where T <: AbstractFloat
+
+    ao_to_mo_rieri(I, C1, C2, name=name)
+    delete!(I, "RIERI")
+
+    return I[name]
 end
 
 #function transform_fock(F::Array{Float64,2}, O1::O, O2::O) where O <: AbstractOrbitals

@@ -1,10 +1,8 @@
 using TensorOperations
 using LinearAlgebra
-using Lints
 using Fermi.DIIS
 using Fermi.Integrals: IntegralHelper, projector
-using Fermi: AbstractOrbitals, Options
-using Fermi.Geometry: Molecule
+using Fermi: AbstractOrbitals
 
 # Define Guesses
 abstract type RHFGuess end
@@ -12,11 +10,21 @@ struct CoreGuess   <: RHFGuess end
 struct GWHGuess    <: RHFGuess end
 
 # Define RHF Orbital
+"""
+    Fermi.HartreeFock.RHFOrbitals
 
+Struct holding information about Restricted Hartree--Fock orbitals
+
+# Fields
+
+    molecule   Molecule object associated with the orbitals
+    basis      Basis set used to compute the orbitals
+    eps        Orbital energies, i.e. diagonal of the Fock matrix
+    C          Coefficients of the AO->MO transformation matrix
+"""
 struct RHFOrbitals <: AbstractOrbitals
     molecule::Molecule
     basis::String
-    aux::String
     eps::AbstractArray{Float64,1}
     C::AbstractArray{Float64,2}
 end
@@ -97,6 +105,11 @@ end
 function RHF(molecule::Molecule)
     guess = select_guess(Options.get("scf_guess"))
     ints = Fermi.Integrals.IntegralHelper()
+    RHF(molecule, ints, guess)
+end
+
+function RHF(molecule::Molecule, ints::IntegralHelper)
+    guess = select_guess(Options.get("scf_guess"))
     RHF(molecule, ints, guess)
 end
 

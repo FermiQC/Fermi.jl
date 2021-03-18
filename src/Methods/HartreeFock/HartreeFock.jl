@@ -4,8 +4,14 @@
 Module for running Hartree--Fock computations in Fermi.
 """
 module HartreeFock
+# Import Fermi basics
 using Fermi
-import Fermi: AbstractWavefunction
+using Fermi.Options
+using Fermi.Error
+using Fermi: AbstractWavefunction
+using Fermi.Geometry: Molecule
+
+export RHF
 
 function hf_header()
     output(repeat("=",80))
