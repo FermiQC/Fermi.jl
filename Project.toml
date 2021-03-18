@@ -1,6 +1,6 @@
 name = "Fermi"
 uuid = "9237668d-08c8-4784-b8dd-383aa52fcf74"
-authors = ["mdav2 <matthew.mcallister.davis@gmail.com>"]
+authors = ["gustavojra <gustavo.aroeira@gmail.com>"]
 version = "0.2.0"
 
 [deps]
