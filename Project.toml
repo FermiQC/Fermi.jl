@@ -1,7 +1,7 @@
 name = "Fermi"
 uuid = "9237668d-08c8-4784-b8dd-383aa52fcf74"
-authors = ["mdav2 <matthew.mcallister.davis@gmail.com>"]
-version = "0.1.0"
+authors = ["gustavojra <gustavo.aroeira@gmail.com>"]
+version = "0.2.0"
 
 [deps]
 ArnoldiMethod = "ec485272-7323-5ecc-a04f-4719b315124d"
@@ -31,5 +31,6 @@ HDF5 = "^0.13.3, 0.14, 0.15"
 IterativeSolvers = "^0.8.4"
 MPI = "0.15.1, 0.16"
 PrettyTables = "0.9.1, 0.10, 0.11"
-TBLIS = "^0"
+TBLIS = "^0.1.0"
+TensorOperations = "^3.0.0"
 julia = "^1.4"
