@@ -1,4 +1,5 @@
-# Fermi documentation
+# Fermi.jl Documentation
 
-Welcome to the documentation for Fermi. See the hamburger menu for more
-details.
+```@docs
+FermiMDArray
+```

@@ -71,22 +71,22 @@ function RMP2{T}(refwfn::RHF, ints::IntegralHelper{T}) where T <: AbstractFloat
         dfsz = size(Bov, 1)
         Bo_a = similar(Bov[:,:,1])
         Bo_b = similar(Bov[:,:,1])
-        t = @elapsed begin
-            Emp2 = zero(T)
-            for b in 1:nvir
-                Bo_b .= Bov[:,:,b]
-                for a in 1:nvir                        
-                    Bo_a .= Bov[:,:,a]
-                    @tensor moeri[i,j] := Bo_a[P,i]*Bo_b[P,j]
-                    for j in 1:ndocc
-                        for i in 1:ndocc
-                            Emp2 += moeri[i,j]*(2*moeri[i,a,j,b] - moeri[i,b,j,a]) /
-                            (ϵo[i]+ϵo[j]-ϵv[a]-ϵv[b])
-                        end
-                    end
-                end
-            end
-        end
+        #t = @elapsed begin
+        #    Emp2 = zero(T)
+        #    for b in 1:nvir
+        #        Bo_b .= Bov[:,:,b]
+        #        for a in 1:nvir                        
+        #            Bo_a .= Bov[:,:,a]
+        #            @tensor moeri[i,j] := Bo_a[P,i]*Bo_b[P,j]
+        #            for j in 1:ndocc
+        #                for i in 1:ndocc
+        #                    Emp2 += moeri[i,j]*(2*moeri[i,a,j,b] - moeri[i,b,j,a]) /
+        #                    (ϵo[i]+ϵo[j]-ϵv[a]-ϵv[b])
+        #                end
+        #            end
+        #        end
+        #    end
+        #end
         output("   Done in {:>5.2f} s\n", t)
         output("   @Final DF-RMP2 Correlation Energy {:>20.12f} Eₕ", Emp2)
         output("   @Final DF-RMP2 Total Energy       {:>20.12f} Eₕ", refwfn.energy+Emp2)

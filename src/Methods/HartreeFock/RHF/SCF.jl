@@ -1,21 +1,17 @@
-function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray{<:AbstractFloat,2}, Λ::FermiMDArray{<:AbstractFloat,2})
-    scf_type = Options.get("scf_type")
-
+function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray{<:AbstractFloat,2}, Λ::FermiMDArray{<:AbstractFloat,2}, Alg::RHFConv)
     output("Computing integrals...")
-    if scf_type == "conventional"
-        t = @elapsed ERI = ints["ERI"]
-    elseif scf_type == "df"
+    if Options.get("df") 
         output("Density Fitting emplying the auxiliar basis $(ints.auxjk)")
         t = @elapsed ERI = ints["JKERI"]
     else
-        throw(InvalidFermiOption(" invalid SCF type requested: $scf_type."))
+        t = @elapsed ERI = ints["ERI"]
     end
     output(" done in {:>5.2f} s", t)
 
-    RHF(molecule, ints, C, ERI, Λ)
+    RHF(molecule, ints, C, ERI, Λ, Alg)
 end
 
-function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray{<:AbstractFloat,2}, ERI::FermiMDArray, Λ::FermiMDArray{<:AbstractFloat,2})
+function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray{<:AbstractFloat,2}, ERI::FermiMDArray, Λ::FermiMDArray{<:AbstractFloat,2}, Alg::RHFConv)
 
     Fermi.HartreeFock.hf_header()
     output(Fermi.Geometry.get_string(molecule))

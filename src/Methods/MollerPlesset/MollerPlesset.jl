@@ -3,8 +3,8 @@
 
 Module for running Møller--Plesset perturbation theory computations.
 """
-
 module MollerPlesset
+
 # Import Fermi basics
 using Fermi
 using Fermi.Options

@@ -8,7 +8,7 @@
     
     @testset "DF" begin
         @set {
-              scf_type df
+              df true
               basis cc-pvdz
               jkfit cc-pvdz-jkfit
              }

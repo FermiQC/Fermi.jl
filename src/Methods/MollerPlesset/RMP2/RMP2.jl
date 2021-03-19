@@ -73,5 +73,4 @@ function RMP2{Float32}()
     end
 end
 
-
 include("ConventionalRMP2.jl")

@@ -54,8 +54,9 @@ const Default = Dict{String,Union{Float64,Int,String,Bool}}(
                                   "reference" => "rhf",
                                   "scf_max_iter" => 50,
                                   "scf_max_rms" => 10^-10,
-                                  "scf_type" => "conventional",
-                                  "mp2_type" => "conventional",
+                                  "scf_alg" => "conventional",
+                                  "mp2_alg" => "conventional",
+                                  "df" => false, 
                                   "oda" => true,
                                   "oda_cutoff" => 1E-1,
                                   "oda_shutoff" => 20,
@@ -131,7 +132,9 @@ Set the option `key` to the value `val`.
 See also `@set`
 """
 function set(key::String, val::Union{String, Bool, Float64, Int})
+    # Make all string lowercase
     key = lowercase(key)
+    val isa String ? val = lowercase(val) : nothing
     if !(haskey(Default, key))
         throw(InvalidFermiOption(key*" is not a valid option."))
     end

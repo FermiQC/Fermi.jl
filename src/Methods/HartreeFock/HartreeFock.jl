@@ -15,8 +15,9 @@ export RHF
 
 function hf_header()
     output(repeat("=",80))
-    output("|    {:<74}|\n", "Hartree Fock", ending="")
-    output("|        {:<70}|\n", "Module by M.M. Davis and G.J.R Aroeira", ending="")
+    output("|{:33}{:^12}{:33}|", "", "Hartree-Fock", "")
+    output("|{:34}{:^9}{:34}|", "", "Module  by","")
+    output("|{:25}{:^28}{:25}|", "", "G.J.R Aroeira and M.M. Davis", "")
     output(repeat("=",80))
 end
 
