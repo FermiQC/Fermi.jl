@@ -1,8 +1,10 @@
 using TensorOperations
 using LinearAlgebra
 using Fermi.DIIS
-using Fermi.Integrals: IntegralHelper, projector
+using Fermi.Integrals: projector
 using Fermi: AbstractOrbitals
+
+export RHF
 
 # For each implementation a singleton type must be create
 struct RHFConv end

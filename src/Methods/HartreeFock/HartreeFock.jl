@@ -10,8 +10,7 @@ using Fermi.Options
 using Fermi.Error
 using Fermi: AbstractWavefunction
 using Fermi.Geometry: Molecule
-
-export RHF
+using Fermi.Integrals: IntegralHelper
 
 function hf_header()
     output(repeat("=",80))

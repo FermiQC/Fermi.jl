@@ -215,7 +215,8 @@ function ao_to_mo_eri!(I::IntegralHelper, C...; name="MOERI") where T <: Abstrac
     return I[name]
 end
 
-function ao_to_mo_rieri(I::IntegralHelper, C1::AbstractArray{T,2}, C2::AbstractArray{T,2}; name::String="MORIERI") where T <: AbstractFloat
+function ao_to_mo_rieri(I::IntegralHelper, C1::AbstractArray{T,2}, C2::AbstractArray{T,2}; 
+                        name::String="MORIERI", indices::String="ov") where T <: AbstractFloat
 
     if !(haskey(I.cache, "RIERI"))
         output("No previous RI-ERI found.")
@@ -225,7 +226,12 @@ function ao_to_mo_rieri(I::IntegralHelper, C1::AbstractArray{T,2}, C2::AbstractA
     end
 
     AOERI = I["RIERI"]
-    @tensoropt MOERI[P,p,q] :=  AOERI[P,μ, ν]*C1[μ, p]*C2[ν, q]
+
+    if indices == "ov"
+        @tensoropt (P => 100, μ => 50, ν => 50, p => 10, q => 40) MOERI[P,p,q] :=  AOERI[P,μ, ν]*C1[μ, p]*C2[ν, q]
+    else
+        @tensoropt (P => 100, μ => 50, ν => 50, p => 25, q => 25) MOERI[P,p,q] :=  AOERI[P,μ, ν]*C1[μ, p]*C2[ν, q]
+    end
 
     I.cache[name] = MOERI
 end

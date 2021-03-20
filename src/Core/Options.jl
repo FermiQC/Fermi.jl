@@ -134,7 +134,9 @@ See also `@set`
 function set(key::String, val::Union{String, Bool, Float64, Int})
     # Make all string lowercase
     key = lowercase(key)
-    val isa String ? val = lowercase(val) : nothing
+    if key != "molstring" && val isa String
+        val = lowercase(val)
+    end
     if !(haskey(Default, key))
         throw(InvalidFermiOption(key*" is not a valid option."))
     end

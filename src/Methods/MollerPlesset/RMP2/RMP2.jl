@@ -1,6 +1,24 @@
-import Fermi.HartreeFock: RHF
+using Fermi.HartreeFock: RHF
 
-struct RMP2{T} <: AbstractMPWavefunction# where T <: AbstractFloat
+export RMP2
+
+# For each implementation a singleton type must be create
+struct MP2Conv end
+
+function get_mp2_alg()
+    if Options.get("mp2_alg") == "conventional"
+        return MP2Conv()
+    else
+        throw(InvalidFermiOption("the only implementation for MP2 currently availiable is `conventional`"))
+    end
+end
+
+"""
+    RMP2{T} <: AbstractMPWavefunction
+
+    TODO
+"""
+struct RMP2{T} <: AbstractMPWavefunction
     reference::RHF
     correlation::T
     energy::T
@@ -13,63 +31,46 @@ function RMP2(x...)
     elseif precision == "double"
         RMP2{Float64}(x...)
     else
-        throw(InvalidFermiOption("precision can only be single or double. Got $precision"))
+        throw(InvalidFermiOption("precision can only be `single` or `double`. Got $precision"))
     end
 end
 
-function RMP2{Float64}()
-
-    output("MP2 will be computed using double precision")
+function RMP2{Float64}(mol::Molecule = Molecule(), ints::IntegralHelper{Float64} = IntegralHelper{Float64}())
 
     # Compute Restricted Hartree-Fock 
-    mol = Molecule()
-    ints = IntegralHelper(mol)
     refwfn = Fermi.HartreeFock.RHF(mol, ints)
+
+    output("MP2 will be computed using double precision")
 
     # Get rid of integrals that will be no longer used
     delete!(ints, "JKERI", "S", "T", "V")
 
-    # MP2 only needs a reference and ERI
-    mp2_type = Options.get("mp2_type")
-    if mp2_type == "df" 
-
-        output("Computing RI density fitted ERI")
-        t = @elapsed ints["RIERI"]
-        output("Done in {:5.5f} s", t)
-        RMP2(refwfn, ints)
-
-    elseif mp2_type == "conventional"
-        output("Computing ERI")
-        t = @elapsed ints["ERI"]
-        output("Done in {:5.5f} s", t)
-        RMP2(refwfn, ints)
-    end
+    RMP2{Float64}(refwfn, ints)
 end
 
-function RMP2{Float32}()
+function RMP2{Float32}(mol::Molecule = Molecule(), ints::IntegralHelper{Float32} = IntegralHelper{Float32}())
+
+    # Compute Restricted Hartree-Fock 
+    refwfn = Fermi.HartreeFock.RHF(mol)
 
     output("MP2 will be computed using single precision")
 
-    # Compute Restricted Hartree-Fock 
-    refwfn = Fermi.HartreeFock.RHF()
+    RMP2{Float32}(refwfn, ints)
+end
 
-    # Get new integrals object
-    ints = IntegralHelper{Float32}()
+function RMP2{T}(refwfn::RHF, ints::IntegralHelper{T} = IntegralHelper{T}()) where T <: AbstractFloat
 
     # MP2 only needs a reference and ERI
-    mp2_type = Options.get("mp2_type")
-    if mp2_type == "df" 
-
+    if Options.get("df") 
         output("Computing RI density fitted ERI")
         t = @elapsed ints["RIERI"]
         output("Done in {:5.5f} s", t)
-        RMP2(refwfn, ints)
-
-    elseif mp2_type == "conventional"
+        RMP2{T}(refwfn, ints, get_mp2_alg())
+    else
         output("Computing ERI")
         t = @elapsed ints["ERI"]
         output("Done in {:5.5f} s", t)
-        RMP2(refwfn, ints)
+        RMP2{T}(refwfn, ints, get_mp2_alg())
     end
 end
 

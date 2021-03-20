@@ -1,4 +1,7 @@
-function RMP2{T}(refwfn::RHF, ints::IntegralHelper{T}) where T <: AbstractFloat
+using TensorOperations
+using LinearAlgebra
+
+function RMP2{T}(refwfn::RHF, ints::IntegralHelper{T}, Alg::MP2Conv) where T <: AbstractFloat
     mp_header()
 
     # Check frozen core and inactive virtual
@@ -25,18 +28,84 @@ function RMP2{T}(refwfn::RHF, ints::IntegralHelper{T}) where T <: AbstractFloat
     C = T.(orbs.C)
     ϵo = T.(orbs.eps[o])
     ϵv = T.(orbs.eps[v])
+    o_size = length(ϵo)
+    v_size = length(ϵv)
 
     output("  Starting MP2 computation")
     output(" Number of frozen orbitals:             {:d}" , core)
     output(" Number of inactive orbitals:           {:d}" , inac)
-    output(" Number of correlated electron pairs:   {:d}", length(o))
-    output(" Number of correlated virtual orbitals: {:d}", length(v))
-    output(" ⇒ Total number of MP2 amplitudes:      {:d}\n\n", length(o)^2*length(v)^2)
+    output(" Number of correlated electron pairs:   {:d}", o_size)
+    output(" Number of correlated virtual orbitals: {:d}", v_size)
+    output(" ⇒ Total number of MP2 amplitudes:      {:d}\n\n", o_size^2*v_size^2)
 
     output(repeat("-",80))
 
-    if Options.get("mp2_type") == "conventional"
+    if Options.get("df")
         output("• Performing AO->MO integral transformation...", ending="")
+
+        # TBLIS is great for integrals transformation
+        Options.set("tblis", true)
+        t = @elapsed Bov = Fermi.Integrals.ao_to_mo_rieri!(ints, C[:,o], C[:,v])
+
+        # Currently TBLIS is greedy and will not work well inside a threaded loop
+        Options.set("tblis", false)
+
+        Bov = Bov.data
+        output("   Done in {:>5.2f} s\n", t)
+
+        output(" Computing DF-MP2 Energy...", ending="")
+
+        aux_size = size(Bov,1)
+        # Pre-allocating arrays for threads
+        BABs = [zeros(T, v_size, v_size) for i=1:Threads.nthreads()]
+        BBAs = [zeros(T, v_size, v_size) for i=1:Threads.nthreads()]
+
+        # Vector containing the energy contribution computed by each thread
+        ΔMP2s = zeros(T,Threads.nthreads())
+        t = @elapsed begin
+            @sync for i in 1:o_size
+                Threads.@spawn begin
+                id = Threads.threadid()
+                @views Bi = Bov[:,i,:]
+                BAB = BABs[id]
+                BBA = BBAs[id]
+                for j in i:o_size
+                    if i != j
+                        fac = T(2)
+                    else
+                        fac = one(T)
+                    end
+                    @views Bj = Bov[:,j,:]
+
+                    @tensor BAB[a,b] = Bi[Q,a]*Bj[Q,b]
+                    transpose!(BBA,BAB)
+
+                    eij = ϵo[i] + ϵo[j]
+                    dmp2_1 = zero(T)
+                    dmp2_2 = zero(T) 
+                    @fastmath for b in 1:v_size
+                        @inbounds eij_b = eij - ϵv[b]
+                        for a in 1:v_size
+                            @inbounds begin 
+                                iajb = BAB[a,b]
+                                d = iajb/(eij_b - ϵv[a])
+                                dmp2_1 += d*iajb
+                                dmp2_2 += d*BBA[a,b]
+                            end
+                        end
+                    end
+                    dmp2 = T(2)*dmp2_1 - dmp2_2
+                    ΔMP2s[id] += fac*dmp2
+                end
+                end
+            end
+            Emp2 = sum(ΔMP2s)
+        end
+    else
+        output("• Performing AO->MO integral transformation...", ending="")
+
+        # TBLIS is great for integrals transformation
+        Options.set("tblis", true)
         t = @elapsed moeri = Fermi.Integrals.ao_to_mo_eri!(ints, C[:,o], C[:,v], C[:,o], C[:,v])
         output("   Done in {:>5.2f} s\n", t)
 
@@ -54,44 +123,11 @@ function RMP2{T}(refwfn::RHF, ints::IntegralHelper{T}) where T <: AbstractFloat
                 end
             end
         end
-        output("   Done in {:>5.2f} s\n", t)
-        output("   @Final RMP2 Correlation Energy {:>20.12f} Eₕ", Emp2)
-        output("   @Final RMP2 Total Energy       {:>20.12f} Eₕ", refwfn.energy+Emp2)
-        output(repeat("-",80))
-
-        RMP2(refwfn, Emp2, Emp2+refwfn.energy)
-
-    elseif Options.get("mp2_type") == "df"
-        
-        output("• Performing AO->MO integral transformation...", ending="")
-        t = @elapsed Bov = Fermi.Integrals.ao_to_mo_rieri!(ints, C[:,o], C[:,v])
-        output("   Done in {:>5.2f} s\n", t)
-
-        output(" Computing DF-MP2 Energy...", ending="")
-        dfsz = size(Bov, 1)
-        Bo_a = similar(Bov[:,:,1])
-        Bo_b = similar(Bov[:,:,1])
-        #t = @elapsed begin
-        #    Emp2 = zero(T)
-        #    for b in 1:nvir
-        #        Bo_b .= Bov[:,:,b]
-        #        for a in 1:nvir                        
-        #            Bo_a .= Bov[:,:,a]
-        #            @tensor moeri[i,j] := Bo_a[P,i]*Bo_b[P,j]
-        #            for j in 1:ndocc
-        #                for i in 1:ndocc
-        #                    Emp2 += moeri[i,j]*(2*moeri[i,a,j,b] - moeri[i,b,j,a]) /
-        #                    (ϵo[i]+ϵo[j]-ϵv[a]-ϵv[b])
-        #                end
-        #            end
-        #        end
-        #    end
-        #end
-        output("   Done in {:>5.2f} s\n", t)
-        output("   @Final DF-RMP2 Correlation Energy {:>20.12f} Eₕ", Emp2)
-        output("   @Final DF-RMP2 Total Energy       {:>20.12f} Eₕ", refwfn.energy+Emp2)
-        output(repeat("-",80))
-
-        RMP2(refwfn, Emp2, Emp2+refwfn.energy)
     end
+    output("   Done in {:>5.2f} s\n", t)
+    output("   @Final RMP2 Correlation Energy {:>20.12f} Eₕ", Emp2)
+    output("   @Final RMP2 Total Energy       {:>20.12f} Eₕ", refwfn.energy+Emp2)
+    output(repeat("-",80))
+
+    RMP2{T}(refwfn, Emp2, Emp2+refwfn.energy)
 end
