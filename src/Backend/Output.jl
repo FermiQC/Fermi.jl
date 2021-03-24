@@ -43,6 +43,7 @@ function output(str, x...; ending="\n")
     elseif style == "stdout"
         print(f)
     elseif style == "file"
+        path = Options.get("output")
         open(path, "a") do io
             write(io, f)
             flush(io)

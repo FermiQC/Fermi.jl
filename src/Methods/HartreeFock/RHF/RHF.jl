@@ -2,18 +2,19 @@ using TensorOperations
 using LinearAlgebra
 using Fermi.DIIS
 using Fermi.Integrals: projector
-using Fermi: AbstractOrbitals
+using Fermi: AbstractRestrictedOrbitals
 
 export RHF
 
-# For each implementation a singleton type must be create
-struct RHFConv end
+abstract type RHFAlgorithm end
 
 function get_scf_alg()
-    if Options.get("scf_alg") == "conventional"
-        return RHFConv()
-    else
-        throw(InvalidFermiOption("the only implementation for RHF currently availiable is `conventional`"))
+    implemented = [RHFa()]
+    N = Options.get("scf_alg")
+    try 
+        return implemented[N]
+    catch BoundsError
+        throw(InvalidFermiOption("implementation number $N not available for RHF."))
     end
 end
 
@@ -29,7 +30,7 @@ Struct holding information about Restricted Hartree--Fock orbitals
     eps        Orbital energies, i.e. diagonal of the Fock matrix
     C          Coefficients of the AO->MO transformation matrix
 """
-struct RHFOrbitals <: AbstractOrbitals
+struct RHFOrbitals <: AbstractRestrictedOrbitals
     molecule::Molecule
     basis::String
     eps::AbstractArray{Float64,1}
@@ -63,9 +64,10 @@ These options can be set with `@set <option> <value>`
 
 | Option         | What it does                      | Type      | choices [default]     |
 |----------------|-----------------------------------|-----------|-----------------------|
-| `scf_alg`      | picks SCF algorithm               | `String`  | [conventional]        |
-| `scf_max_rms`  | RMS density convergence criterion | `Float64` | [10^-10]              |
+| `scf_alg`      | Picks SCF algorithm               | `String`  | [conventional]        |
+| `scf_max_rms`  | RMS density convergence criterion | `Float64` | [10^-9]               |
 | `scf_max_iter` | Max number of iterations          | `Int`     | [50]                  |
+| `scf_e_conv`   | Energy convergence criterion      | `Float64` | [10^-10]              |
 | `basis`        | What basis set to use             | `String`  | ["sto-3g"]            |
 | `df`           | Whether to use density fitting    | Bool      | false                 |
 | `jkfit`        | What aux. basis set to use for JK | `String`  | ["auto"]              |
@@ -137,4 +139,6 @@ end
 
 # Actual HF routine is in here
 include("AuxRHF.jl")
-include("SCF.jl")
+# For each implementation a singleton type must be create
+struct RHFa <: RHFAlgorithm end
+include("RHFa.jl")

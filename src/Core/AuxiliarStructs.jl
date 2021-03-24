@@ -22,6 +22,9 @@ _struct tree:_
 """
 abstract type AbstractOrbitals end
 
+abstract type AbstractRestrictedOrbitals <: AbstractOrbitals end
+abstract type AbstractUnrestrictedOrbitals <: AbstractOrbitals end
+
 """
     Fermi.GeneralRestrictedOrbitals
 
@@ -48,7 +51,7 @@ _struct tree:_
 
 **GeneralRestrictedOrbitals** <: AbstractOrbitals
 """
-struct GeneralRestrictedOrbitals{T} <: AbstractOrbitals 
+struct GeneralRestrictedOrbitals{T} <: AbstractRestrictedOrbitals 
     name::String
     basis::String
     molecule::Molecule

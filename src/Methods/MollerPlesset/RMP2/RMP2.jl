@@ -2,14 +2,15 @@ using Fermi.HartreeFock: RHF
 
 export RMP2
 
-# For each implementation a singleton type must be create
-struct MP2Conv end
+abstract type RMP2Algorithm end
 
 function get_mp2_alg()
-    if Options.get("mp2_alg") == "conventional"
-        return MP2Conv()
-    else
-        throw(InvalidFermiOption("the only implementation for MP2 currently availiable is `conventional`"))
+    implemented = [RMP2a()]
+    N = Options.get("mp2_alg")
+    try 
+        return implemented[N]
+    catch BoundsError
+        throw(InvalidFermiOption("implementation number $N not available for RMP2."))
     end
 end
 
@@ -74,4 +75,6 @@ function RMP2{T}(refwfn::RHF, ints::IntegralHelper{T} = IntegralHelper{T}()) whe
     end
 end
 
-include("ConventionalRMP2.jl")
+# For each implementation a singleton type must be create
+struct RMP2a <: RMP2Algorithm end
+include("RMP2a.jl")

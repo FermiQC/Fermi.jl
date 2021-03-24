@@ -10,11 +10,11 @@ using Fermi.Options
 using Fermi.Error
 using Fermi: AbstractWavefunction
 using Fermi.Geometry: Molecule
-using Fermi.Integrals: IntegralHelper
+using Fermi.Integrals: IntegralHelper, MOIntegralHelper, ao_to_mo!
 
 function mp_header()
     output(repeat("=",80))
-    output("|{:22}{:^12}{:22}|", "Møller-Plesset Perturbation Theory", "", "")
+    output("|{:22}{:^34}{:22}|", "", "Møller-Plesset Perturbation Theory", "")
     output("|{:34}{:^9}{:34}|", "", "Module  by","")
     output("|{:25}{:^28}{:25}|", "", "G.J.R Aroeira and M.M. Davis", "")
     output(repeat("=",80))

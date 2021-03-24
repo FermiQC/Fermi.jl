@@ -6,6 +6,7 @@ Module to compute integrals using Lints.jl
 module Integrals
 
 using Fermi
+using Fermi: AbstractOrbitals, AbstractRestrictedOrbitals
 using Fermi.Geometry: Molecule
 using LinearAlgebra
 using TensorOperations
@@ -13,13 +14,13 @@ using TensorOperations
 import Base: getindex, setindex!, delete!
 
 export IntegralHelper
+export MOIntegralHelper
 export delete!
-export ao_to_mo_eri
-export ao_to_mo_rieri
-export ao_to_mo_eri!
-export ao_to_mo_rieri!
+export ao_to_mo!
 
 include("Lints.jl")
+
+abstract type AbstractIntegralHelper end
 
 """
     IntegralHelper{T}
@@ -42,16 +43,14 @@ A key is associated with each type of integral
     basis                       Basis set used within the helper
     aux                         Auxiliar basis set used in density fitting
     cache                       Holds integrals already computed 
-    notation                    `chem` or `phys` for ERI notation
     normalize                   Do normalize integrals? `true` or `false`
 """
-mutable struct IntegralHelper{T}
+struct IntegralHelper{T} <: AbstractIntegralHelper
     mol::Molecule
     basis::String
     auxjk::String
     auxri::String
     cache::Dict{String,FermiMDArray{T}} 
-    notation::String
     normalize::Bool
 end
 
@@ -91,7 +90,7 @@ function IntegralHelper{T}(mol::Molecule, basis::String, auxjk::String, auxri::S
         auxri = occursin(std_name, basis) ? basis*"-rifit" : "cc-pvqz-rifit"
     end
     cache = Dict{String, FermiMDArray{T}}() 
-    IntegralHelper{T}(mol, basis, auxjk, auxri, cache, "chem", false)
+    IntegralHelper{T}(mol, basis, auxjk, auxri, cache, false)
 end
 
 # Clears cache and change normalize key
@@ -110,7 +109,7 @@ end
 Called when `helper["foo"]` syntax is used. If the requested entry already
 exists, simply return the entry. If not, compute the requested entry.
 """
-function getindex(I::IntegralHelper,entry::String)
+function getindex(I::AbstractIntegralHelper,entry::String)
     if haskey(I.cache, entry)
         return I.cache[entry]
     else
@@ -119,11 +118,19 @@ function getindex(I::IntegralHelper,entry::String)
     end
 end
 
-function delete!(I::IntegralHelper, keys...)
+function setindex!(I::AbstractIntegralHelper, A::FermiMDArray, key::String)
+    I.cache[key] = A
+end
+
+function delete!(I::AbstractIntegralHelper, keys...)
     for k in keys
         delete!(I.cache, k)
     end
     GC.gc()
+end
+
+function delete!(I::AbstractIntegralHelper)
+    delete!(I, keys(I.cache)...)
 end
 
 function compute!(I::IntegralHelper{Float64}, entry::String)
@@ -176,199 +183,137 @@ function compute!(I::IntegralHelper{Float32}, entry::String)
     end
 end
 
-function ao_to_mo_eri(I::IntegralHelper, C::AbstractArray{T,2}; name::String="MOERI") where T <: AbstractFloat
-
-    if !(haskey(I.cache, "ERI"))
-        output("No previous ERI found.")
-        output("Computing ERI...")
-        t = @elapsed I["ERI"]
-        output("Done in {:5.5f}", t)
-    end
-
-    AOERI = I["ERI"]
-    @tensoropt MOERI[p,q,r,s] :=  AOERI[μ, ν, ρ, σ]*C[μ, p]*C[ν, q]*C[ρ, r]*C[σ, s]
-
-    I.cache[name] = MOERI
+struct MOIntegralHelper{T,O} <: AbstractIntegralHelper
+    orbitals::O
+    auxri::String
+    αocc::Int
+    βocc::Int
+    αvir::Int
+    βvir::Int
+    cache::Dict{String,FermiMDArray{T}} 
+    phys::Bool
 end
 
-function ao_to_mo_eri(I::IntegralHelper, C1::AbstractArray{T,2}, C2::AbstractArray{T,2}, 
-                     C3::AbstractArray{T,2}, C4::AbstractArray{T,2}; name::String="MOERI") where T <: AbstractFloat
-
-    if !(haskey(I.cache, "ERI"))
-        output("No previous ERI found.")
-        output("Computing ERI...")
-        t = @elapsed I["ERI"]
-        output("Done in {:5.5f}", t)
-    end
-
-    AOERI = I["ERI"]
-    @tensoropt MOERI[p,q,r,s] :=  AOERI[μ, ν, ρ, σ]*C1[μ, p]*C2[ν, q]*C3[ρ, r]*C4[σ, s]
-
-    I.cache[name] = MOERI
-end
-
-function ao_to_mo_eri!(I::IntegralHelper, C...; name="MOERI") where T <: AbstractFloat
-
-    ao_to_mo_eri(I, C..., name=name)
-    delete!(I, "ERI")
-
-    return I[name]
-end
-
-function ao_to_mo_rieri(I::IntegralHelper, C1::AbstractArray{T,2}, C2::AbstractArray{T,2}; 
-                        name::String="MORIERI", indices::String="ov") where T <: AbstractFloat
-
-    if !(haskey(I.cache, "RIERI"))
-        output("No previous RI-ERI found.")
-        output("Computing RI-ERI...")
-        t = @elapsed I["RIERI"]
-        output("Done in {:5.5f}", t)
-    end
-
-    AOERI = I["RIERI"]
-
-    if indices == "ov"
-        @tensoropt (P => 100, μ => 50, ν => 50, p => 10, q => 40) MOERI[P,p,q] :=  AOERI[P,μ, ν]*C1[μ, p]*C2[ν, q]
+function MOIntegralHelper(x...; y...)
+    precision = Fermi.Options.get("precision")
+    if precision == "double"
+        MOIntegralHelper{Float64}(x...; y...)
+    elseif precision == "single"
+        MOIntegralHelper{Float32}(x...; y...)
     else
-        @tensoropt (P => 100, μ => 50, ν => 50, p => 25, q => 25) MOERI[P,p,q] :=  AOERI[P,μ, ν]*C1[μ, p]*C2[ν, q]
+        throw(InvalidFermiOption("precision can only be `single` or `double`. Got $precision"))
+    end
+end
+
+function MOIntegralHelper{T}(O::AbstractRestrictedOrbitals; auxri="auto", phys=false) where T <: AbstractFloat
+
+    basis = O.basis
+    if auxri == "auto"
+        std_name = Regex("cc-pv.z")
+        auxri = occursin(std_name, basis) ? basis*"-rifit" : "cc-pvqz-rifit"
     end
 
-    I.cache[name] = MOERI
+    ndocc = O.molecule.Nα
+    nvir = size(O.C, 1) - ndocc
+
+    cache = Dict{String, FermiMDArray{T}}() 
+    return MOIntegralHelper(O, auxri, ndocc, ndocc, nvir, nvir, cache, phys)
 end
 
-function ao_to_mo_rieri!(I::IntegralHelper, C1::AbstractArray{T,2}, C2::AbstractArray{T,2}; name::String="MORIERI") where T <: AbstractFloat
+function ao_to_mo!(aoints::IntegralHelper, O::AbstractRestrictedOrbitals, entries...; phys=false)
 
-    ao_to_mo_rieri(I, C1, C2, name=name)
-    delete!(I, "RIERI")
+    moint = MOIntegralHelper(O, auxri=aoints.auxri, phys=phys)
+    #delete!(aoints, "JKERI", "S", "T", "V")
 
-    return I[name]
+    #for entry in entries
+    #    compute!(moint, entry, aoints)
+    #end
+    compute!(moint, entries[1], aoints)
+    delete!(aoints)
+    return moint
 end
 
-#function transform_fock(F::Array{Float64,2}, O1::O, O2::O) where O <: AbstractOrbitals
-#    C1 = hcat([orb.C for orb in O1.orbs]...)
-#    C2 = hcat([orb.C for orb in O2.orbs]...)
-#    transform_fock(F,C1,C2)
-#end
+function compute!(I::MOIntegralHelper{T,O}, entry::String, ints::IntegralHelper=IntegralHelper()) where {T <: AbstractFloat, O <: AbstractRestrictedOrbitals}
 
-#function transform_fock(F::Array{Float64,2}, C1::Array{Float64,2}, C2::Array{Float64,2})
-#
-#    nmo,p = size(C1)
-#    _,q   = size(C2)
-#
-#    Q1 = zeros(p,nmo)
-#    Fermi.contract!(Q1,C1,F,"pv","up","uv")
-#
-#    Q2 = zeros(p,q)
-#    Fermi.contract!(Q2,C2,Q1,"pq","vq","pv")
-#
-#    return Q2
-#end
-#
-#function transform_eri(ERI::Array{T,4}, O1::O, O2::O, O3::O, O4::O) where { O <: AbstractOrbitals,
-#                                                                            T <: AbstractFloat }
-#    C1 = hcat([orb.C for orb in O1.orbs]...)
-#    C2 = hcat([orb.C for orb in O2.orbs]...)
-#    C3 = hcat([orb.C for orb in O3.orbs]...)
-#    C4 = hcat([orb.C for orb in O4.orbs]...)
-#    transform_eri(ERI,C1,C2,C3,C4)
-#end
-#
-#function transform_eri(ERI::Array{T,3}, O1::O, O2::O) where { O <: AbstractOrbitals,
-#                                                              T <: AbstractFloat }
-#    C1 = hcat([orb.C for orb in O1.orbs]...)
-#    C2 = hcat([orb.C for orb in O2.orbs]...)
-#    transform_eri(ERI,C1,C2)
-#end
-#
-#function transform_eri(ERI::Array{T,4}, C1::Array{Float64,2}, C2::Array{Float64,2}, C3::Array{Float64,2}, C4::Array{Float64,2}) where T <: AbstractFloat
-#
-#    nmo,i = size(C1)
-#    _,a   = size(C2)
-#    _,j   = size(C3)
-#    _,b   = size(C4)
-#
-#    C1 = T.(C1)
-#    C2 = T.(C2)
-#    C3 = T.(C3)
-#    C4 = T.(C4)
-#    Q1 = zeros(T,i,nmo,nmo,nmo)
-#    Fermi.contract!(Q1,C1,ERI,"ivls","ui","uvls")
-#
-#    Q2 = zeros(T,i,a,nmo,nmo)
-#    Fermi.contract!(Q2,C2,Q1,"ials","va","ivls")
-#    Q1 = nothing
-#
-#    Q3 = zeros(T,i,a,j,nmo)
-#    Fermi.contract!(Q3,C3,Q2,"iajs","lj","ials")
-#    Q2 = nothing
-#
-#    Q4 = zeros(T,i,a,j,b)
-#    Fermi.contract!(Q4,C4,Q3,"iajb","sb","iajs")
-#    Q4
-#end
-#
-#function transform_eri(ERI::Array{T,3},C1::Array{Float64,2},C2::Array{Float64,2}) where T <: AbstractFloat
-#    C1 = T.(C1)
-#    C2 = T.(C2)
-#    naux = size(ERI,1)
-#    nao,i = size(C1)
-#    _,a = size(C2)
-#    Bin = zeros(T,naux,i,nao)
-#    Fermi.contract!(Bin,C1,ERI,"Qiv","ui","Quv")
-#    Bia = zeros(T,naux,i,a)
-#    Fermi.contract!(Bia,C2,Bin,"Qia","va","Qiv")
-#    Bia
-#end
+    core = Fermi.Options.get("drop_occ")
+    inac = Fermi.Options.get("drop_vir")
 
-#"""
-#    aux_ri!(I::IntegralHelper, ri=Fermi.Options.get["rifit"])
-#
-#Clears the integral cache and switches auxiliary DF integrals to use the
-#current RI fitting basis set. Used between DF-RHF and DF-post HF.
-#"""
-#function aux_ri!(I::IntegralHelper,ri=Fermi.Options.get("rifit"))
-#    delete!(I.cache,"B") #clear out old aux basis
-#    GC.gc()
-#    if ri == "auto"
-#        aux_lookup = Dict{String,String}(
-#                                         "cc-pvdz" => "cc-pvdz-rifit",
-#                                         "cc-pvtz" => "cc-pvtz-rifit",
-#                                         "cc-pvqz" => "cc-pvqz-rifit",
-#                                         "cc-pv5z" => "cc-pv5z-rifit"
-#                                        )
-#        I.bname["aux"] = try
-#            aux_lookup[Fermi.Options.get("basis")]
-#        catch KeyError
-#            "aug-cc-pvqz-rifit" # default to large DF basis
-#        end
-#    else
-#        I.bname["aux"] = ri
-#    end
-#end
-#"""
-#    aux_ri!(I::IntegralHelper, jk=Fermi.Options.get["jkfit"])
-#
-#Clears the integral cache and switches auxiliary DF integrals to use the
-#current JK fitting basis set. Used to ensure JK integrals are used in
-#DF-RHF.
-#"""
-#function aux_jk!(I::IntegralHelper, jk = Fermi.Options.get("jkfit"))
-#    delete!(I,"B") #clear out old aux basis
-#    if jk == "auto"
-#        aux_lookup = Dict{String,String}(
-#                                         "cc-pvdz" => "cc-pvdz-jkfit",
-#                                         "cc-pvtz" => "cc-pvtz-jkfit",
-#                                         "cc-pvqz" => "cc-pvqz-jkfit",
-#                                         "cc-pv5z" => "cc-pv5z-jkfit"
-#                                        )
-#        I.bname["aux"] = try
-#            aux_lookup[Fermi.Options.get("basis")]
-#        catch KeyError
-#            "aug-cc-pvqz-rifit" # default to large DF basis
-#        end
-#    else
-#        I.aux = jk
-#    end
-#end
+    if core ≥ 2*I.αocc
+        throw(InvalidFermiOption("too many core electrons ($core) for Ne = $(2*I.αocc)."))
+    end
+
+    if inac ≥ 2*I.αvir
+        throw(InvalidFermiOption("too many inactive orbitals ($inac) for # virtuals = $(2*I.αvir)."))
+    end
+    o = (core+1):I.αocc
+    v = (I.αocc+1):(I.αocc + I.αvir - inac)
+
+    Co = T.(I.orbitals.C[:,o])
+    Cv = T.(I.orbitals.C[:,v])
+
+    chem = I.phys ? entry[[1,3,2,4]] : entry
+    if chem == "OOOO"
+        AOERI = T.(ints["ERI"])
+        @tensoropt (μ=>100, ν=>100, ρ=>100, σ=>100, i=>10, j=>10, k=>10, l=>10, a=>80, b=>80, c=>80, d=>80) begin 
+            OOOO[i,j,k,l] :=  AOERI[μ, ν, ρ, σ]*Co[μ, i]*Co[ν, j]*Co[ρ, k]*Co[σ, l]
+        end
+        I.cache[entry] = I.phys ? permutedims(OOOO, (1,3,2,4)) : OOOO
+
+    elseif chem == "OOOV"
+        AOERI = T.(ints["ERI"])
+        @tensoropt (μ=>100, ν=>100, ρ=>100, σ=>100, i=>10, j=>10, k=>10, l=>10, a=>80, b=>80, c=>80, d=>80) begin 
+            OOOV[i,j,k,a] :=  AOERI[μ, ν, ρ, σ]*Co[μ, i]*Co[ν, j]*Co[ρ, k]*Cv[σ, a]
+        end
+        I.cache[entry] = I.phys ? permutedims(OOOV, (1,3,2,4)) : OOOV
+
+    elseif chem == "OVOV"
+        AOERI = T.(ints["ERI"])
+        @tensoropt (μ=>100, ν=>100, ρ=>100, σ=>100, i=>10, j=>10, k=>10, l=>10, a=>80, b=>80, c=>80, d=>80) begin 
+            OVOV[i,a,j,b] :=  AOERI[μ, ν, ρ, σ]*Co[μ, i]*Cv[ν, a]*Co[ρ, j]*Cv[σ, b]
+        end
+        I.cache[entry] = I.phys ? permutedims(OVOV, (1,3,2,4)) : OVOV
+
+    elseif chem == "OOVV"
+        AOERI = T.(ints["ERI"])
+        @tensoropt (μ=>100, ν=>100, ρ=>100, σ=>100, i=>10, j=>10, k=>10, l=>10, a=>80, b=>80, c=>80, d=>80) begin 
+            OOVV[i,j,a,b] :=  AOERI[μ, ν, ρ, σ]*Co[μ, i]*Co[ν, j]*Cv[ρ, a]*Cv[σ, b]
+        end
+        I.cache[entry] = I.phys ? permutedims(OOVV, (1,3,2,4)) : OOVV
+
+    elseif chem == "OVVV"
+        AOERI = T.(ints["ERI"])
+        @tensoropt (μ=>100, ν=>100, ρ=>100, σ=>100, i=>10, j=>10, k=>10, l=>10, a=>80, b=>80, c=>80, d=>80) begin 
+            OVVV[i,a,b,c] :=  AOERI[μ, ν, ρ, σ]*Co[μ, i]*Cv[ν, a]*Cv[ρ, b]*Cv[σ, c]
+        end
+        I.cache[entry] = I.phys ? permutedims(OVVV, (1,3,2,4)) : OVVV
+
+    elseif chem == "VVVV"
+        AOERI = T.(ints["ERI"])
+        @tensoropt (μ=>100, ν=>100, ρ=>100, σ=>100, i=>10, j=>10, k=>10, l=>10, a=>80, b=>80, c=>80, d=>80) begin 
+            VVVV[a,b,c,d] :=  AOERI[μ, ν, ρ, σ]*Cv[μ, a]*Cv[ν, b]*Cv[ρ, c]*Cv[σ, d]
+        end
+        I.cache[entry] = I.phys ? permutedims(VVVV, (1,3,2,4)) : VVVV
+    elseif chem == "BOV"
+        AOERI = (ints["RIERI"])
+        @time begin
+        @tensoropt (P => 100, μ => 50, ν => 50, i => 10, a => 40) begin 
+            Bov[P,i,a] :=  AOERI[P,μ, ν]*Co[μ, i]*Cv[ν, a]
+        end
+        I.cache["BOV"] = Bov
+        end
+    elseif chem == "BOO"
+        AOERI = T.(ints["RIERI"])
+        @tensoropt (P => 100, μ => 50, ν => 50, i => 10, a => 40) begin 
+            Boo[P,i,a] :=  AOERI[P,μ, ν]*Co[μ, i]*Co[ν, a]
+        end
+        I.cache["BOO"] = Boo
+    elseif chem == "BOV"
+        AOERI = T.(ints["RIERI"])
+        @tensoropt (P => 100, μ => 50, ν => 50, i => 10, a => 40) begin 
+            Bvv[P,i,a] :=  AOERI[P,μ, ν]*Cv[μ, i]*Cv[ν, a]
+        end
+        I.cache["BVV"] = Bvv
+    end
+end
 
 end #module

@@ -2,7 +2,7 @@
 @testset "Moller-Plesset" begin
     @set {
           basis cc-pvdz
-          scf_alg df
+          df true
           jkfit cc-pvdz-jkfit
           rifit cc-pvdz-rifit
          }

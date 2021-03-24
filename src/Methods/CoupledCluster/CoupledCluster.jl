@@ -1,17 +1,18 @@
 """
-Module for running CoupledCluster computations in Fermi.
+    Fermi.CoupledCluster
 
+Module for running CoupledCluster computations in Fermi.
 """
 module CoupledCluster
-
+# Import Fermi basics
 using Fermi
+using Fermi.Options
+using Fermi.Error
+using Fermi: AbstractWavefunction
+using Fermi.Geometry: Molecule
 using Fermi.Integrals: IntegralHelper
-using Fermi.HartreeFock: RHF
-using Fermi.Output
-using TensorOperations
-using LinearAlgebra
 
-function print_header()
+function cc_header()
     banner = 
 raw"""
 ================================================================================
@@ -24,10 +25,10 @@ raw"""
 //                    | |                                                     \\   
 //                    |_|                                                     \\   
 //                                                                            \\     
-//                 Module by M.M. Davis and G.J.R. Aroeira                    \\       
+//                 Module by G.J.R. Aroeira and M. M. Davis                   \\       
 ================================================================================
 """
-    @output "\n{}\n" banner
+    output(banner)
 end
 
 """
@@ -37,42 +38,12 @@ Fermi abstract type common to all Coupled Cluster wavefunctions
 
 _struct tree:_
 
-**AbstractCCWavefunction** <: AbstractCorrelatedWavefunction <: AbstractWavefunction
+**AbstractCCWavefunction** <: AbstractWavefunction
 """
 abstract type AbstractCCWavefunction <: Fermi.AbstractCorrelatedWavefunction end
 
-# Structures symbolizing the type of implementation for each CC method
-abstract type CCAlgorithm end
-struct DPD   <: CCAlgorithm end
-struct CTF   <: CCAlgorithm end
-struct DFCTF <: CCAlgorithm end
-
-function select_precision(A::String)
-    implemented = Dict{Any,Any}("single" => Float32,
-                                "double" => Float64)
-    try
-        return implemented[A]
-    catch KeyError
-        throw(Fermi.InvalidFermiOptions("Invalid precision: $(A)"))
-    end
-end
-
-function select_algorithm(A::String)
-    implemented = Dict{Any,Any}("DPD" => DPD(),
-                                "CTF" => CTF(),
-                                "DFCTF" => DFCTF())
-    try
-        return implemented[A]
-    catch KeyError
-        throw(Fermi.InvalidFermiOptions("Invalid CC algorithm: $(A)"))
-    end
-end
-
 #include("RCCD/RCCD.jl")
 include("RCCSD/RCCSD.jl")
-include("pT/PerturbativeTriples.jl")
-include("ecRCCSD/ecRCCSD.jl")
-include("ecpT/ecPerturbativeTriples.jl")
-include("BCC/BD.jl")
+#include("PerturbativeTriples/PerturbativeTriples.jl")
 
 end #module CC
