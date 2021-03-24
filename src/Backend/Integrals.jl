@@ -225,10 +225,9 @@ function ao_to_mo!(aoints::IntegralHelper, O::AbstractRestrictedOrbitals, entrie
     moint = MOIntegralHelper(O, auxri=aoints.auxri, phys=phys)
     #delete!(aoints, "JKERI", "S", "T", "V")
 
-    #for entry in entries
-    #    compute!(moint, entry, aoints)
-    #end
-    compute!(moint, entries[1], aoints)
+    for entry in entries
+        compute!(moint, entry, aoints)
+    end
     delete!(aoints)
     return moint
 end
@@ -248,59 +247,57 @@ function compute!(I::MOIntegralHelper{T,O}, entry::String, ints::IntegralHelper=
     o = (core+1):I.αocc
     v = (I.αocc+1):(I.αocc + I.αvir - inac)
 
-    Co = T.(I.orbitals.C[:,o])
-    Cv = T.(I.orbitals.C[:,v])
+    Co = I.orbitals.C[:,o]
+    Cv = I.orbitals.C[:,v]
 
     chem = I.phys ? entry[[1,3,2,4]] : entry
     if chem == "OOOO"
-        AOERI = T.(ints["ERI"])
+        AOERI = ints["ERI"]
         @tensoropt (μ=>100, ν=>100, ρ=>100, σ=>100, i=>10, j=>10, k=>10, l=>10, a=>80, b=>80, c=>80, d=>80) begin 
             OOOO[i,j,k,l] :=  AOERI[μ, ν, ρ, σ]*Co[μ, i]*Co[ν, j]*Co[ρ, k]*Co[σ, l]
         end
         I.cache[entry] = I.phys ? permutedims(OOOO, (1,3,2,4)) : OOOO
 
     elseif chem == "OOOV"
-        AOERI = T.(ints["ERI"])
+        AOERI = ints["ERI"]
         @tensoropt (μ=>100, ν=>100, ρ=>100, σ=>100, i=>10, j=>10, k=>10, l=>10, a=>80, b=>80, c=>80, d=>80) begin 
             OOOV[i,j,k,a] :=  AOERI[μ, ν, ρ, σ]*Co[μ, i]*Co[ν, j]*Co[ρ, k]*Cv[σ, a]
         end
         I.cache[entry] = I.phys ? permutedims(OOOV, (1,3,2,4)) : OOOV
 
     elseif chem == "OVOV"
-        AOERI = T.(ints["ERI"])
+        AOERI = ints["ERI"]
         @tensoropt (μ=>100, ν=>100, ρ=>100, σ=>100, i=>10, j=>10, k=>10, l=>10, a=>80, b=>80, c=>80, d=>80) begin 
             OVOV[i,a,j,b] :=  AOERI[μ, ν, ρ, σ]*Co[μ, i]*Cv[ν, a]*Co[ρ, j]*Cv[σ, b]
         end
         I.cache[entry] = I.phys ? permutedims(OVOV, (1,3,2,4)) : OVOV
 
     elseif chem == "OOVV"
-        AOERI = T.(ints["ERI"])
+        AOERI = ints["ERI"]
         @tensoropt (μ=>100, ν=>100, ρ=>100, σ=>100, i=>10, j=>10, k=>10, l=>10, a=>80, b=>80, c=>80, d=>80) begin 
             OOVV[i,j,a,b] :=  AOERI[μ, ν, ρ, σ]*Co[μ, i]*Co[ν, j]*Cv[ρ, a]*Cv[σ, b]
         end
         I.cache[entry] = I.phys ? permutedims(OOVV, (1,3,2,4)) : OOVV
 
     elseif chem == "OVVV"
-        AOERI = T.(ints["ERI"])
+        AOERI = ints["ERI"]
         @tensoropt (μ=>100, ν=>100, ρ=>100, σ=>100, i=>10, j=>10, k=>10, l=>10, a=>80, b=>80, c=>80, d=>80) begin 
             OVVV[i,a,b,c] :=  AOERI[μ, ν, ρ, σ]*Co[μ, i]*Cv[ν, a]*Cv[ρ, b]*Cv[σ, c]
         end
         I.cache[entry] = I.phys ? permutedims(OVVV, (1,3,2,4)) : OVVV
 
     elseif chem == "VVVV"
-        AOERI = T.(ints["ERI"])
+        AOERI = ints["ERI"]
         @tensoropt (μ=>100, ν=>100, ρ=>100, σ=>100, i=>10, j=>10, k=>10, l=>10, a=>80, b=>80, c=>80, d=>80) begin 
             VVVV[a,b,c,d] :=  AOERI[μ, ν, ρ, σ]*Cv[μ, a]*Cv[ν, b]*Cv[ρ, c]*Cv[σ, d]
         end
         I.cache[entry] = I.phys ? permutedims(VVVV, (1,3,2,4)) : VVVV
     elseif chem == "BOV"
-        AOERI = (ints["RIERI"])
-        @time begin
+        AOERI = ints["RIERI"]
         @tensoropt (P => 100, μ => 50, ν => 50, i => 10, a => 40) begin 
             Bov[P,i,a] :=  AOERI[P,μ, ν]*Co[μ, i]*Cv[ν, a]
         end
         I.cache["BOV"] = Bov
-        end
     elseif chem == "BOO"
         AOERI = T.(ints["RIERI"])
         @tensoropt (P => 100, μ => 50, ν => 50, i => 10, a => 40) begin 
