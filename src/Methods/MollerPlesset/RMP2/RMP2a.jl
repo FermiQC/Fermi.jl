@@ -46,18 +46,6 @@ function RMP2{T}(refwfn::RHF, ints::IntegralHelper{T}, Alg::RMP2a) where T <: Ab
         # TBLIS is great for integrals transformation
         Options.set("tblis", true)
         t = @elapsed begin
-        #AOERI = ints["RIERI"]
-        #Co = C[:,o]
-        #Cv = C[:,v]
-        #@tensoropt (P => 100, μ => 50, ν => 50, i => 10, a => 40) begin 
-        #    Bov[P,i,a] :=  AOERI[P,μ, ν]*Co[μ, i]*Cv[ν, a]
-        #end
-        ## Clean data that is not going to be used again
-        #AOERI = nothing
-        #Co = nothing
-        #Cv = nothing
-        #delete!(ints, "RIERI")
-        #moint = MOIntegralHelper{T, typeof(refwfn.orbitals)}(refwfn.orbitals, ints.auxri, ndocc, ndocc, nvir,nvir, Dict("BOV"=>Bov), false)
         moint = ao_to_mo!(ints, refwfn.orbitals, "BOV")
         end
 
