@@ -15,7 +15,7 @@ _struct tree:_
 **FermiMDArray** <: AbstractArray
 """
 struct FermiMDArray{T,N} <: AbstractArray{T,N}
-    data::AbstractArray{T,N}
+    data::Array{T,N}
 end
 
 function FermiMDArray(A::FermiMDArray{T,N}) where {T,N}
