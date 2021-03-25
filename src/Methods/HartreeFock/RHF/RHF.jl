@@ -5,6 +5,7 @@ using Fermi.Integrals: projector
 using Fermi: AbstractRestrictedOrbitals
 
 export RHF
+export RHFOrbitals
 
 abstract type RHFAlgorithm end
 

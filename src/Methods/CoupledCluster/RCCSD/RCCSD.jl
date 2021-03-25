@@ -1,4 +1,5 @@
 using Fermi.HartreeFock.RHF
+using Fermi: AbstractRestrictedOrbitals
 
 export RCCSD
 
@@ -31,8 +32,8 @@ _struct tree:_
 **RCCSD** <: AbstractCCWavefunction <: AbstractCorrelatedWavefunction <: AbstractWavefunction
 """
 struct RCCSD{T} <: AbstractCCWavefunction 
-    GuessEnergy::T
-    CorrelationEnergy::T
+    guessenergy::T
+    correlation::T
     T1::AbstractArray{T,2}
     T2::AbstractArray{T,4}
     converged::Bool
@@ -93,13 +94,6 @@ function RCCSD{T}(guess::RCCSD{Tb}) where { T <: AbstractFloat,
     alg = select_algorithm(Fermi.CurrentOptions["cc_alg"])
     RCCSD{T}(guess,alg)
 end
-
-# implementation specific functions (look at one of these for guidance implementing a new method!)
-include("CTF.jl")
-include("DF-CTF.jl")
-
-# main kernel (ccsd iteration logic)
-include("kernel.jl")
 
 # For each implementation a singleton type must be create
 struct RCCSD1 <: RCCSDAlgorithm end

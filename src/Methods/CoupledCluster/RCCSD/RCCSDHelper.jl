@@ -1,10 +1,18 @@
-function rhf_update_energy(T1::AbstractArray{T, 2}, T2::AbstractArray{T, 4}, ints, alg::RCCSDa) where T <: AbstractFloat
+"""
+    Fermi.CoupledCluster.cc_update_energy(T1::AbstractArray{T, 2}, T2::AbstractArray{T, 4}, moints::MOIntegralHelper{T,O}, 
+                          alg::RCCSDa) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
 
-    Voovv = ints["OOVV"]
+Compute CC energy from T1 and T2 amplitudes constructed with a set of restricted orbitals.
+NOTE: It does not include off-diagonal Fock contributions: See `od_cc_update_energy`.
+"""
+function cc_update_energy(T1::AbstractArray{T, 2}, T2::AbstractArray{T, 4}, moints::MOIntegralHelper{T,O}, 
+                          alg::RCCSDa) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+
+    Voovv = moints["OOVV"]
     @tensoropt (k=>x, l=>x, c=>100x, d=>100x)  begin
-        B[l,c,k,d] := -1.0*T1[l,c]*T1[k,d]
-        B[l,c,k,d] += -1.0*T2[l,k,c,d]
-        B[l,c,k,d] += 2.0*T2[k,l,c,d]
+        B[l,c,k,d] := 2.0*T2[k,l,c,d]
+        B[l,c,k,d] -= T1[l,c]*T1[k,d]
+        B[l,c,k,d] -= T2[l,k,c,d]
         CC_energy := B[l,c,k,d]*Voovv[k,l,c,d]
         CC_energy += 2.0*T1[l,c]*T1[k,d]*Voovv[l,k,c,d]
     end
@@ -12,9 +20,33 @@ function rhf_update_energy(T1::AbstractArray{T, 2}, T2::AbstractArray{T, 4}, int
     return CC_energy
 end
 
-function rhf_update_T1(T1::AbstractArray{T,2}, T2::AbstractArray{T,4}, newT1::AbstractArray{T,2}, ints::IntegralHelper, alg::RCCSDa) where T <: AbstractFloat
-    fill!(newT1, 0.0)
-    Voooo, Vooov, Voovv, Vovov, Vovvv, Vvvvv = ints["OOOO"], ints["OOOV"], ints["OOVV"], ints["OVOV"], ints["OVVV"], ints["VVVV"]
+"""
+    Fermi.CoupledCluster.od_cc_update_energy(T1::AbstractArray{T, 2}, T2::AbstractArray{T, 4}, moints::MOIntegralHelper{T,O}, 
+                          alg::RCCSDa) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+
+Compute contributions from off-diagonal Fock terms to the CC energy from T1 and T2 amplitudes constructed with a set of restricted orbitals.
+See also: `cc_update_energy`
+"""
+function od_cc_update_energy(T1::AbstractArray{T, 2}, T2::AbstractArray{T, 4}, moints::MOIntegralHelper{T,O}, 
+                          alg::RCCSDa) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+
+    Voovv = moints["OOVV"]
+    CC_energy = cc_update_energy(T1, T2, moints, alg)
+    @tensor CC_energy += 2.0*f[k,c]*T1[k,c]
+    
+    return CC_energy
+end
+"""
+    Fermi.CoupledCluster.cc_update_T1!(newT1::AbstractArray{T,2}, T1::AbstractArray{T,2}, T2::AbstractArray{T,4}, moints::MOIntegralHelper{T,O}, 
+                      alg::RCCSDa) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+
+Compute DᵢₐTᵢₐ from old T1 and T2 amplitudes. Final updated T1 amplitudes can be obtained by applying the denominator 1/Dᵢₐ.
+NOTE: It does not include off-diagonal Fock contributions: See `od_cc_update_T1`.
+"""
+function cc_update_T1!(newT1::AbstractArray{T,2}, T1::AbstractArray{T,2}, T2::AbstractArray{T,4}, moints::MOIntegralHelper{T,O}, 
+                      alg::RCCSDa) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+
+    Voooo, Vooov, Voovv, Vovov, Vovvv, Vvvvv = moints["OOOO"], moints["OOOV"], moints["OOVV"], moints["OVOV"], moints["OVVV"], moints["VVVV"]
     @tensoropt (i=>x, j=>x, k=>x, l=>x, a=>10x, b=>10x, c=>10x, d=>10x) begin
         newT1[i,a] -= T1[k,c]*Vovov[i,c,k,a]
         newT1[i,a] += 2.0*T1[k,c]*Voovv[k,i,c,a]
@@ -39,9 +71,45 @@ function rhf_update_T1(T1::AbstractArray{T,2}, T2::AbstractArray{T,4}, newT1::Ab
     end
 end
 
-function rhf_update_T2(T1::AbstractArray{T,2}, T2::AbstractArray{T,4}, newT2::AbstractArray{T,4}, ints::IntegralHelper, alg::RCCSDa) where T <: AbstractFloat
-    fill!(newT2, 0.0)
-    Voooo, Vooov, Voovv, Vovov, Vovvv, Vvvvv = ints["OOOO"], ints["OOOV"], ints["OOVV"], ints["OVOV"], ints["OVVV"], ints["VVVV"]
+"""
+    Fermi.CoupledCluster.od_cc_update_T1!(newT1::AbstractArray{T,2}, T1::AbstractArray{T,2}, T2::AbstractArray{T,4}, moints::MOIntegralHelper{T,O}, 
+                      alg::RCCSDa) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+
+Compute non-diagonal Fock contributions to DᵢₐTᵢₐ from old T1 and T2 amplitudes. Final updated T1 amplitudes 
+can be obtained by applying the denominator 1/Dᵢₐ.
+See also: `cc_update_T1`.
+"""
+function od_cc_update_T1!(newT1::AbstractArray{T,2}, T1::AbstractArray{T,2}, T2::AbstractArray{T,4}, moints::MOIntegralHelper{T,O}, 
+                      alg::RCCSDa) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+
+    # Include non-RHF terms
+    fov = moints["FOV"]
+    foo = moints["FOO"]
+    fvv = moints["FVV"]
+    @tensoropt (i=>x, j=>x, k=>x, l=>x, a=>10x, b=>10x, c=>10x, d=>10x) begin
+        newT1[i,a] += fov[i,a]
+        newT1[i,a] -= foo[i,k]*T1[k,a]
+        newT1[i,a] += fvv[c,a]*T1[i,c]
+        newT1[i,a] -= fov[k,c]*T1[i,c]*T1[k,a]
+        newT1[i,a] += 2.0*fov[k,c]*T2[i,k,a,c]
+        newT1[i,a] -= fov[k,c]*T2[k,i,a,c]
+    end
+
+    # Include RHF terms
+    cc_update_T1!(newT1, T1, T2, moints, alg)
+end
+
+"""
+    Fermi.CoupledCluster.cc_update_T2!(newT2::AbstractArray{T,4}, T1::AbstractArray{T,2}, T2::AbstractArray{T,4}, moints::MOIntegralHelper{T,O}, 
+                    alg::RCCSDa) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+
+Compute Dᵢⱼₐᵦ⋅Tᵢⱼₐᵦ from old T1 and T2 amplitudes. Final updated T2 amplitudes can be obtained by applying the denominator 1/Dᵢⱼₐᵦ.
+NOTE: It does not include off-diagonal Fock contributions: See `od_cc_update_T2`.
+"""
+function cc_update_T2!(newT2::AbstractArray{T,4}, T1::AbstractArray{T,2}, T2::AbstractArray{T,4}, moints::MOIntegralHelper{T,O}, 
+                    alg::RCCSDa) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+
+    Voooo, Vooov, Voovv, Vovov, Vovvv, Vvvvv = moints["OOOO"], moints["OOOV"], moints["OOVV"], moints["OVOV"], moints["OVVV"], moints["VVVV"]
 
     @tensoropt (i=>x, j=>x, k=>x, l=>x, a=>10x, b=>10x, c=>10x, d=>10x) begin
         newT2[i,j,a,b] += Voovv[i,j,a,b]
@@ -104,4 +172,77 @@ function rhf_update_T2(T1::AbstractArray{T,2}, T2::AbstractArray{T,4}, newT2::Ab
         
         newT2[i,j,a,b] += P_OoVv[i,j,a,b] + P_OoVv[j,i,b,a]
     end
+end
+
+"""
+    Fermi.CoupledCluster.od_cc_update_T2!(newT2::AbstractArray{T,4}, T1::AbstractArray{T,2}, T2::AbstractArray{T,4}, moints::MOIntegralHelper{T,O}, 
+                    alg::RCCSDa) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+
+Compute non-diagonal Fock contribution to Dᵢⱼₐᵦ⋅Tᵢⱼₐᵦ from old T1 and T2 amplitudes. Final updated T2 amplitudes 
+can be obtained by applying the denominator 1/Dᵢⱼₐᵦ. See also: `cc_update_T2`.
+"""
+function od_cc_update_T2!(newT2::AbstractArray{T,4}, T1::AbstractArray{T,2}, T2::AbstractArray{T,4}, moints::MOIntegralHelper{T,O}, 
+                    alg::RCCSDa) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+
+    # Include non-RHF terms
+    fov = moints["FOV"]
+    foo = moints["FOO"]
+    fvv = moints["FVV"]
+    @tensoropt (i=>x, j=>x, k=>x, l=>x, a=>10x, b=>10x, c=>10x, d=>10x) begin
+        P_OoVv[i,j,a,b] := -1.0*foo[i,k]*T2[k,j,a,b]
+        P_OoVv[i,j,a,b] += fvv[c,a]*T2[i,j,c,b]
+        P_OoVv[i,j,a,b] -= fov[k,c]*T1[i,c]*T2[k,j,a,b]
+        P_OoVv[i,j,a,b] -= fov[k,c]*T1[k,a]*T2[i,j,c,b]
+        newT2[i,j,a,b] += P_OoVv[i,j,a,b] + P_OoVv[j,i,b,a]
+    end
+    #Include RHF terms
+    cc_update_T2!(newT2, T1, T2, moints, alg)
+end
+
+"""
+    Fermi.CoupledCluster.update_amp!(newT1::AbstractArray{T,2}, newT2::Array{T,4}, T1::Array{T, 2}, T2::Array{T, 4}, moints::IntegralHelper{T,O}, 
+                     alg::A) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+
+Computes new T1 and T2 amplitudes from old ones. It assumes arbitrary restricted orbitals.
+"""
+function update_amp!(newT1::AbstractArray{T,2}, newT2::AbstractArray{T,4}, T1::AbstractArray{T, 2}, T2::AbstractArray{T, 4}, 
+                    moints::IntegralHelper{T,O}, alg::A) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+
+    # Clean the arrays
+    fill!(newT1, 0.0)
+    fill!(newT2, 0.0)
+
+    # Get new amplitudes
+    od_cc_update_T1!(newT1, T1, T2, moints, alg)
+    od_cc_update_T2!(newT2, T1, T2, moints, alg)
+
+    # Orbital energies line
+    d, D = moints["D1"], moints["D2"]
+
+    newT1 ./= d
+    newT2 ./= D
+end
+
+"""
+    Fermi.CoupledCluster.update_amp!(newT1::AbstractArray{T,2}, newT2::Array{T,4}, T1::Array{T, 2}, T2::Array{T, 4}, moints::IntegralHelper{T,O}, 
+                     alg::A) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+
+Computes new T1 and T2 amplitudes from old ones. It assumes Restricted Hartree-Fock reference.
+"""
+function update_amp!(newT1::AbstractArray{T,2}, newT2::Array{T,4}, T1::Array{T, 2}, T2::Array{T, 4}, moints::IntegralHelper{T,RHFOrbitals}, 
+                     alg::A) where T<:AbstractFloat
+
+    # Clean the arrays
+    fill!(newT1, 0.0)
+    fill!(newT2, 0.0)
+
+    # Get new amplitudes
+    cc_update_T1!(newT1, T1, T2, moints, alg)
+    cc_update_T2!(newT2, T1, T2, moints, alg)
+
+    # Orbital energies line
+    d, D = moints["D1"], moints["D2"]
+
+    newT1 ./= d
+    newT2 ./= D
 end
