@@ -8,7 +8,7 @@ GitHub: [Fermi.jl](https://github.com/FermiQC/Fermi.jl)
 module Fermi
 
 include("Backend/Error.jl")
-include("Core/Options.jl")                             # Top level scope
+include("Core/Options.jl")                             
 include("Backend/Arrays.jl")
 include("Backend/Contract.jl")
 include("Backend/Output.jl")
@@ -19,7 +19,7 @@ include("Core/AuxiliarStructs.jl")
 include("Backend/Integrals.jl")
 include("Methods/HartreeFock/HartreeFock.jl")
 include("Methods/MollerPlesset/MollerPlesset.jl")
-#include("Methods/CoupledCluster/CoupledCluster.jl")
+include("Methods/CoupledCluster/CoupledCluster.jl")
 #include("Methods/FocalPointAnalysis/FocalPointAnalysis.jl")
 
 include("Core/SinglePointEnergy.jl")

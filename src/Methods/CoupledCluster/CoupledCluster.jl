@@ -10,7 +10,7 @@ using Fermi.Options
 using Fermi.Error
 using Fermi: AbstractWavefunction
 using Fermi.Geometry: Molecule
-using Fermi.Integrals: IntegralHelper
+using Fermi.Integrals: IntegralHelper, MOIntegralHelper
 
 function cc_header()
     banner = 
