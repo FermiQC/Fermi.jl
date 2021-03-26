@@ -62,7 +62,7 @@ end
 
 Compute RHF energy given a density matrix `D`, Core Hamiltonian `H` and Fock matrix `F`.
 """
-function RHFEnergy(D::FermiMDArray{Float64}, H::FermiMDArray{Float64},F::FermiMDArray{Float64})
+function RHFEnergy(D::FermiMDArray{Float64}, H::FermiMDArray{Float64}, F::FermiMDArray{Float64})
     return sum(D .* (H .+ F))
 end
 

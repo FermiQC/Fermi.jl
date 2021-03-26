@@ -14,7 +14,7 @@ _struct tree:_
 
 **FermiMDArray** <: AbstractArray
 """
-struct FermiMDArray{T,N} <: AbstractArray{T,N}
+struct FermiMDArray{T,N} <: AbstractArray{T,N} 
     data::Array{T,N}
 end
 
