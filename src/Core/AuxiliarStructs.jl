@@ -1,5 +1,8 @@
 using Fermi.Geometry: Molecule
 
+export AbstractOrbitals, AtomicOrbitals, AbstractRestrictedOrbitals, AbstractUnrestrictedOrbitals
+export AbstractWavefunction, GeneralRestrictedOrbitals, AbstractERI, AbstractDFERI, JKFIT, RIFIT, Chonky
+
 """
     Fermi.AbstractWavefunction
 
@@ -11,6 +14,13 @@ _struct tree:_
 """
 abstract type AbstractWavefunction end
 
+abstract type AbstractERI end
+abstract type AbstractDFERI <: AbstractERI end
+
+struct JKFIT <: AbstractDFERI end
+struct RIFIT <: AbstractDFERI end
+struct Chonky <:AbstractERI end
+
 """
     Fermi.AbstractOrbitals
 
@@ -21,6 +31,7 @@ _struct tree:_
 **AbstractOrbitals**  (Top level)
 """
 abstract type AbstractOrbitals end
+struct AtomicOrbitals <: AbstractOrbitals end
 
 abstract type AbstractRestrictedOrbitals <: AbstractOrbitals end
 abstract type AbstractUnrestrictedOrbitals <: AbstractOrbitals end

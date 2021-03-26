@@ -6,7 +6,8 @@ Module to compute integrals using Lints.jl
 module Integrals
 
 using Fermi
-using Fermi: AbstractOrbitals, AbstractRestrictedOrbitals
+using Fermi.Error
+using Fermi.Options
 using Fermi.Geometry: Molecule
 using LinearAlgebra
 using TensorOperations
@@ -14,9 +15,7 @@ using TensorOperations
 import Base: getindex, setindex!, delete!
 
 export IntegralHelper
-export MOIntegralHelper
 export delete!
-export ao_to_mo!
 
 include("Lints.jl")
 
@@ -45,52 +44,46 @@ A key is associated with each type of integral
     cache                       Holds integrals already computed 
     normalize                   Do normalize integrals? `true` or `false`
 """
-struct IntegralHelper{T} <: AbstractIntegralHelper
-    mol::Molecule
+struct IntegralHelper{T,E,O} <: AbstractIntegralHelper where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractOrbitals}
+    molecule::Molecule
+    orbitals::O
     basis::String
-    auxjk::String
-    auxri::String
+    aux::String
     cache::Dict{String,FermiMDArray{T}} 
+    eri_type::E
     normalize::Bool
 end
+function IntegralHelper(;molecule = Molecule(), orbitals = AtomicOrbitals(), 
+                           basis = Options.get("basis"), aux = Options.get("jkfit") normalize = false)
 
-function IntegralHelper(x...)
-    IntegralHelper{Float64}(x...)
-end
-
-function IntegralHelper{T}() where T <: AbstractFloat
-    mol = Molecule()
-    basis = Fermi.Options.get("basis")
-    auxjk = Fermi.Options.get("jkfit")
-    auxri = Fermi.Options.get("rifit")
-    IntegralHelper{T}(mol, basis, auxjk, auxri)
-end
-
-function IntegralHelper{T}(mol::Molecule) where T <: AbstractFloat
-    basis = Fermi.Options.get("basis")
-    auxjk = Fermi.Options.get("jkfit")
-    auxri = Fermi.Options.get("rifit")
-    IntegralHelper{T}(mol, basis, auxjk, auxri)
-end
-
-function IntegralHelper{T}(mol::Molecule, basis::String) where T <: AbstractFloat
-    auxjk = Fermi.Options.get("jkfit")
-    auxri = Fermi.Options.get("rifit")
-    IntegralHelper{T}(mol, basis, auxjk, auxri)
-end
-
-function IntegralHelper{T}(mol::Molecule, basis::String, auxjk::String, auxri::String) where T <: AbstractFloat
-    if auxjk == "auto"
-        std_name = Regex("cc-pv.z")
-        auxjk = occursin(std_name, basis) ? basis*"-jkfit" : "cc-pvqz-jkfit"
+    # Check if density-fitting is requested
+    if Options.get("df")
+        # If the associated orbitals are AtomicOrbitals and DF is requested, JKFIT is set by default
+        # Otherwise, the ERI type will be RIFIT
+        eri_type = orbitals === AtomicOrbitals() ? JKFIT() : RIFIT()
+    else
+        eri_type = Chonky()
     end
 
-    if auxri == "auto"
+    # If aux is auto, determine the aux basis from the basis
+    if aux == "auto"
         std_name = Regex("cc-pv.z")
-        auxri = occursin(std_name, basis) ? basis*"-rifit" : "cc-pvqz-rifit"
+        aux = occursin(std_name, basis) ? basis*"-jkfit" : "cc-pvqz-jkfit"
     end
-    cache = Dict{String, FermiMDArray{T}}() 
-    IntegralHelper{T}(mol, basis, auxjk, auxri, cache, false)
+
+    # Starts an empty cache
+
+    precision = Options.get("precision")
+    if precision == "single"
+        cache = Dict{String, FermiMDArray{Float32}}() 
+    elseif precision == "double"
+        cache = Dict{String, FermiMDArray{Float64}}() 
+    else
+        throw(InvalidFermiOption("precision can only be `single` or `double`. Got $precision"))
+    end
+
+    # Return IntegralHelper object
+    IntegralHelper{T}(molecule, orbitals, basis, aux, cache, eri_type, normalize=normalize)
 end
 
 # Clears cache and change normalize key
@@ -158,67 +151,10 @@ function compute!(I::IntegralHelper{Float64}, entry::String)
     end
 end
 
-function compute!(I::IntegralHelper{Float32}, entry::String)
-
-    if entry == "S" #AO basis overlap
-        I.cache["S"] = FermiMDArray(Float32.(ao_overlap(I.mol, I.basis, normalize = I.normalize)))
-
-    elseif entry == "T" #AO basis kinetic
-        I.cache["T"] = FermiMDArray(Float32.(ao_kinetic(I.mol, I.basis, normalize = I.normalize)))
-
-    elseif entry == "V" #AO basis nuclear
-        I.cache["V"] = FermiMDArray(Float32.(ao_nuclear(I.mol, I.basis, normalize = I.normalize)))
-
-    elseif entry == "ERI" 
-        I.cache["ERI"] = FermiMDArray(Float32.(ao_eri(I.mol, I.basis, normalize = I.normalize)))
-
-    elseif entry == "JKERI"
-        I.cache["JKERI"] = FermiMDArray(Float32.(df_ao_eri(I.mol, I.basis, I.auxjk, normalize = I.normalize)))
-
-    elseif entry == "RIERI"
-        I.cache["RIERI"] = FermiMDArray(Float32.(df_ao_eri(I.mol, I.basis, I.auxri, normalize = I.normalize)))
-
-    else
-        throw(Fermi.InvalidFermiOption("Invalid key for IntegralHelper: $(entry)."))
-    end
+function compute_S!(I::IntegralHelper{T, E, AtomicOrbitals}) where {T<:AbstractFloat, E<:AbstractERI}
+        I.cache["S"] = FermiMDArray(ao_overlap(I.mol, I.basis, normalize = I.normalize))
 end
 
-struct MOIntegralHelper{T,O} <: AbstractIntegralHelper
-    orbitals::O
-    auxri::String
-    αocc::Int
-    βocc::Int
-    αvir::Int
-    βvir::Int
-    cache::Dict{String,FermiMDArray{T}} 
-    phys::Bool
-end
-
-function MOIntegralHelper(x...; y...)
-    precision = Fermi.Options.get("precision")
-    if precision == "double"
-        MOIntegralHelper{Float64}(x...; y...)
-    elseif precision == "single"
-        MOIntegralHelper{Float32}(x...; y...)
-    else
-        throw(InvalidFermiOption("precision can only be `single` or `double`. Got $precision"))
-    end
-end
-
-function MOIntegralHelper{T}(O::AbstractRestrictedOrbitals; auxri="auto", phys=false) where T <: AbstractFloat
-
-    basis = O.basis
-    if auxri == "auto"
-        std_name = Regex("cc-pv.z")
-        auxri = occursin(std_name, basis) ? basis*"-rifit" : "cc-pvqz-rifit"
-    end
-
-    ndocc = O.molecule.Nα
-    nvir = size(O.C, 1) - ndocc
-
-    cache = Dict{String, FermiMDArray{T}}() 
-    return MOIntegralHelper(O, auxri, ndocc, ndocc, nvir, nvir, cache, phys)
-end
 
 function ao_to_mo!(aoints::IntegralHelper, O::AbstractRestrictedOrbitals, entries...; phys=false)
 
