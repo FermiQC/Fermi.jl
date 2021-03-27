@@ -25,10 +25,11 @@ end
 
 Compute an initial orbital coefficient matrix using the GWH guess.
 """
-function RHF_gwh_guess(molecule::Molecule, ints::IntegralHelper)
+function RHF_gwh_guess(ints::IntegralHelper)
 
     # Form GWH guess
     output("Using GWH Guess")
+    molecule = ints.molecule
     S = ints["S"]
     d, U = diagonalize(S, sortby = x->1/abs(x))
     Λ = S^(-1/2)

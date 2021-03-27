@@ -96,13 +96,17 @@ struct RHF <: AbstractHFWavefunction
     orbitals::RHFOrbitals
 end
 
-function RHF(molecule::Molecule = Molecule(), ints::IntegralHelper = IntegralHelper())
+function RHF(mol::Molecule)
+    RHF(IntegralHelper{Float64}(molecule=mol))
+end
+
+function RHF(ints::IntegralHelper = IntegralHelper{Float64}())
 
     guess = Options.get("scf_guess")
     if guess == "core"
         C, Λ = RHF_core_guess(ints)
     elseif guess == "gwh"
-        C, Λ = RHF_gwh_guess(molecule, ints)
+        C, Λ = RHF_gwh_guess(ints)
     end
 
     RHF(molecule, ints, C, Λ, get_scf_alg())
@@ -115,15 +119,14 @@ function RHF(wfn::RHF)
 
     output("Using {} wave function as initial guess", wfn.orbitals.basis)
 
-    molB = Fermi.Geometry.Molecule()
+    intsB = IntegralHelper{Float64}()
 
     # Assert both A and B have the same molecule.
-    if molB != wfn.molecule
-        throw(InvalidFermiOption(" input RHF wavefunction and Current Options have different molecules."))
+    if intsB.molecule != wfn.molecule
+        output(" ! Input molecule does not match the molecule from the RHF wave function !")
     end
 
     basisB = Options.get("basis")
-    intsB = Fermi.Integrals.IntegralHelper()
 
     Sbb = intsB["S"]
     Λ = Array(Sbb^(-1/2))
@@ -135,7 +138,7 @@ function RHF(wfn::RHF)
     Cb = (Sbb^-1.0)*transpose(Sab)*Ca*T^(-1/2)
     Cb = real.(Cb)
 
-    RHF(molB, intsB, FermiMDArray(Cb), FermiMDArray(Λ), get_scf_alg())
+    RHF(intsB, FermiMDArray(Cb), FermiMDArray(Λ), get_scf_alg())
 end
 
 # Actual HF routine is in here

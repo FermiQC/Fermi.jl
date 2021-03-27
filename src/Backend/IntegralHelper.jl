@@ -54,6 +54,19 @@ end
 function IntegralHelper(;molecule = Molecule(), orbitals = AtomicOrbitals(), 
                            basis = Options.get("basis"), normalize = false)
 
+    precision = Options.get("precision")
+    if precision == "single"
+        IntegralHelper{Float64}(molecule=molecule, orbitals=orbitals, basis=basis, normalize=normalize)
+    elseif precision == "double"
+        IntegralHelper{Float32}(molecule=molecule, orbitals=orbitals, basis=basis, normalize=normalize)
+    else
+        throw(InvalidFermiOption("precision can only be `single` or `double`. Got $precision"))
+    end
+end
+
+function IntegralHelper{T}(;molecule = Molecule(), orbitals = AtomicOrbitals(), 
+                           basis = Options.get("basis"), normalize = false) where T<:AbstractFloat
+
     # Check if density-fitting is requested
     if Options.get("df")
         # If the associated orbitals are AtomicOrbitals and DF is requested, JKFIT is set by default
@@ -64,15 +77,7 @@ function IntegralHelper(;molecule = Molecule(), orbitals = AtomicOrbitals(),
     end
 
     # Starts an empty cache
-
-    precision = Options.get("precision")
-    if precision == "single"
-        cache = Dict{String, FermiMDArray{Float32}}() 
-    elseif precision == "double"
-        cache = Dict{String, FermiMDArray{Float64}}() 
-    else
-        throw(InvalidFermiOption("precision can only be `single` or `double`. Got $precision"))
-    end
+    cache = Dict{String,FermiMDArray{T}}()
 
     # Return IntegralHelper object
     IntegralHelper(molecule, orbitals, basis, cache, eri_type, normalize)

@@ -1,19 +1,7 @@
-function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray{<:AbstractFloat,2}, Λ::FermiMDArray{<:AbstractFloat,2}, Alg::RHFa)
-    output("Computing integrals...")
-    if Options.get("df") 
-        output("Density Fitting emplying the auxiliar basis $(ints.auxjk)")
-        t = @elapsed ERI = ints["JKERI"]
-    else
-        t = @elapsed ERI = ints["ERI"]
-    end
-    output(" done in {:>5.2f} s", t)
-
-    RHF(molecule, ints, C, ERI, Λ, Alg)
-end
-
-function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray{<:AbstractFloat,2}, ERI::FermiMDArray, Λ::FermiMDArray{<:AbstractFloat,2}, Alg::RHFa)
+function RHF(ints::IntegralHelper{Float64}, C::FermiMDArray{Float64,2}, Λ::FermiMDArray{Float64,2}, Alg::RHFa)
 
     Fermi.HartreeFock.hf_header()
+    molecule = ints.molecule
     output(Fermi.Geometry.get_string(molecule))
     # Grab some options
     maxit = Options.get("scf_max_iter")
@@ -55,6 +43,7 @@ function RHF(molecule::Molecule, ints::IntegralHelper, C::FermiMDArray{<:Abstrac
     S = ints["S"]
     T = ints["T"]
     V = ints["V"]
+    ERI = ints["ERI"]
 
     # Form the density matrix from occupied subset of guess coeffs
     Co = C[:, 1:ndocc]
