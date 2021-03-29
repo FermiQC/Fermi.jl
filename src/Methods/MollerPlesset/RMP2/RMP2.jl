@@ -1,4 +1,4 @@
-using Fermi.HartreeFock: RHF
+using Fermi.HartreeFock: RHF, RHFOrbitals
 
 export RMP2
 
@@ -20,59 +20,50 @@ end
     TODO
 """
 struct RMP2{T} <: AbstractMPWavefunction
-    reference::RHF
     correlation::T
     energy::T
 end
 
-function RMP2(x...)
-    precision = Options.get("precision")
-    if precision == "single"
-        RMP2{Float32}(x...)
-    elseif precision == "double"
-        RMP2{Float64}(x...)
-    else
-        throw(InvalidFermiOption("precision can only be `single` or `double`. Got $precision"))
-    end
+function RMP2()
+    aoints = IntegralHelper{Float64}()
+    rhf = RHF(aoints)
+    moints = IntegralHelper(orbitals=rhf.orbitals)
+    RMP2(moints, aoints)
 end
 
-function RMP2{Float64}(mol::Molecule = Molecule(), ints::IntegralHelper{Float64} = IntegralHelper{Float64}())
-
-    # Compute Restricted Hartree-Fock 
-    refwfn = Fermi.HartreeFock.RHF(mol, ints)
-
-    output("MP2 will be computed using double precision")
-
-    # Get rid of integrals that will be no longer used
-    delete!(ints, "JKERI", "S", "T", "V")
-
-    RMP2{Float64}(refwfn, ints)
+function RMP2(O::AbstractRestrictedOrbitals)
+    aoints = IntegralHelper()
+    moints = IntegralHelper(orbitals=O)
+    RMP2(moints, aoints)
 end
 
-function RMP2{Float32}(mol::Molecule = Molecule(), ints::IntegralHelper{Float32} = IntegralHelper{Float32}())
-
-    # Compute Restricted Hartree-Fock 
-    refwfn = Fermi.HartreeFock.RHF(mol)
-
-    output("MP2 will be computed using single precision")
-
-    RMP2{Float32}(refwfn, ints)
+function RMP2(rhf::RHF)
+    aoints = IntegralHelper()
+    moints = IntegralHelper(orbitals=rhf.orbitals)
+    RMP2(moints, aoints)
 end
 
-function RMP2{T}(refwfn::RHF, ints::IntegralHelper{T} = IntegralHelper{T}()) where T <: AbstractFloat
+function RMP2(M::Molecule)
+    aoints = IntegralHelper{Float64}(molecule=M)
+    rhf = RHF(M,aoints)
+    moints = IntegralHelper(molecule = M, orbitals=rhf.orbitals)
+    RMP2(moints, aoints)
+end
 
-    # MP2 only needs a reference and ERI
-    if Options.get("df") 
-        output("Computing RI density fitted ERI")
-        t = @elapsed ints["RIERI"]
-        output("Done in {:5.5f} s", t)
-        RMP2{T}(refwfn, ints, get_mp2_alg())
-    else
-        output("Computing ERI")
-        t = @elapsed ints["ERI"]
-        output("Done in {:5.5f} s", t)
-        RMP2{T}(refwfn, ints, get_mp2_alg())
-    end
+function RMP2(moints::IntegralHelper{T1,Chonky,O}, aoints::IntegralHelper{T2,Chonky,AtomicOrbitals}) where {T1<:AbstractFloat,
+                                                                                        T2<:AbstractFloat,O<:AbstractOrbitals}
+    Fermi.Integrals.mo_from_ao(moints, aoints, "Fia","OVOV")
+    RMP2(moints)
+end
+
+function RMP2(moints::IntegralHelper{T1,E1,O}, aoints::IntegralHelper{T2,E2,AtomicOrbitals}) where {T1<:AbstractFloat,T2<:AbstractFloat,
+                                                                                E1<:AbstractDFERI,E2<:AbstractDFERI,O<:AbstractOrbitals}
+    Fermi.Integrals.mo_from_ao(moints, aoints, "Fia","BOV")
+    RMP2(moints)
+end
+
+function RMP2(ints::IntegralHelper{T,E,O}) where {T<:AbstractFloat,E<:AbstractERI,O<:AbstractRestrictedOrbitals}
+    RMP2(ints, get_mp2_alg())
 end
 
 # For each implementation a singleton type must be create

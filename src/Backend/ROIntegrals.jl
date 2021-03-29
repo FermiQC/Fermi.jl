@@ -1,3 +1,18 @@
+function mo_from_ao(I::IntegralHelper{T1,E1,O}, aoints::IntegralHelper{T2,E2,AtomicOrbitals}, entries...) where {T1<:AbstractFloat,T2<:AbstractFloat,
+                                                            E1<:AbstractERI,E2<:AbstractERI,O<:AbstractRestrictedOrbitals}
+    if T1 !== T2 || E1 !== E2 
+        output("!! AO Integrals are not the same type as the MO. New integrals will be computed")
+        aoints = IntegralHelper(I, AtomicOrbitals())
+    end
+    t = @elapsed begin
+        output("Computing MO Integrals...")
+        for entry in entries
+            compute!(I, entry, aoints)
+        end
+    end
+    output("Done in {:5.5f} seconds.", t)
+end
+
 function compute!(I::IntegralHelper{T,Chonky,O}, entry::String, x...) where {T<: AbstractFloat,O<:AbstractRestrictedOrbitals}
     if entry == "S"
         compute_S!(I, x...)
@@ -19,6 +34,8 @@ function compute!(I::IntegralHelper{T,Chonky,O}, entry::String, x...) where {T<:
         compute_OVVV!(I, x...)
     elseif entry == "VVVV"
         compute_VVVV!(I, x...)
+    elseif entry in ["Fd", "Fia", "Fij", "Fab"]
+        compute_F(I, x...)
     else
         throw(Fermi.InvalidFermiOption("Invalid key for IntegralHelper: $(entry)."))
     end
@@ -39,6 +56,8 @@ function compute!(I::IntegralHelper{T,RIFIT,O}, entry::String, x...) where {T<: 
         compute_BOV!(I, x...)
     elseif entry == "BVV"
         compute_BVV!(I, x...)
+    elseif entry in ["Fd", "Fia", "Fij", "Fab"]
+        compute_F(I, x...)
     else
         throw(Fermi.InvalidFermiOption("Invalid key for IntegralHelper: $(entry)."))
     end
@@ -188,8 +207,8 @@ function compute_BVV!(I::IntegralHelper{T, RIFIT, O}, aoints::IntegralHelper{T, 
 
         inac = Options.get("drop_vir")
         ndocc = I.molecule.Nα
-        nvir = size(I.orbitals.C,1) - ndocc
-        v = (ndocc+1):(nvir - inac)
+        nbf = size(I.orbitals.C,1)
+        v = (ndocc+1):(nbf - inac)
         Cv = I.orbitals.C[:,v]
         @tensoropt (Q=>50, a=>8, b=>8, μ=>10, ν=>10) begin
             Bab[Q,a,b] :=  Bμν[Q, μ, ν]*Cv[μ, a]*Cv[ν, b]
@@ -204,9 +223,9 @@ function compute_BOV!(I::IntegralHelper{T, RIFIT, O}, aoints::IntegralHelper{T, 
         inac = Options.get("drop_vir")
         core = Options.get("drop_occ")
         ndocc = I.molecule.Nα
-        nvir = size(I.orbitals.C,1) - ndocc
+        nbf = size(I.orbitals.C,1)
         o = (1+core):ndocc
-        v = (ndocc+1):(nvir - inac)
+        v = (ndocc+1):(nbf - inac)
         Cv = I.orbitals.C[:,v]
         Co = I.orbitals.C[:,o]
         @tensoropt (Q=>50, a=>8, i=>1, μ=>10, ν=>10) begin
@@ -215,7 +234,7 @@ function compute_BOV!(I::IntegralHelper{T, RIFIT, O}, aoints::IntegralHelper{T, 
         I["BOV"] = Bia
 end
 
-function compute_OOOO!(I::IntegralHelper{T,Chonky,O}, aoints::IntegralHelper{T,Chonky, O}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+function compute_OOOO!(I::IntegralHelper{T,Chonky,O}, aoints::IntegralHelper{T,Chonky, AtomicOrbitals}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
 
     AOERI = aoints["ERI"]
 
@@ -229,16 +248,16 @@ function compute_OOOO!(I::IntegralHelper{T,Chonky,O}, aoints::IntegralHelper{T,C
     I["OOOO"] = OOOO
 end
 
-function compute_OOOV!(I::IntegralHelper{T,Chonky,O}, aoints::IntegralHelper{T,Chonky, O}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+function compute_OOOV!(I::IntegralHelper{T,Chonky,O}, aoints::IntegralHelper{T,Chonky, AtomicOrbitals}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
 
     AOERI = aoints["ERI"]
 
     inac = Options.get("drop_vir")
     core = Options.get("drop_occ")
     ndocc = I.molecule.Nα
-    nvir = size(I.orbitals.C,1) - ndocc
+    nbf = size(I.orbitals.C,1)
     o = (1+core):ndocc
-    v = (ndocc+1):(nvir - inac)
+    v = (ndocc+1):(nbf - inac)
     Cv = I.orbitals.C[:,v]
     Co = I.orbitals.C[:,o]
     @tensoropt (μ=>100, ν=>100, ρ=>100, σ=>100, i=>10, j=>10, k=>10, l=>10, a=>80, b=>80, c=>80, d=>80) begin 
@@ -247,16 +266,16 @@ function compute_OOOV!(I::IntegralHelper{T,Chonky,O}, aoints::IntegralHelper{T,C
     I["OOOV"] = OOOV
 end
 
-function compute_OOVV!(I::IntegralHelper{T,Chonky,O}, aoints::IntegralHelper{T,Chonky, O}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+function compute_OOVV!(I::IntegralHelper{T,Chonky,O}, aoints::IntegralHelper{T,Chonky, AtomicOrbitals}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
 
     AOERI = aoints["ERI"]
 
     inac = Options.get("drop_vir")
     core = Options.get("drop_occ")
     ndocc = I.molecule.Nα
-    nvir = size(I.orbitals.C,1) - ndocc
+    nbf = size(I.orbitals.C,1)
     o = (1+core):ndocc
-    v = (ndocc+1):(nvir - inac)
+    v = (ndocc+1):(nbf - inac)
     Cv = I.orbitals.C[:,v]
     Co = I.orbitals.C[:,o]
     @tensoropt (μ=>100, ν=>100, ρ=>100, σ=>100, i=>10, j=>10, k=>10, l=>10, a=>80, b=>80, c=>80, d=>80) begin 
@@ -265,16 +284,16 @@ function compute_OOVV!(I::IntegralHelper{T,Chonky,O}, aoints::IntegralHelper{T,C
     I["OOVV"] = OOVV
 end
 
-function compute_OVOV!(I::IntegralHelper{T,Chonky,O}, aoints::IntegralHelper{T,Chonky, O}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+function compute_OVOV!(I::IntegralHelper{T,Chonky,O}, aoints::IntegralHelper{T,Chonky, AtomicOrbitals}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
 
     AOERI = aoints["ERI"]
 
     inac = Options.get("drop_vir")
     core = Options.get("drop_occ")
     ndocc = I.molecule.Nα
-    nvir = size(I.orbitals.C,1) - ndocc
+    nbf = size(I.orbitals.C,1)
     o = (1+core):ndocc
-    v = (ndocc+1):(nvir - inac)
+    v = (ndocc+1):(nbf - inac)
     Cv = I.orbitals.C[:,v]
     Co = I.orbitals.C[:,o]
     @tensoropt (μ=>100, ν=>100, ρ=>100, σ=>100, i=>10, j=>10, k=>10, l=>10, a=>80, b=>80, c=>80, d=>80) begin 
@@ -283,16 +302,16 @@ function compute_OVOV!(I::IntegralHelper{T,Chonky,O}, aoints::IntegralHelper{T,C
     I["OVOV"] = OVOV
 end
 
-function compute_OVVV!(I::IntegralHelper{T,Chonky,O}, aoints::IntegralHelper{T,Chonky, O}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+function compute_OVVV!(I::IntegralHelper{T,Chonky,O}, aoints::IntegralHelper{T,Chonky, AtomicOrbitals}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
 
     AOERI = aoints["ERI"]
 
     inac = Options.get("drop_vir")
     core = Options.get("drop_occ")
     ndocc = I.molecule.Nα
-    nvir = size(I.orbitals.C,1) - ndocc
+    nbf = size(I.orbitals.C,1)
     o = (1+core):ndocc
-    v = (ndocc+1):(nvir - inac)
+    v = (ndocc+1):(nbf - inac)
     Cv = I.orbitals.C[:,v]
     Co = I.orbitals.C[:,o]
     @tensoropt (μ=>100, ν=>100, ρ=>100, σ=>100, i=>10, j=>10, k=>10, l=>10, a=>80, b=>80, c=>80, d=>80) begin 
@@ -301,17 +320,96 @@ function compute_OVVV!(I::IntegralHelper{T,Chonky,O}, aoints::IntegralHelper{T,C
     I["OVVV"] = OVVV
 end
 
-function compute_VVVV!(I::IntegralHelper{T,Chonky,O}, aoints::IntegralHelper{T,Chonky, O}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+function compute_VVVV!(I::IntegralHelper{T,Chonky,O}, aoints::IntegralHelper{T,Chonky, AtomicOrbitals}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
 
     AOERI = aoints["ERI"]
 
     inac = Options.get("drop_vir")
     ndocc = I.molecule.Nα
-    nvir = size(I.orbitals.C,1) - ndocc
-    v = (ndocc+1):(nvir - inac)
+    nbf = size(I.orbitals.C,1)
+    v = (ndocc+1):(nbf - inac)
     Cv = I.orbitals.C[:,v]
     @tensoropt (μ=>100, ν=>100, ρ=>100, σ=>100, i=>10, j=>10, k=>10, l=>10, a=>80, b=>80, c=>80, d=>80) begin 
         VVVV[a,b,c,d] :=  AOERI[μ, ν, ρ, σ]*Cv[μ, a]*Cv[ν, b]*Cv[ρ, c]*Cv[σ, d]
     end
     I["VVVV"] = VVVV
+end
+
+function compute_F(I::IntegralHelper{T,E,O}) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
+    aoints = IntegralHelper(I, AtomicOrbitals())
+    compute_F(I, aoints)
+end
+
+function compute_F(I::IntegralHelper{T,Chonky,O}, aoints::IntegralHelper{T, Chonky, AtomicOrbitals}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+
+    core = Options.get("drop_occ")
+    inac = Options.get("drop_vir")
+    ndocc = I.molecule.Nα
+    nbf = size(I.orbitals.C,1)
+
+    o = (1+core):ndocc
+    v = (ndocc+1):(nbf - inac)
+
+    Co = I.orbitals.C[:,1:ndocc]
+
+    # Build Atomic Fock
+    F = aoints["T"] + aoints["V"]
+    ERI = aoints["ERI"]
+    D = Co*transpose(Co)
+    
+    @tensor F[m,n] += 2*D[r,s]*ERI[m,n,r,s]
+    @tensor F[m,n] -= D[r,s]*ERI[m,r,n,s]
+    C = I.orbitals.C
+
+    # Atomic Fock -> Molecular Fock
+    @tensoropt Fmol[p,q] := C[μ,p]*F[μ,ν]*C[ν,q]
+
+    Fd = FermiMDArray(diag(Fmol))
+    I["Fd"] = Fd
+    I["Fia"] = Fmol[o,v] 
+    I["Fij"] = Fmol[o,o] - diagm(Fd[o])
+    I["Fab"] = Fmol[v,v] - diagm(Fd[v])
+end
+
+function compute_F(I::IntegralHelper{T,E,O}, aoints::IntegralHelper{T, E, AtomicOrbitals}) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
+
+    ndocc = I.molecule.Nα
+    nbf = size(I.orbitals.C,1)
+
+    o = 1:ndocc
+    v = (ndocc+1):nbf
+
+    Co = I.orbitals.C[:,1:ndocc]
+
+    # Build Atomic Fock
+    F = aoints["T"] + aoints["V"]
+    b = aoints["ERI"]
+    D = Co*transpose(Co)
+    
+    @tensoropt F[m,n] += 2*D[r,s]*b[Q,m,n]*b[Q,r,s]
+    @tensoropt F[m,n] -= D[r,s]*b[Q,m,r]*b[Q,n,s]
+    C = I.orbitals.C
+
+    # Atomic Fock -> Molecular Fock
+    @tensoropt Fmol[p,q] := C[μ,p]*F[μ,ν]*C[ν,q]
+
+    Fd = FermiMDArray(diag(Fmol))
+    I["Fd"] = Fd
+    I["Fia"] = Fmol[o,v] 
+    I["Fij"] = Fmol[o,o] - diagm(Fd[o])
+    I["Fab"] = Fmol[v,v] - diagm(Fd[v])
+end
+
+function compute_F(I::IntegralHelper{T,E,RHFOrbitals}) where {T<:AbstractFloat, E<:AbstractERI}
+    ndocc = I.molecule.Nα
+    I["Fd"] = I.orbitals.eps
+    I["Fij"] = FermiMDzeros(ndocc, ndocc)
+end
+
+function reference_energy(I::IntegralHelper{T,E,O}) where {T<:AbstractFloat, E<:AbstractERI,O<:AbstractRestrictedOrbitals}
+    o = 1:I.molecule.Nα
+    Hij = (I["V"]+I["T"])[o,o]
+    Fij = I["Fij"] + diagm(I["Fd"][o])
+
+    return sum(diag(Fij + Hij)) + I.molecule.Vnuc
 end

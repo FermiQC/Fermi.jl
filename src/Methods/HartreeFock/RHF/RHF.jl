@@ -2,10 +2,10 @@ using TensorOperations
 using LinearAlgebra
 using Fermi.DIIS
 using Fermi.Integrals: projector
-using Fermi: AbstractRestrictedOrbitals
+
+import Base: show
 
 export RHF
-export RHFOrbitals
 
 abstract type RHFAlgorithm end
 
@@ -17,25 +17,6 @@ function get_scf_alg()
     catch BoundsError
         throw(InvalidFermiOption("implementation number $N not available for RHF."))
     end
-end
-
-"""
-    Fermi.HartreeFock.RHFOrbitals
-
-Struct holding information about Restricted Hartree--Fock orbitals
-
-# Fields
-
-    molecule   Molecule object associated with the orbitals
-    basis      Basis set used to compute the orbitals
-    eps        Orbital energies, i.e. diagonal of the Fock matrix
-    C          Coefficients of the AO->MO transformation matrix
-"""
-struct RHFOrbitals <: AbstractRestrictedOrbitals
-    molecule::Molecule
-    basis::String
-    eps::AbstractArray{Float64,1}
-    C::AbstractArray{Float64,2}
 end
 
 """
@@ -96,11 +77,20 @@ struct RHF <: AbstractHFWavefunction
     orbitals::RHFOrbitals
 end
 
+# Pretty printing
+function show(io::IO, ::MIME"text/plain", X::RHF)
+    print(" ⇒ Fermi Restricted Hartree--Fock Wave function\n")
+    print(" ⋅ Basis:                  $(X.orbitals.basis)\n")
+    print(" ⋅ Energy:                 $(X.energy)\n")
+    print(" ⋅ Occ. Spartial Orbitals: $(X.ndocc)\n")
+    print(" ⋅ Vir. Spartial Orbitals: $(X.nvir)")
+end
+
 function RHF(mol::Molecule)
     RHF(IntegralHelper{Float64}(molecule=mol))
 end
 
-function RHF(ints::IntegralHelper = IntegralHelper{Float64}())
+function RHF(ints::IntegralHelper{Float64} = IntegralHelper{Float64}())
 
     guess = Options.get("scf_guess")
     if guess == "core"
@@ -109,7 +99,7 @@ function RHF(ints::IntegralHelper = IntegralHelper{Float64}())
         C, Λ = RHF_gwh_guess(ints)
     end
 
-    RHF(molecule, ints, C, Λ, get_scf_alg())
+    RHF(ints, C, Λ, get_scf_alg())
 end
 
 function RHF(wfn::RHF)

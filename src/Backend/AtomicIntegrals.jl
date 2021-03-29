@@ -26,7 +26,8 @@ function compute_V!(I::IntegralHelper{T, E, AtomicOrbitals}) where {T<:AbstractF
 end
 
 function compute_ERI!(I::IntegralHelper{T, JKFIT, AtomicOrbitals}) where T<:AbstractFloat
-        auxjk = Options.get("auxjk")
+        auxjk = Options.get("jkfit")
+        basis = I.basis
 
         # If aux is auto, determine the aux basis from the basis
         if auxjk == "auto"
@@ -38,7 +39,8 @@ function compute_ERI!(I::IntegralHelper{T, JKFIT, AtomicOrbitals}) where T<:Abst
 end
 
 function compute_ERI!(I::IntegralHelper{T, RIFIT, AtomicOrbitals}) where T<:AbstractFloat
-        auxri = Options.get("auxri")
+        auxri = Options.get("rifit")
+        basis = I.basis
 
         # If aux is auto, determine the aux basis from the basis
         if auxri == "auto"

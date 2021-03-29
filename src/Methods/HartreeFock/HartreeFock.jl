@@ -11,6 +11,7 @@ using Fermi.Error
 using Fermi: AbstractWavefunction
 using Fermi.Geometry: Molecule
 using Fermi.Integrals: IntegralHelper
+using Fermi.Orbitals
 
 function hf_header()
     output(repeat("=",80))

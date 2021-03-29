@@ -9,8 +9,9 @@ using Fermi
 using Fermi.Options
 using Fermi.Error
 using Fermi: AbstractWavefunction
-using Fermi.Geometry: Molecule
-using Fermi.Integrals: IntegralHelper, MOIntegralHelper, ao_to_mo!
+using Fermi.Geometry
+using Fermi.Integrals
+using Fermi.Orbitals
 
 function mp_header()
     output(repeat("=",80))

@@ -18,6 +18,10 @@ struct FermiMDArray{T,N} <: AbstractArray{T,N}
     data::Array{T,N}
 end
 
+function FermiMDArray(A::AbstractArray)
+    return FermiMDArray(Array(A))
+end
+
 function FermiMDArray(A::FermiMDArray{T,N}) where {T,N}
     # If try to convert a FermiMDArray into a FermiMDArray: Do nothing
     return A

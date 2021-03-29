@@ -11,6 +11,7 @@ using Fermi.Options
 using Fermi.Geometry: Molecule
 using LinearAlgebra
 using TensorOperations
+using Fermi.Orbitals
 
 import Base: getindex, setindex!, delete!
 
@@ -56,9 +57,9 @@ function IntegralHelper(;molecule = Molecule(), orbitals = AtomicOrbitals(),
 
     precision = Options.get("precision")
     if precision == "single"
-        IntegralHelper{Float64}(molecule=molecule, orbitals=orbitals, basis=basis, normalize=normalize)
-    elseif precision == "double"
         IntegralHelper{Float32}(molecule=molecule, orbitals=orbitals, basis=basis, normalize=normalize)
+    elseif precision == "double"
+        IntegralHelper{Float64}(molecule=molecule, orbitals=orbitals, basis=basis, normalize=normalize)
     else
         throw(InvalidFermiOption("precision can only be `single` or `double`. Got $precision"))
     end
