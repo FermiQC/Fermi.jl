@@ -1,13 +1,15 @@
+using TensorOperations
+
 include("RCCSDHelper.jl")
 
-function RCCSD{T}(moints::MOIntegralHelper{T,O}, newT1::AbstractArray{T,2}, newT2::AbstractArray{T,4}, 
-                    alg::RCCSDa) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::AbstractArray{T,4}, 
+                    alg::RCCSDa) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
  
     # Print intro
     cc_header()
 
-    nvir = moints.αvir
-    ndocc = moints.αocc
+    ndocc = moints.molecule.Nα
+    nvir = size(moints.orbitals.C,1) - ndocc
     core = Options.get("drop_occ")
     inac = Options.get("drop_vir")
 
@@ -232,8 +234,11 @@ function RCCSD{T}(moints::MOIntegralHelper{T,O}, newT1::AbstractArray{T,2}, newT
         output("\n 🍾 Equations Converged!")
         conv = true
     end
-    output("\n⇒ Final CCSD Energy:     {:15.10f}", Ecc+moint.ref_energy)
+
+    Eref = Integrals.ref_energy(moints)
+    output(" @Final CCSD Correlation Energy:     {:15.10f}", Ecc)
+    output(" @Final CCSD Energy:                 {:15.10f}", Ecc+Eref)
     output(repeat("-",80))
 
-    return RCCSD{T}(Eguess, Ecc, Ecc+refwfn.energy, newT1, newT2, conv)
+    return RCCSD(Eguess, Ecc, Ecc+Eref, newT1, newT2, conv)
 end

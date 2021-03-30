@@ -151,5 +151,5 @@ function RHF(ints::IntegralHelper{Float64}, C::FermiMDArray{Float64,2}, Λ::Ferm
 
     Orbitals = RHFOrbitals(molecule, ints.basis, eps, C)
 
-    return RHF(molecule, E, ndocc, nvir, Orbitals)
+    return RHF(molecule, E, ndocc, nvir, Orbitals, converged)
 end

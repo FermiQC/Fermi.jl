@@ -1,12 +1,11 @@
-using Fermi.HartreeFock.RHF
-using Fermi: AbstractRestrictedOrbitals
+using Fermi.HartreeFock
 
 export RCCSD
 
 abstract type RCCSDAlgorithm end
 
 function get_rccsd_alg()
-    implemented = [RCCSD1()]
+    implemented = [RCCSDa()]
     N = Options.get("cc_alg")
     try 
         return implemented[N]
@@ -39,15 +38,23 @@ struct RCCSD{T} <: AbstractCCWavefunction
     converged::Bool
 end
 
-function RCCSD(x...)
-    precision = Options.get("precision")
-    if precision == "single"
-        RCCSD{Float32}(x...)
-    elseif precision == "double"
-        RCCSD{Float64}(x...)
-    else
-        throw(InvalidFermiOption("precision can only be `single` or `double`. Got $precision"))
-    end
+function RCCSD()
+    aoints = IntegralHelper{Float64}()
+    rhf = RHF(aoints)
+    moints = IntegralHelper(orbitals=rhf.orbitals)
+    RCCSD(moints, aoints)
+end
+
+function RCCSD(moints::IntegralHelper{T1,Chonky,O}, aoints::IntegralHelper{T2,Chonky,AtomicOrbitals}) where {T1<:AbstractFloat,
+                                                                                        T2<:AbstractFloat,O<:AbstractOrbitals}
+    Fermi.Integrals.mo_from_ao(moints, aoints, "Fd","OOOO", "OOOV", "OOVV", "OVOV", "OVVV", "VVVV")
+    RCCSD(moints)
+end
+
+function RCCSD(moints::IntegralHelper{T1,E1,O}, aoints::IntegralHelper{T2,E2,AtomicOrbitals}) where {T1<:AbstractFloat,T2<:AbstractFloat,
+                                                                                E1<:AbstractDFERI,E2<:AbstractDFERI,O<:AbstractOrbitals}
+    Fermi.Integrals.mo_from_ao(moints, aoints, "Fd","BOO", "BOV", "BVV")
+    RCCSD(moints)
 end
 
 function RCCSD{Float64}(mol = Molecule(), ints = IntegralHelper{Float64}())
@@ -72,15 +79,15 @@ function RCCSD{Float32}(mol = Molecule(), ints = IntegralHelper{Float32}())
     RCCSD{Float32}(refwfn, ints)
 end
 
-function RCCSD{T}(refwfn::RHF, ints::IntegralHelper{T})
+function RCCSD(moints::IntegralHelper{T,E,O}) where {T<:AbstractFloat,E<:AbstractERI,O<:AbstractRestrictedOrbitals}
 
     # Create zeroed guesses for amplitudes
 
-    o = refwfn.ndocc - Options.get("drop_occ")
-    v = refwfn.nvir - Options.get("drop_nvir")
+    o = moints.molecule.Nα - Options.get("drop_occ")
+    v = size(moints.orbitals.C,1) - Options.get("drop_vir") - moints.molecule.Nα
     T1guess = FermiMDzeros(T, o, v)
     T2guess = FermiMDzeros(T, o, o, v, v)
-    RCCSD{T}(refwfn, ints, T1guess, T2guess, alg = get_rccsd_alg())
+    RCCSD(moints, T1guess, T2guess, get_rccsd_alg())
 end
 
 
@@ -96,5 +103,5 @@ function RCCSD{T}(guess::RCCSD{Tb}) where { T <: AbstractFloat,
 end
 
 # For each implementation a singleton type must be create
-struct RCCSD1 <: RCCSDAlgorithm end
+struct RCCSDa <: RCCSDAlgorithm end
 include("RCCSDa.jl")

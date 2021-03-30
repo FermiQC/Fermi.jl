@@ -8,9 +8,9 @@ module CoupledCluster
 using Fermi
 using Fermi.Options
 using Fermi.Error
-using Fermi: AbstractWavefunction
-using Fermi.Geometry: Molecule
-using Fermi.Integrals: IntegralHelper, MOIntegralHelper
+using Fermi.Geometry
+using Fermi.Integrals
+using Fermi.Orbitals
 
 function cc_header()
     banner = 
@@ -40,7 +40,7 @@ _struct tree:_
 
 **AbstractCCWavefunction** <: AbstractWavefunction
 """
-abstract type AbstractCCWavefunction <: Fermi.AbstractCorrelatedWavefunction end
+abstract type AbstractCCWavefunction <: Fermi.AbstractWavefunction end
 
 #include("RCCD/RCCD.jl")
 include("RCCSD/RCCSD.jl")

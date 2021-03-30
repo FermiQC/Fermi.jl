@@ -75,6 +75,7 @@ struct RHF <: AbstractHFWavefunction
     ndocc::Int
     nvir::Int
     orbitals::RHFOrbitals
+    converged::Bool
 end
 
 # Pretty printing
