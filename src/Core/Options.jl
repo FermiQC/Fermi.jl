@@ -125,6 +125,7 @@ function get(key::String)
     end
 end
 
+
 """
     Fermi.Options.set(key, val)
 
@@ -206,7 +207,17 @@ julia> @get basis
 "cc-pVDZ"
 ```
 """
-macro get(opt)
+macro get(opt="all")
+
+    if opt == "all"
+        out = ""
+        for k in keys(Fermi.Options.Current)
+            out = out*"$k  =>  $(Fermi.Options.Current[k])\n"
+        end
+        out = out[1:end-2]
+        return out
+    end
+
     A = symbol_to_string(opt)
     quote
         Fermi.Options.get($A)
