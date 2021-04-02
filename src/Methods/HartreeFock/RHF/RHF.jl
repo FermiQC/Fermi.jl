@@ -123,7 +123,7 @@ function RHF(wfn::RHF)
     Λ = Array(Sbb^(-1/2))
 
     Ca = wfn.orbitals.C
-    Sab = projector(wfn.molecule, wfn.orbitals.basis, molB, basisB)
+    Sab = projector(wfn.molecule, wfn.orbitals.basis, intsB.molecule, basisB)
 
     T = transpose(Ca)*Sab*(Sbb^-1.0)*transpose(Sab)*Ca
     Cb = (Sbb^-1.0)*transpose(Sab)*Ca*T^(-1/2)

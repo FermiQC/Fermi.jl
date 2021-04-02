@@ -35,7 +35,7 @@ Float64 object with the conversion factor from Bohr to Angstrom.
 Source: CODATA 2018 [NIST](https://physics.nist.gov/cgi-bin/cuu/Value?bohrrada0)
 """
 # Note. Psi4 constant is
-# bohr_to_angstrom = 0.529177210670000
+#const bohr_to_angstrom = 0.529177210670000
 const bohr_to_angstrom = 0.529177210903
 
 """

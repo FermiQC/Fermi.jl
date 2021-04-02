@@ -7,5 +7,5 @@
           rifit cc-pvdz-rifit
          }
     wf = @energy rmp2;
-    @test isapprox(wf.CorrelationEnergy, -0.2062284914, rtol=tol)
+    @test isapprox(wf.correlation, -0.2062284914, rtol=tol)
 end
