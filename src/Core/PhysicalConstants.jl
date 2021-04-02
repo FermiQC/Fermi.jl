@@ -1,38 +1,74 @@
 """
     Fermi.PhysicalConstants
 
-Module for storing physical constants and convertion factors used in computations.
+Module for storing physical constants and conversion factors used in computations.
 
 # Functions:
 
     atomic_number   Given an element symbol, return the atomic number.
 """
 module PhysicalConstants
+using Fermi.Error
 
 export atomic_number
 
 """
+    Fermi.PhysicalConstants.AvogadroNumber
+
+Float64 object with the Avogadro Number in mol^-1
+Source: CODATA 2018 [NIST](https://physics.nist.gov/cgi-bin/cuu/Value?na)
+"""
+const AvogadroNumber = 6.02214076e23 
+
+"""
+    Fermi.PhysicalConstants.kcal_to_kj
+
+Float64 object with the convesion factor from kcal to kJ
+Source: [NIST SP 1038 - 2006 page 12](https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication1038.pdf)
+"""
+const kcal_to_kj = 4.184
+
+"""
     Fermi.PhysicalConstants.bohr_to_angstrom
 
-Float64 object with the convertion factor from Bohr to Angstrom.
-Source: [NIST](https://physics.nist.gov/cgi-bin/cuu/Value?bohrrada0)
+Float64 object with the conversion factor from Bohr to Angstrom.
+Source: CODATA 2018 [NIST](https://physics.nist.gov/cgi-bin/cuu/Value?bohrrada0)
 """
-#bohr_to_angstrom = 0.529177210903
-#psi4s
-bohr_to_angstrom = 0.529177210670000
+# Note. Psi4 constant is
+#const bohr_to_angstrom = 0.529177210670000
+const bohr_to_angstrom = 0.529177210903
 
 """
-    Fermi.PhysicalConstants.angstrom_to_bohr
+    Fermi.PhysicalConstants.hartree_to_kjmol
 
-Float64 object with the convertion factor from Angstrom to Bohr.
-Computed as 1/Fermi.PhysicalConstants.bohr_to_angstrom
+Float64 object with the conversion factor from Hartree energy to kJ/mol
+Source: CODATA 2018 [NIST](https://physics.nist.gov/cgi-bin/cuu/Value?hr)
 """
-angstrom_to_bohr = 1/bohr_to_angstrom
+const hartree_to_kjmol = 4.3597447222071e-18 * AvogadroNumber / 1000 # (E_H in J) * (Na in 1/mol) / (1000 J/kJ) 
 
-hartree_to_kcalmol = 627.509474
-hartree_to_kjmol = 2625.49964
-hartree_to_cm = 219474.6313708
-hartree_to_eV = 27.21138505
+"""
+    Fermi.PhysicalConstants.hartree_to_kcalmol
+
+Float64 object with the conversion factor from Hartree energy to kcal/mol.
+Source: CODATA 2018 [NIST](https://physics.nist.gov/cgi-bin/cuu/Value?bohrrada0)
+"""
+const hartree_to_kcalmol = hartree_to_kjmol / kcal_to_kj
+
+"""
+    Fermi.PhysicalConstants.hartree_to_cm
+
+Float64 object with the conversion factor from Hartree energy to cm^-1 (wavenumber)
+Source: CODATA 2018 [NIST](https://physics.nist.gov/cgi-bin/cuu/Value?hrminv)
+"""
+const hartree_to_cm = 2.1947463136320e7 / 100 # Value in 1/meter * (1/100) meter/cm
+
+"""
+    Fermi.PhysicalConstants.hartree_to_eV
+
+Float64 object with the conversion factor from Hartree energy to eV.
+Source: CODATA 2018 [NIST](https://physics.nist.gov/cgi-bin/cuu/Value?hrev)
+"""
+const hartree_to_eV = 27.21138505
 
 """
     Fermi.PhysicalConstants.atomic_number(atom::String)
@@ -41,12 +77,11 @@ Given a string with the element symbol, return its atomic number
 """
 function atomic_number(atom::String)
     
-    try 
+    if haskey(atom_num, atom)
         return atom_num[atom]
-    catch
-        error("Invalid atom: $atom")
+    else
+        throw(InvalidFermiOption("atomic symbol $atom not defined."))
     end
-
 end
 
 atom_num = Dict(

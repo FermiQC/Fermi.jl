@@ -4,4 +4,5 @@ timer.dat
 docs/build/
 output.dat
 Manifest.toml
+.vscode
 

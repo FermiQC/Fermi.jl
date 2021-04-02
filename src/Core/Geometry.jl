@@ -14,16 +14,12 @@ export Molecule
 export Atom
 
 using Fermi
-using Fermi.Output
-using Fermi.PhysicalConstants: atomic_number, bohr_to_angstrom, angstrom_to_bohr
+using Fermi.Error
+using Fermi.PhysicalConstants: atomic_number, bohr_to_angstrom
 using LinearAlgebra
 using Lints
 using Formatting
-
-struct InvalidMolecule <: Exception
-    msg::String
-end
-Base.showerror(io::IO, e::InvalidMolecule) = print(io, "InvalidMolecule: ", e.msg)
+import Base: show
 
 """
     Fermi.Atom
@@ -65,109 +61,57 @@ struct Molecule
     Vnuc::Float64
 end
 
-"""
-    Fermi.Molecule()
-
-Uses data stored in Fermi.CurrentOptions to return a Molecule object.
-
-"""
 function Molecule()
-    molstring = Fermi.CurrentOptions["molstring"]
-    unit = Fermi.CurrentOptions["unit"]
+    molstring = Fermi.Options.get("molstring")
+    unit = Fermi.Options.get("unit")
     Molecule(molstring, unit)
 end
 
-"""
-    Fermi.Molecule(molstring::String, unit::String="angstrom")
-
-Uses data stored in Fermi.CurrentOptions for charge and multiplicity to build
-a Molecule object given XYZ string.
-"""
 function Molecule(molstring::String, unit::String="angstrom")
-    charge = Fermi.CurrentOptions["charge"]
-    multiplicity = Fermi.CurrentOptions["multiplicity"]
+    charge = Fermi.Options.get("charge")
+    multiplicity = Fermi.Options.get("multiplicity")
     Molecule(molstring, charge, multiplicity, unit)
 end
 
-"""
-    Fermi.Molecule(molstring::String, charge::Int, multiplicity::Int, unit::String="angstrom")
-
-Produces a Molecule object from the XYZ string.
-"""
 function Molecule(molstring::String, charge::Int, multiplicity::Int, unit::String="angstrom")
     atoms = get_atoms(molstring, unit=unit)
     Molecule(atoms, charge, multiplicity)
 end
 
-"""
-    Fermi.Molecule(molstring::String, charge::Int, multiplicity::Int, unit::String="angstrom")
-
-Produces a Molecule object from an array of Atom objects.
-"""
 function Molecule(atoms::Array{Atom,1}, charge::Int, multiplicity::Int)
     
     # Compute Nuclear repulsion
     Vnuc = 0.0
     for i in eachindex(atoms)
         for j in 1:(i-1)
-            @inbounds Vnuc += nuclear_repulsion(atoms[i], atoms[j])
+            Vnuc += nuclear_repulsion(atoms[i], atoms[j])
         end
     end
 
     # Compute number of electrons
-
-    nelec = 0
+    nelec = -charge
     for i in eachindex(atoms)
-        @inbounds nelec += atoms[i].Z
+        nelec += atoms[i].Z
     end
 
-    nelec -= charge
-
+    # If the number of electrons turns out negative returns an error
     if nelec ≤ 0
-        throw(Fermi.InvalidMolecule("Invalid charge ($charge) for given molecule"))
+        throw(InvalidMolecule("Invalid charge ($charge) for given molecule"))
     end
 
+    # Mult = 2Ms + 1 thus the number of unpaired electrons (taken as α) is Mult-1 = 2Ms
     αexcess = multiplicity-1
 
+    # The number of β electrons must be equal the number of doubly occupied orbitals (Ndo)
+    # Ndo = (nelec - n_of_unpaired_elec)/2 this must be an integer
     if isodd(nelec) != isodd(αexcess)
-        throw(Fermi.InvalidMolecule("Incompatible charge $(charge) and multiplicity $(multiplicity)"))
+        throw(InvalidMolecule("Incompatible charge $(charge) and multiplicity $(multiplicity)"))
     end
 
     Nβ = (nelec - αexcess)/2
     Nα = nelec - Nβ
-    
     out =  Molecule(Tuple(atoms), charge, multiplicity, Nα, Nβ, Vnuc)
-
     return out
-end
-
-function to_lints_molecule(M::Molecule)
-    natoms = length(M.atoms)
-    zs = zeros(Int64,natoms)
-    pos = fill(Float64[],natoms)
-    for i=1:natoms
-        zs[i] = M.atoms[i].Z
-        pos[i] = collect(M.atoms[i].xyz)
-    end
-    Lints.Molecule(zs,pos)
-end
-
-
-function print_out(M::Molecule)
-    @output "   • Molecule:\n\n"
-    output(get_xyz(M))
-    @output "\n"
-    @output "\nCharge: {}   " out.charge 
-    @output "Multiplicity: {}   \n" out.multiplicity
-    @output "Nuclear repulsion: {:15.10f}\n\n" out.Vnuc
-end
-"""
-    Fermi.Geometry.nuclear_repulsion(A::Atom, B::Atom)
-
-Returns the repulsion energy between the two given atoms.
-"""
-function nuclear_repulsion(A::Atom, B::Atom)
-    return (A.Z*B.Z)/(√((A.xyz.-B.xyz)⋅(A.xyz.-B.xyz))*angstrom_to_bohr)
 end
 
 """
@@ -177,24 +121,23 @@ From a XYZ string, produces an array of Atom objects.
 """
 function get_atoms(molstring::String; unit::String="angstrom")
     
+    # Get a list of Atom objects from String
     if unit == "bohr"
         conv = bohr_to_angstrom
     elseif unit == "angstrom"
         conv = 1.0
     else
-        error("Invalid unit given to Fermi.Molecule.get_atoms: $unit")
+        throw(InvalidFermiOptions("unknown unit in molecule construction: $unit"))
     end
 
     atoms = Atom[]
-    #exp = r"(\w{1,2})\s+([-+]??\d+\.\d+\s+[-+]??\d+\.\d+\s+[-+]??\d+\.\d+)"
     for line in split(strip(molstring), "\n")
-        #m = match(exp, line)
         m = split(line)
         if length(m) != 4
             throw(InvalidMolecule("4 columns expected on XYZ string. Got $(length(m))"))
         end
 
-        if m != nothing
+        if m !== nothing
             # Convert SubString to String
             AtomicSymbol = String(m[1])
             Z = atomic_number(AtomicSymbol)
@@ -214,6 +157,15 @@ function get_atoms(molstring::String; unit::String="angstrom")
 end
 
 """
+    Fermi.Geometry.nuclear_repulsion(A::Atom, B::Atom)
+
+Returns the repulsion energy between the two given atoms.
+"""
+function nuclear_repulsion(A::Atom, B::Atom)
+    return (A.Z*B.Z)/(√((A.xyz.-B.xyz)⋅(A.xyz.-B.xyz))/bohr_to_angstrom)
+end
+
+"""
     Fermi.get_xyz(M::Molecule)
 
 Returns a XYZ string in angstrom for the given Molecule.
@@ -228,6 +180,27 @@ function get_xyz(M::Molecule)
         molstring *= format("{}   {: 15.12f}   {: 15.12f}   {: 15.12f}\n", A.AtomicSymbol, A.xyz...)
     end
     return molstring
+end
+
+"""
+    Fermi.get_string(M::Molecule)
+
+Returns a nicely formatted string with all the molecule's information
+"""
+function get_string(M::Molecule)
+    out = ""
+    out = out*format("Molecule:\n\n")
+    out = out*format(get_xyz(M))
+    out = out*format("\n")
+    out = out*format("\nCharge: {}   ", M.charge)
+    out = out*format("Multiplicity: {}   \n", M.multiplicity)
+    out = out*format("Nuclear repulsion: {:15.10f}\n", M.Vnuc)
+    return out
+end
+
+# Pretty printing
+function show(io::IO, ::MIME"text/plain", M::Molecule)
+    print(get_string(M))
 end
 
 end #Module
