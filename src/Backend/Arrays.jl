@@ -1,6 +1,7 @@
 using LinearAlgebra
 import Base: size, permutedims, getindex, setindex!, ndims, show
 import Base: iterate, length, similar, adjoint, eltype, +, -, *, /, ^, BroadcastStyle
+import Strided: UnsafeStridedView
 
 export FermiMDArray, FermiMDrand, FermiMDzeros, diagonalize
 
@@ -173,6 +174,10 @@ end
 
 function Base.:^(A::FermiMDArray, B::AbstractFloat)
     return FermiMDArray(A.data^B)
+end
+
+function UnsafeStridedView(A::FermiMDArray)
+    UnsafeStridedView(A.data)
 end
 
 # Pretty printing
