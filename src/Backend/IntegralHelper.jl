@@ -129,6 +129,7 @@ function delete!(I::IntegralHelper)
     delete!(I, keys(I.cache)...)
 end
 
+# Integrals specific to orbital types
 include("AtomicIntegrals.jl")
 include("ROIntegrals.jl")
 

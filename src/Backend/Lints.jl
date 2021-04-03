@@ -6,12 +6,7 @@ using LinearAlgebra
     ao_kinetic(molecule::Fermi.Molecule, basis::String)
 
 Computes AO basis kinetic energy ⟨μ|T̂|ν⟩ integrals for the given basis and molecule.
-Can be conveniently accessed using the IntegralHelper:
-    
-```
-ints = Fermi.Integrals.IntegralHelper()
-ints["T"]
-```
+See also: Fermi.Integrals.IntegralHelper
 """
 function ao_kinetic(molecule::Molecule, basis::String; normalize=false)
 
@@ -27,12 +22,7 @@ end
     ao_overlap(molecule::Fermi.Molecule, basis::String)
 
 Computes AO basis overlap ⟨p|q⟩ integrals for the given basis and molecule.
-Can be conveniently accessed using the IntegralHelper:
-    
-```
-ints = Fermi.Integrals.IntegralHelper()
-ints["S"]
-```
+See also: Fermi.Integrals.IntegralHelper
 """
 function ao_overlap(molecule::Molecule, basis::String; normalize=false)
 
@@ -48,12 +38,7 @@ end
     ao_nuclear(molecule::Fermi.Molecule, basis::String)
 
 Computes AO basis nuclear attraction ⟨μ|V̂|ν⟩ integrals for the given basis and molecule.
-Can be conveniently accessed using the IntegralHelper:
-    
-```
-ints = Fermi.Integrals.IntegralHelper()
-ints["V"]
-```
+See also: Fermi.Integrals.IntegralHelper
 """
 function ao_nuclear(molecule::Molecule, basis::String; normalize=false)
 
@@ -69,12 +54,7 @@ end
     ao_eri(molecule::Fermi.Molecule, basis::String)
 
 Computes AO basis electron repulsion integrals ⟨μν|Ô₂|ρσ⟩ integrals for the given basis and molecule.
-Can be conveniently accessed using the IntegralHelper:
-    
-```
-ints = Fermi.Integrals.IntegralHelper()
-ints["ERI"]
-```
+See also: Fermi.Integrals.IntegralHelper
 """
 function ao_eri(molecule::Molecule, basis::String; normalize=false)
 
@@ -91,12 +71,7 @@ end
 
 Computes AO basis density fitted electron repulsion integrals ⟨μν|Ô₂|P⟩J(P,Q)^-1/2 integrals for the given basis and molecule.
 Note that the returned integrals DO NOT need to be combined with the Coulomb metric J(P,Q). In common notation, this is B(Q,μ,ν).
-Can be conveniently accessed using the IntegralHelper:
-    
-```
-ints = Fermi.Integrals.IntegralHelper()
-ints["DFERI"]
-```
+See also: Fermi.Integrals.IntegralHelper
 """
 function df_ao_eri(molecule::Molecule, basis::String, aux::String; normalize=false)
 

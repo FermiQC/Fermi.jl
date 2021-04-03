@@ -43,7 +43,7 @@ const Default = Dict{String,Union{Float64,Int,String,Bool}}(
                                   H        2.1984800075      1.7977100627      0.0121161719
                                   H        0.9197881882      2.4580185570      0.6297938832
                                   """,
-                                  "printstyle" => "stdout",
+                                  "printstyle" => "repl",
                                   "output" => "output.jl",
                                   "basis" => "sto-3g",
                                   "jkfit" => "auto",
@@ -101,7 +101,7 @@ const Default = Dict{String,Union{Float64,Int,String,Bool}}(
 """
     Fermi.Options.Current
 
-Dictionary containing user options for Fermi. Unspecified options are obtained from 
+Dictionary containing user defined options for Fermi. Unspecified options are obtained from 
 Fermi.Default.
 """
 Current = Dict{String,Union{Float64,Int,String,Bool}}()
@@ -429,6 +429,21 @@ macro molecule(block)
     end
 end
 
+"""
+    Fermi.@lookup
+
+Look up valid keywords for Fermi.
+
+# Example
+```
+julia> @lookup conv
+cc_max_rms
+Currently set to: 1.0000000000000006e-10
+
+scf_max_rms
+Currently set to: 1.0000000000000005e-9
+```
+"""
 macro lookup(A::Symbol)
     clean_up(s) = strip(filter(c->!occursin(c,"{}():"),s))
     A = clean_up(repr(A))

@@ -9,7 +9,7 @@ export FermiMDArray, FermiMDrand, FermiMDzeros, diagonalize
 
     FermiMDArray{T,N}
 
-Fermi array object held entirely in memory. Thin wrapper around a standard Julia array, representing a dense array of type T and rank N.
+Fermi array object held entirely in memory. Thin wrap around a standard Julia array, representing a dense array of type T and rank N.
 
 _struct tree:_
 
@@ -19,22 +19,25 @@ struct FermiMDArray{T,N} <: AbstractArray{T,N}
     data::Array{T,N}
 end
 
+# Creates a FermiMDArray from a native Julia Array
 function FermiMDArray(A::AbstractArray)
     return FermiMDArray(Array(A))
 end
 
+# If trying to create a FermiMDArray from another FermiMDArray, do nothing
 function FermiMDArray(A::FermiMDArray{T,N}) where {T,N}
-    # If try to convert a FermiMDArray into a FermiMDArray: Do nothing
     return A
 end
 
+# If trying to create a FermiMDArray from a number, returns the number
 function FermiMDArray(num::Number)
     return num
 end
 
 """
     FermiMDzeros(x...)
-Create a Julia Array as `zeros(x...)` and wrapped in a FermiMDArray.
+
+Create a Julia Array as `zeros(x...)` wrapped in a FermiMDArray.
 """
 function FermiMDzeros(x...)
     data = zeros(x...)
@@ -43,7 +46,8 @@ end
 
 """
     FermiMDrand(x...)
-Create a Julia Array as `rand(x...)` and wrapped in a FermiMDArray.
+
+Create a Julia Array as `rand(x...)` wrapped in a FermiMDArray.
 """
 function FermiMDrand(x...)
     data = rand(x...)
@@ -62,7 +66,7 @@ end
 
 # Basic methods for AbstractArrays in Julia
 function size(A::FermiMDArray, i...)
-    size(A.data, i...)
+    return size(A.data, i...)
 end
 
 function getindex(A::FermiMDArray, I...)
