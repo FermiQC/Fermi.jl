@@ -1,9 +1,6 @@
 @reset
 @set printstyle none
 
-molecules = ["water", "ammonia", "benzene", "ethanol", "formaldehyde", "glycine", "methane", "phosphaethene", "acetic_acid", "nitrogen"]
-basis = ["cc-pvtz", "aug-cc-pvdz", "6-31g", "cc-pvdz", "6-31g*", "sto-3g", "cc-pvtz", "3-21g", "6-311+g", "cc-pcvdz"]
-
 Econv = [
 -76.0529365964
 -56.2053544136
