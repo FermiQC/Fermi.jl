@@ -19,9 +19,6 @@ include("Core/Orbitals.jl")
 include("Core/AuxiliarStructs.jl")                  
 include("Backend/IntegralHelper.jl")
 include("Methods/HartreeFock/HartreeFock.jl")
-include("Methods/MollerPlesset/MollerPlesset.jl")
-include("Methods/CoupledCluster/CoupledCluster.jl")
-#include("Methods/FocalPointAnalysis/FocalPointAnalysis.jl")
 
 include("Core/SinglePointEnergy.jl")
 
