@@ -79,6 +79,7 @@ struct RHFOrbitals <: AbstractRestrictedOrbitals
     molecule::Molecule
     basis::String
     eps::AbstractArray{Float64,1}
+    sd_energy::Float64
     C::AbstractArray{Float64,2}
 end
 

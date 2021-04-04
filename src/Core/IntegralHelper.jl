@@ -18,7 +18,7 @@ import Base: getindex, setindex!, delete!
 export IntegralHelper
 export delete!
 
-include("Lints.jl")
+include("../Backend/Lints.jl")
 
 """
     IntegralHelper{T}

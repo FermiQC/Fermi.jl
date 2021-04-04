@@ -30,7 +30,7 @@ function RMP2(ints::IntegralHelper{T,E,O}, Alg::RMP2a) where {T<:AbstractFloat,E
 
     # Compute MP2 energy
     t = @elapsed Emp2 = RMP2_energy(ints, Alg)
-    Eref = Integrals.reference_energy(ints)
+    Eref = ints.orbitals.sd_energy
 
     output("   @Final RMP2 Correlation Energy {:>20.12f} Eₕ", Emp2)
     output("   Reference Energy               {:>20.12f} Eₕ", Eref)
@@ -92,6 +92,21 @@ function RMP2_rhf_energy(ints::IntegralHelper{T,RIFIT,O}, ϵo::AbstractArray{T,1
     BABs = [zeros(T, v_size, v_size) for i=1:Threads.nthreads()]
     BBAs = [zeros(T, v_size, v_size) for i=1:Threads.nthreads()]
 
+
+    # DEBUG
+    #t = @elapsed begin
+    #@tensor iajb[i,a,j,b] := Bov[Q,i,a]*Bov[Q,j,b]
+
+    #D = [ϵo[i]-ϵv[a]+ϵo[j]-ϵv[b] for i=eachindex(ϵo), a=eachindex(ϵv), j=eachindex(ϵo), b=eachindex(ϵv)]
+
+    #x1 = 2*iajb - permutedims(iajb,(1,4,3,2))
+    #x2 = x1 .* iajb
+    #Emp2 = sum(x2 ./ D)        
+    #end
+    #output("Done in {:5.5f} seconds.", t)
+    #return Emp2
+    #DEBUG
+
     # Vector containing the energy contribution computed by each thread
     ΔMP2s = zeros(T,Threads.nthreads())
     t = @elapsed begin
@@ -102,13 +117,8 @@ function RMP2_rhf_energy(ints::IntegralHelper{T,RIFIT,O}, ϵo::AbstractArray{T,1
             BAB = BABs[id]
             BBA = BBAs[id]
             for j in i:o_size
-                if i != j
-                    fac = T(2)
-                else
-                    fac = one(T)
-                end
-                @views Bj = Bov[:,j,:]
 
+                @views Bj = Bov[:,j,:]
                 @tensor BAB[a,b] = Bi[Q,a]*Bj[Q,b]
                 transpose!(BBA,BAB)
 
@@ -126,6 +136,7 @@ function RMP2_rhf_energy(ints::IntegralHelper{T,RIFIT,O}, ϵo::AbstractArray{T,1
                         end
                     end
                 end
+                fac = i != j ? T(2) : one(T)
                 dmp2 = T(2)*dmp2_1 - dmp2_2
                 ΔMP2s[id] += fac*dmp2
             end

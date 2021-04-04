@@ -149,7 +149,7 @@ function RHF(ints::IntegralHelper{Float64}, C::FermiMDArray{Float64,2}, Λ::Ferm
     end
     output(repeat("-",80))
 
-    Orbitals = RHFOrbitals(molecule, ints.basis, eps, C)
+    Orbitals = RHFOrbitals(molecule, ints.basis, eps, E, C)
 
     return RHF(molecule, E, ndocc, nvir, Orbitals, converged)
 end

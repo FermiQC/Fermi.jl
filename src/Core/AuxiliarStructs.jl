@@ -1,7 +1,8 @@
 using Fermi.Geometry: Molecule
 
-export AbstractOrbitals, AtomicOrbitals, AbstractRestrictedOrbitals, AbstractUnrestrictedOrbitals
-export AbstractWavefunction, GeneralRestrictedOrbitals, AbstractERI, AbstractDFERI, JKFIT, RIFIT, Chonky
+export AbstractOrbitals, AtomicOrbitals, AbstractRestrictedOrbitals, AbstractUnrestrictedOrbitals, GeneralRestrictedOrbitals
+export AbstractWavefunction
+export AbstractERI, AbstractDFERI, JKFIT, RIFIT, Chonky
 
 """
     Fermi.AbstractWavefunction
