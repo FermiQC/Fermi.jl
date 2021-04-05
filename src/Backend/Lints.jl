@@ -73,7 +73,7 @@ Computes AO basis density fitted electron repulsion integrals ⟨μν|Ô₂|P�
 Note that the returned integrals DO NOT need to be combined with the Coulomb metric J(P,Q). In common notation, this is B(Q,μ,ν).
 See also: Fermi.Integrals.IntegralHelper
 """
-function df_ao_eri(molecule::Molecule, basis::String, aux::String; normalize=false)
+function df_ao_eri(molecule::Molecule, basis::String, aux::String; normalize=true)
 
     mol = mol_to_lints_molecule(molecule)
     bas = Lints.BasisSet(basis,mol)
@@ -82,7 +82,8 @@ function df_ao_eri(molecule::Molecule, basis::String, aux::String; normalize=fal
         Pqp = Lints.make_ERI3(bas,dfbas; normalize=normalize)
         J = Lints.make_ERI2(dfbas; normalize=normalize)
     end
-    Jh = Array(Hermitian(J)^(-1/2)) #sometimes Jh becomes complex slightly if J is not ~~exactly~~ hermitian 💔
+    #Jh = Array(Hermitian(J)^(-1/2)) #sometimes Jh becomes complex slightly if J is not ~~exactly~~ hermitian 💔
+    Jh = real(J^(-1/2)) 
     @tensor b[Q,p,q] := Pqp[P,p,q]*Jh[P,Q]
     return b
 end

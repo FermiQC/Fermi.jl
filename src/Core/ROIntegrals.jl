@@ -41,7 +41,7 @@ function compute!(I::IntegralHelper{T,Chonky,O}, entry::String, x...) where {T<:
     end
 end
 
-function compute!(I::IntegralHelper{T,RIFIT,O}, entry::String, x...) where {T<: AbstractFloat,O<:AbstractRestrictedOrbitals}
+function compute!(I::IntegralHelper{T,E,O}, entry::String, x...) where {T<: AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
     if entry == "S"
         compute_S!(I, x...)
     elseif entry == "T"
@@ -170,25 +170,25 @@ function compute_ERI!(I::IntegralHelper{T, RIFIT, O}, aoints::IntegralHelper{T, 
         I["ERI"] = Bpq
 end
 
-function compute_BOO!(I::IntegralHelper{T, RIFIT, O}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+function compute_BOO!(I::IntegralHelper{T, E, O}) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
         # Create AO integral object
         aoints = IntegralHelper(I, AtomicOrbitals())
         compute_BOO!(I,aoints)
 end
 
-function compute_BVV!(I::IntegralHelper{T, RIFIT, O}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+function compute_BVV!(I::IntegralHelper{T, E, O}) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
         # Create AO integral object
         aoints = IntegralHelper(I, AtomicOrbitals())
         compute_BVV!(I,aoints)
 end
 
-function compute_BOV!(I::IntegralHelper{T, RIFIT, O}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+function compute_BOV!(I::IntegralHelper{T, E, O}) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
         # Create AO integral object
         aoints = IntegralHelper(I, AtomicOrbitals())
         compute_BOV!(I,aoints)
 end
 
-function compute_BOO!(I::IntegralHelper{T, RIFIT, O}, aoints::IntegralHelper{T, RIFIT, AtomicOrbitals}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+function compute_BOO!(I::IntegralHelper{T, E, O}, aoints::IntegralHelper{T, E, AtomicOrbitals}) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
 
         Bμν = aoints["ERI"]
 
@@ -201,7 +201,7 @@ function compute_BOO!(I::IntegralHelper{T, RIFIT, O}, aoints::IntegralHelper{T, 
         I["BOO"] = Bij
 end
 
-function compute_BVV!(I::IntegralHelper{T, RIFIT, O}, aoints::IntegralHelper{T, RIFIT, AtomicOrbitals}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+function compute_BVV!(I::IntegralHelper{T, E, O}, aoints::IntegralHelper{T, E, AtomicOrbitals}) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
 
         Bμν = aoints["ERI"]
 
@@ -216,7 +216,7 @@ function compute_BVV!(I::IntegralHelper{T, RIFIT, O}, aoints::IntegralHelper{T, 
         I["BVV"] = Bab
 end
 
-function compute_BOV!(I::IntegralHelper{T, RIFIT, O}, aoints::IntegralHelper{T, RIFIT, AtomicOrbitals}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+function compute_BOV!(I::IntegralHelper{T, E, O}, aoints::IntegralHelper{T, E, AtomicOrbitals}) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
 
         Bμν = aoints["ERI"]
 
@@ -406,10 +406,41 @@ function compute_F(I::IntegralHelper{T,E,RHFOrbitals}) where {T<:AbstractFloat, 
     I["Fij"] = FermiMDzeros(ndocc, ndocc)
 end
 
-function reference_energy(I::IntegralHelper{T,E,O}) where {T<:AbstractFloat, E<:AbstractERI,O<:AbstractRestrictedOrbitals}
-    o = 1:I.molecule.Nα
-    Hij = (I["V"]+I["T"])[o,o]
-    Fij = I["Fij"] + diagm(I["Fd"][o])
+function compute_ref_energy(I::IntegralHelper{T,Chonky,O}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+    ndocc = I.molecule.Nα
+    o = 1:ndocc
 
-    return sum(diag(Fij + Hij)) + I.molecule.Vnuc
+    H = I["T"] + I["V"]
+
+    OOOO = I["OOOO"]
+
+    E0 = zero(T)
+    for i in o
+        E0 += 2*H[i,i]
+        for j in o
+            E0 += 2*OOOO[i,i,j,j] - OOOO[i,j,i,j]
+        end
+    end
+
+    return E0
+end
+
+function compute_ref_energy(I::IntegralHelper{T,E,O}) where {T<:AbstractFloat,E<:AbstractDFERI,O<:AbstractRestrictedOrbitals}
+    ndocc = I.molecule.Nα
+    o = 1:ndocc
+
+    H = I["T"] + I["V"]
+
+    Boo = I["BOO"]
+
+    E0 = zero(T)
+    for i in o
+        E0 += 2*H[i,i]
+        for j in o
+            E0 += 2*sum(Boo[:,i,i] .* Boo[:,j,j])
+            E0 -= sum(Boo[:,i,j] .* Boo[:,i,j])
+        end
+    end
+
+    return E0
 end

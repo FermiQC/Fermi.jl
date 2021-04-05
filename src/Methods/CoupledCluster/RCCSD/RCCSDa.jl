@@ -7,7 +7,7 @@ function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::
  
     # Print intro
     cc_header()
-
+    Eref = moints.orbitals.sd_energy
     ndocc = moints.molecule.Nα
     nvir = size(moints.orbitals.C,1) - ndocc
     core = Options.get("drop_occ")
@@ -37,6 +37,11 @@ function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::
     diis_prec = diis_prec == "double" ? Float64 : diis_prec == "single" ? Float32 : Float16
     do_diis ? DM_T1 = Fermi.DIIS.DIISManager{T, diis_prec}(size=ndiis) : nothing
     do_diis ? DM_T2 = Fermi.DIIS.DIISManager{T, diis_prec}(size=ndiis) : nothing
+
+    # TEMPORARY
+    moints["OOOO"], moints["OOOV"], moints["OOVV"], moints["OVOV"], moints["OVVV"], moints["VVVV"] =
+    permutedims(moints["OOOO"], (1,3,2,4)), permutedims(moints["OOOV"], (1,3,2,4)), permutedims(moints["OVOV"], (1,3,2,4)), 
+    permutedims(moints["OOVV"], (1,3,2,4)) , permutedims(moints["OVVV"], (1,3,2,4)) , permutedims(moints["VVVV"], (1,3,2,4))
 
     output("\tDropped Occupied Orbitals →  {:3.0f}", core)
     output("\tDropped Virtual Orbitals  →  {:3.0f}\n", inac)
@@ -68,7 +73,7 @@ function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::
 
     # Compute Guess Energy
     Ecc = cc_update_energy(newT1, newT2, moints, alg)
-    Eguess = Ecc + moints.ref_energy
+    Eguess = Ecc + Eref
     
     output("\tGuess Correlation Energy:   {:15.10f}\n", Ecc)
     output("\tGuess Total Energy:         {:15.10f}\n", Eguess)
@@ -92,7 +97,7 @@ function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::
         t = @elapsed begin 
 
             # Update amplitudes
-            update_amp!(newT1, newT2, T1, T2, mo_ints, alg)
+            update_amp!(newT1, newT2, T1, T2, moints, alg)
 
             # Compute residues 
             r1 = sqrt(sum((newT1 .- T1).^2))/length(T1)
@@ -116,7 +121,7 @@ function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::
 
         rms = max(r1,r2)
         oldE = Ecc
-        Ecc = update_energy(newT1, newT2, fov, ints, alg)
+        Ecc = cc_update_energy(newT1, newT2, moints, alg)
         dE = Ecc - oldE
         output("    {:<5}    {:<15.10f}    {:<12.10f}    {:<12.10f}    {:<10.5f}", "pre", Ecc, dE, rms, t)
 
@@ -148,7 +153,7 @@ function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::
                 end
 
                 # Compute residues 
-                rms = sqrt(sum((newT1 .- T1).^2))/length(T1)
+                rms = sqrt(sum((newT1 .- T1).^2)/length(T1))
 
                 # Apply damping
                 if dp > 0
@@ -194,8 +199,8 @@ function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::
             update_amp!(newT1, newT2, T1, T2, moints, alg)
 
             # Compute residues 
-            r1 = sqrt(sum((newT1 .- T1).^2))/length(T1)
-            r2 = sqrt(sum((newT2 .- T2).^2))/length(T2)
+            r1 = sqrt(sum((newT1 .- T1).^2)/length(T1))
+            r2 = sqrt(sum((newT2 .- T2).^2)/length(T2))
 
             if do_diis && ite > 2
                 # Update DIIS vector
@@ -235,10 +240,9 @@ function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::
         conv = true
     end
 
-    Eref = Integrals.ref_energy(moints)
     output(" @Final CCSD Correlation Energy:     {:15.10f}", Ecc)
     output(" @Final CCSD Energy:                 {:15.10f}", Ecc+Eref)
     output(repeat("-",80))
 
-    return RCCSD(Eguess, Ecc, Ecc+Eref, newT1, newT2, conv)
+    return RCCSD(Eguess, Ecc+Eref, Ecc, newT1, newT2, dE, rms)
 end

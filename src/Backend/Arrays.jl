@@ -184,12 +184,6 @@ function UnsafeStridedView(A::FermiMDArray)
     UnsafeStridedView(A.data)
 end
 
-# Pretty printing
-function show(io::IO, ::MIME"text/plain", A::FermiMDArray{T}) where T <: Number
-    print("Fermi Memory-held Dense Array - ")
-    display(A.data)
-end
-
 # Methods to allow Broadcasting
 function Base.BroadcastStyle(::Type{<:FermiMDArray}) 
     Broadcast.ArrayStyle{FermiMDArray}()
@@ -197,4 +191,9 @@ end
 
 function Base.similar(bc::Broadcast.Broadcasted{Broadcast.ArrayStyle{FermiMDArray}}, ::Type{ElType}) where ElType
     FermiMDArray(similar(Array{ElType}, axes(bc)))
+end
+
+function show(io::IO, ::MIME"text/plain", A::FermiMDArray{T}) where T <: Number
+    print("Fermi Memory-held Dense Array - ")
+    display(A.data)
 end

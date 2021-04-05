@@ -53,27 +53,27 @@ struct IntegralHelper{T<:AbstractFloat,E<:AbstractERI,O<:AbstractOrbitals}
 end
 
 function IntegralHelper(;molecule = Molecule(), orbitals = AtomicOrbitals(), 
-                           basis = Options.get("basis"), normalize = false)
+                           basis = Options.get("basis"), normalize = false, eri_type = nothing)
 
     precision = Options.get("precision")
     if precision == "single"
-        IntegralHelper{Float32}(molecule=molecule, orbitals=orbitals, basis=basis, normalize=normalize)
+        IntegralHelper{Float32}(molecule=molecule, orbitals=orbitals, basis=basis, normalize=normalize, eri_type = eri_type)
     elseif precision == "double"
-        IntegralHelper{Float64}(molecule=molecule, orbitals=orbitals, basis=basis, normalize=normalize)
+        IntegralHelper{Float64}(molecule=molecule, orbitals=orbitals, basis=basis, normalize=normalize, eri_type = eri_type)
     else
         throw(InvalidFermiOption("precision can only be `single` or `double`. Got $precision"))
     end
 end
 
 function IntegralHelper{T}(;molecule = Molecule(), orbitals = AtomicOrbitals(), 
-                           basis = Options.get("basis"), normalize = false) where T<:AbstractFloat
+                           basis = Options.get("basis"), normalize = false, eri_type = nothing) where T<:AbstractFloat
 
     # Check if density-fitting is requested
-    if Options.get("df")
+    if Options.get("df") && eri_type === nothing
         # If the associated orbitals are AtomicOrbitals and DF is requested, JKFIT is set by default
         # Otherwise, the ERI type will be RIFIT
         eri_type = orbitals === AtomicOrbitals() ? JKFIT() : RIFIT()
-    else
+    elseif !(typeof(eri_type) <: AbstractERI)
         eri_type = Chonky()
     end
 

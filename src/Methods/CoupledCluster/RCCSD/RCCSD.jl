@@ -32,10 +32,12 @@ _struct tree:_
 """
 struct RCCSD{T} <: AbstractCCWavefunction 
     guessenergy::T
+    energy::T
     correlation::T
     T1::AbstractArray{T,2}
     T2::AbstractArray{T,4}
-    converged::Bool
+    δE::T
+    residue::T
 end
 
 function RCCSD()

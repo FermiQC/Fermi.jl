@@ -83,9 +83,9 @@ function od_cc_update_T1!(newT1::AbstractArray{T,2}, T1::AbstractArray{T,2}, T2:
                       alg::RCCSDa) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
 
     # Include non-RHF terms
-    fov = moints["FOV"]
-    foo = moints["FOO"]
-    fvv = moints["FVV"]
+    fov = moints["Fia"]
+    foo = moints["Fij"]
+    fvv = moints["Fab"]
     @tensoropt (i=>x, j=>x, k=>x, l=>x, a=>10x, b=>10x, c=>10x, d=>10x) begin
         newT1[i,a] += fov[i,a]
         newT1[i,a] -= foo[i,k]*T1[k,a]
@@ -217,7 +217,7 @@ function update_amp!(newT1::AbstractArray{T,2}, newT2::AbstractArray{T,4}, T1::A
     od_cc_update_T2!(newT2, T1, T2, moints, alg)
 
     # Orbital energies line
-    if haskey(moints, "D1")
+    if haskey(moints.cache, "D1")
         d = moints["D1"]
     else
         Fd = moints["Fd"]
@@ -225,11 +225,11 @@ function update_amp!(newT1::AbstractArray{T,2}, newT2::AbstractArray{T,4}, T1::A
         ϵo = Fd[(1+Options.get("drop_occ"):ndocc)]
         ϵv = Fd[(1+ndocc):size(T1,2)]
 
-        d = [ϵo[i]-ϵv[a] for i=eachindex(ϵo), a=eachindex(ϵv)]
+        d = FermiMDArray([ϵo[i]-ϵv[a] for i=eachindex(ϵo), a=eachindex(ϵv)])
         moints["D1"] = d
     end
 
-    if haskey(moints, "D2")
+    if haskey(moints.cache, "D2")
         D = moints["D2"]
     else
         Fd = moints["Fd"]
@@ -237,7 +237,7 @@ function update_amp!(newT1::AbstractArray{T,2}, newT2::AbstractArray{T,4}, T1::A
         ϵo = Fd[(1+Options.get("drop_occ"):ndocc)]
         ϵv = Fd[(1+ndocc):size(T1,2)]
 
-        D = [ϵo[i]+ϵ[j]-ϵv[a]-ϵv[b] for i=eachindex(ϵo), j=eachindex(ϵo), a=eachindex(ϵv), b=eachindex(ϵv)]
+        D = FermiMDArray([ϵo[i]+ϵ[j]-ϵv[a]-ϵv[b] for i=eachindex(ϵo), j=eachindex(ϵo), a=eachindex(ϵv), b=eachindex(ϵv)])
         moints["D2"] = D
     end
 
@@ -251,7 +251,7 @@ end
 
 Computes new T1 and T2 amplitudes from old ones. It assumes Restricted Hartree-Fock reference.
 """
-function update_amp!(newT1::AbstractArray{T,2}, newT2::Array{T,4}, T1::Array{T, 2}, T2::Array{T, 4}, moints::IntegralHelper{T,E,RHFOrbitals}, 
+function update_amp!(newT1::AbstractArray{T,2}, newT2::AbstractArray{T,4}, T1::AbstractArray{T, 2}, T2::AbstractArray{T, 4}, moints::IntegralHelper{T,E,RHFOrbitals}, 
                      alg::RCCSDa) where {T<:AbstractFloat,E<:AbstractERI}
 
     # Clean the arrays
@@ -263,27 +263,31 @@ function update_amp!(newT1::AbstractArray{T,2}, newT2::Array{T,4}, T1::Array{T, 
     cc_update_T2!(newT2, T1, T2, moints, alg)
 
     # Orbital energies line
-    if haskey(moints, "D1")
+    if haskey(moints.cache, "D1")
         d = moints["D1"]
     else
         Fd = moints["Fd"]
         ndocc = moints.molecule.Nα
-        ϵo = Fd[(1+Options.get("drop_occ"):ndocc)]
-        ϵv = Fd[(1+ndocc):size(T1,2)]
+        frozen = Options.get("drop_occ")
+        inac = Options.get("drop_vir")
+        ϵo = Fd[(1+frozen:ndocc)]
+        ϵv = Fd[(1+ndocc):end-inac]
 
-        d = [ϵo[i]-ϵv[a] for i=eachindex(ϵo), a=eachindex(ϵv)]
+        d = FermiMDArray([ϵo[i]-ϵv[a] for i=eachindex(ϵo), a=eachindex(ϵv)])
         moints["D1"] = d
     end
 
-    if haskey(moints, "D2")
+    if haskey(moints.cache, "D2")
         D = moints["D2"]
     else
         Fd = moints["Fd"]
         ndocc = moints.molecule.Nα
-        ϵo = Fd[(1+Options.get("drop_occ"):ndocc)]
-        ϵv = Fd[(1+ndocc):size(T1,2)]
+        frozen = Options.get("drop_occ")
+        inac = Options.get("drop_vir")
+        ϵo = Fd[(1+frozen:ndocc)]
+        ϵv = Fd[(1+ndocc):end-inac]
 
-        D = [ϵo[i]+ϵ[j]-ϵv[a]-ϵv[b] for i=eachindex(ϵo), j=eachindex(ϵo), a=eachindex(ϵv), b=eachindex(ϵv)]
+        D = FermiMDArray([ϵo[i]+ϵo[j]-ϵv[a]-ϵv[b] for i=eachindex(ϵo), j=eachindex(ϵo), a=eachindex(ϵv), b=eachindex(ϵv)])
         moints["D2"] = D
     end
 
