@@ -1,5 +1,5 @@
 @reset
-@set printstyle none
+#@set printstyle none
 
 Econv = [
   -76.335767822597319
@@ -44,27 +44,27 @@ Edf = [
         end
     end
     
-    @testset "Density Fitted" begin
-        Fermi.Options.set("df", true)
-        Fermi.Options.set("jkfit", "cc-pvqz-jkfit")
-        Fermi.Options.set("rifit", "cc-pvqz-rifit")
+    #@testset "Density Fitted" begin
+    #    Fermi.Options.set("df", true)
+    #    Fermi.Options.set("jkfit", "cc-pvqz-jkfit")
+    #    Fermi.Options.set("rifit", "cc-pvqz-rifit")
 
-        for i = eachindex(molecules)
-            # Read molecule
-            mol = open(f->read(f,String), "xyz/"*molecules[i]*".xyz")
+    #    for i = eachindex(molecules)
+    #        # Read molecule
+    #        mol = open(f->read(f,String), "xyz/"*molecules[i]*".xyz")
 
-            # Skipping these cause there is some problem with Cart x Spherical
-            if molecules[i] in ["benzene", "phosphaethene"]
-                continue
-            end
+    #        # Skipping these cause there is some problem with Cart x Spherical
+    #        if molecules[i] in ["benzene", "phosphaethene"]
+    #            continue
+    #        end
 
-            # Define options
-            Fermi.Options.set("molstring", mol)
-            Fermi.Options.set("basis", basis[i])
+    #        # Define options
+    #        Fermi.Options.set("molstring", mol)
+    #        Fermi.Options.set("basis", basis[i])
 
-            wf = @energy ccsd
-            @test isapprox(wf.energy, Edf[i], rtol=tol) # Energy from Psi4
-        end
-    end
+    #        wf = @energy ccsd
+    #        @test isapprox(wf.energy, Edf[i], rtol=tol) # Energy from Psi4
+    #    end
+    #end
 end
 
