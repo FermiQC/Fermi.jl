@@ -1,6 +1,7 @@
 using TensorOperations
 
 include("RCCSDHelper.jl")
+include("RCCSDDFHelper.jl")
 
 function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::AbstractArray{T,4}, 
                     alg::RCCSDa) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
@@ -37,11 +38,6 @@ function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::
     diis_prec = diis_prec == "double" ? Float64 : diis_prec == "single" ? Float32 : Float16
     do_diis ? DM_T1 = Fermi.DIIS.DIISManager{T, diis_prec}(size=ndiis) : nothing
     do_diis ? DM_T2 = Fermi.DIIS.DIISManager{T, diis_prec}(size=ndiis) : nothing
-
-    # TEMPORARY
-    moints["OOOO"], moints["OOOV"], moints["OOVV"], moints["OVOV"], moints["OVVV"], moints["VVVV"] =
-    permutedims(moints["OOOO"], (1,3,2,4)), permutedims(moints["OOOV"], (1,3,2,4)), permutedims(moints["OVOV"], (1,3,2,4)), 
-    permutedims(moints["OOVV"], (1,3,2,4)) , permutedims(moints["OVVV"], (1,3,2,4)) , permutedims(moints["VVVV"], (1,3,2,4))
 
     output("\tDropped Occupied Orbitals →  {:3.0f}", core)
     output("\tDropped Virtual Orbitals  →  {:3.0f}\n", inac)
