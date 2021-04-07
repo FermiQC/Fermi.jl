@@ -1,7 +1,6 @@
 using TensorOperations
 
 include("RCCSDHelper.jl")
-include("RCCSDDFHelper.jl")
 
 function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::AbstractArray{T,4}, 
                     alg::RCCSDa) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}

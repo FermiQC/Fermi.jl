@@ -5,8 +5,8 @@
 Compute CC energy from T1 and T2 amplitudes constructed with a set of restricted orbitals.
 NOTE: It does not include off-diagonal Fock contributions: See `od_cc_update_energy`.
 """
-function cc_update_energy(T1::AbstractArray{T, 2}, T2::AbstractArray{T, 4}, moints::IntegralHelper{T,Chonky,O}, 
-                          alg::RCCSDa) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+function cc_update_energy(T1::AbstractArray{T, 2}, T2::AbstractArray{T, 4}, moints::IntegralHelper{T,E,O}, 
+                          alg::RCCSDa) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
 
     Vovov = moints["OVOV"]
     @tensoropt (k=>x, l=>x, c=>100x, d=>100x)  begin
@@ -43,8 +43,8 @@ end
 Compute DᵢₐTᵢₐ from old T1 and T2 amplitudes. Final updated T1 amplitudes can be obtained by applying the denominator 1/Dᵢₐ.
 NOTE: It does not include off-diagonal Fock contributions: See `od_cc_update_T1`.
 """
-function cc_update_T1!(newT1::AbstractArray{T,2}, T1::AbstractArray{T,2}, T2::AbstractArray{T,4}, moints::IntegralHelper{T,Chonky,O}, 
-                      alg::RCCSDa) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+function cc_update_T1!(newT1::AbstractArray{T,2}, T1::AbstractArray{T,2}, T2::AbstractArray{T,4}, moints::IntegralHelper{T,E,O}, 
+                      alg::RCCSDa) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
 
     Voooo, Vooov, Voovv, Vovov, Vovvv, Vvvvv = moints["OOOO"], moints["OOOV"], moints["OOVV"], moints["OVOV"], moints["OVVV"], moints["VVVV"]
     @tensoropt (i=>x, j=>x, k=>x, l=>x, a=>10x, b=>10x, c=>10x, d=>10x) begin
@@ -106,15 +106,16 @@ end
 Compute Dᵢⱼₐᵦ⋅Tᵢⱼₐᵦ from old T1 and T2 amplitudes. Final updated T2 amplitudes can be obtained by applying the denominator 1/Dᵢⱼₐᵦ.
 NOTE: It does not include off-diagonal Fock contributions: See `od_cc_update_T2`.
 """
-function cc_update_T2!(newT2::AbstractArray{T,4}, T1::AbstractArray{T,2}, T2::AbstractArray{T,4}, moints::IntegralHelper{T,Chonky,O}, 
-                    alg::RCCSDa) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+function cc_update_T2!(newT2::AbstractArray{T,4}, T1::AbstractArray{T,2}, T2::AbstractArray{T,4}, moints::IntegralHelper{T,E,O}, 
+                    alg::RCCSDa) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
 
     Voooo, Vooov, Voovv, Vovov, Vovvv, Vvvvv = moints["OOOO"], moints["OOOV"], moints["OOVV"], moints["OVOV"], moints["OVVV"], moints["VVVV"]
 
+    # Include (VV,VV) term. This is the only part that changes with Density Fitting
+    cc_update_T2_v4_term!(newT2, T1, T2, moints, alg)
+
     @tensoropt (i=>x, j=>x, k=>x, l=>x, a=>10x, b=>10x, c=>10x, d=>10x) begin
         newT2[i,j,a,b] += Vovov[i,a,j,b]
-        newT2[i,j,a,b] += T1[i,c]*T1[j,d]*Vvvvv[c,a,d,b]
-        newT2[i,j,a,b] += T2[i,j,c,d]*Vvvvv[c,a,d,b]
         newT2[i,j,a,b] += T1[k,a]*T1[l,b]*Voooo[i,k,j,l]
         newT2[i,j,a,b] += T2[k,l,a,b]*Voooo[i,k,j,l]
         newT2[i,j,a,b] -= T1[i,c]*T1[j,d]*T1[k,a]*Vovvv[k,c,b,d]
@@ -171,6 +172,26 @@ function cc_update_T2!(newT2::AbstractArray{T,4}, T1::AbstractArray{T,2}, T2::Ab
         P_OoVv[i,j,a,b] += -2.0*T2[i,k,d,c]*T2[l,j,a,b]*Vovov[k,c,l,d]
      
         newT2[i,j,a,b] += P_OoVv[i,j,a,b] + P_OoVv[j,i,b,a]
+    end
+end
+
+function cc_update_T2_v4_term!(newT2::AbstractArray{T,4}, T1::AbstractArray{T,2}, T2::AbstractArray{T,4}, moints::IntegralHelper{T,Chonky,O}, 
+                    alg::RCCSDa) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+                
+    Vvvvv = moints["VVVV"]
+    @tensoropt (i=>x, j=>x, k=>x, l=>x, a=>10x, b=>10x, c=>10x, d=>10x) begin
+        τ[i,j,a,b] := T2[i,j,a,b] + T1[i,a]*T1[j,b]
+        newT2[i,j,a,b] += τ[i,j,c,d]*Vvvvv[c,a,d,b]
+    end
+end
+
+function cc_update_T2_v4_term!(newT2::AbstractArray{T,4}, T1::AbstractArray{T,2}, T2::AbstractArray{T,4}, moints::IntegralHelper{T,E,O}, 
+                    alg::RCCSDa) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
+                
+    Bvv = moints["BVV"]
+    @tensoropt (i=>x, j=>x, k=>x, l=>x, a=>10x, b=>10x, c=>10x, d=>10x, Q=>20x) begin
+        τ[i,j,a,b] := T2[i,j,a,b] + T1[i,a]*T1[j,b]
+        newT2[i,j,a,b] += τ[i,j,c,d]*Bvv[Q,c,a]*Bvv[Q,d,b]
     end
 end
 
