@@ -227,7 +227,8 @@ function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::
         output("    {:<5.0d}    {:<15.10f}    {:>+12.10f}    {:<12.10f}    {:<10.5f}", ite, Ecc, dE, rms, t)
         ite += 1
     end
-    output("\nMain CCSD iterations done in {}s", main_time)
+    output("\nMain CCSD iterations done in {:5.5f}s", main_time)
+    output("Average time per iteration {:5.5f}", main_time/(ite-1))
 
     # Converged?
     conv = false

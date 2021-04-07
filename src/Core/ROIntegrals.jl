@@ -56,6 +56,18 @@ function compute!(I::IntegralHelper{T,E,O}, entry::String, x...) where {T<: Abst
         compute_BOV!(I, x...)
     elseif entry == "BVV"
         compute_BVV!(I, x...)
+    elseif entry == "OOOO"
+        compute_OOOO!(I, x...)
+    elseif entry == "OOOV"
+        compute_OOOV!(I, x...)
+    elseif entry == "OVOV"
+        compute_OVOV!(I, x...)
+    elseif entry == "OOVV"
+        compute_OOVV!(I, x...)
+    elseif entry == "OVVV"
+        compute_OVVV!(I, x...)
+    elseif entry == "VVVV"
+        compute_VVVV!(I, x...)
     elseif entry in ["Fd", "Fia", "Fij", "Fab"]
         compute_F(I, x...)
     else
@@ -85,6 +97,57 @@ function compute_ERI!(I::IntegralHelper{T, E, O}) where {T<:AbstractFloat, E<:Ab
         # Create AO integral object
         aoints = IntegralHelper(I, AtomicOrbitals())
         compute_ERI!(I,aoints)
+end
+
+function compute_OOOO!(I::IntegralHelper{T,E,O}) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
+    Boo = I["BOO"]
+    @tensoropt (i=>x, j=>x, k=>x, l=>x, a=>10x, b=>10x, c=>10x, d=>10x, Q=>20x) begin 
+        OOOO[i,j,k,l] :=  Boo[Q, i, j]*Boo[Q, k, l]
+    end
+    I["OOOO"] = OOOO
+end
+
+function compute_OOOV!(I::IntegralHelper{T,E,O}) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
+    Boo = I["BOO"]
+    Bov = I["BOV"]
+    @tensoropt (i=>x, j=>x, k=>x, l=>x, a=>10x, b=>10x, c=>10x, d=>10x, Q=>20x) begin 
+        OOOV[i,j,k,a] :=  Boo[Q, i, j]*Bov[Q, k, a]
+    end
+    I["OOOV"] = OOOV
+end
+
+function compute_OOVV!(I::IntegralHelper{T,E,O}) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
+    Boo = I["BOO"]
+    Bvv = I["BVV"]
+    @tensoropt (i=>x, j=>x, k=>x, l=>x, a=>10x, b=>10x, c=>10x, d=>10x, Q=>20x) begin 
+        OOVV[i,j,a,b] :=  Boo[Q, i, j]*Bvv[Q, a, b]
+    end
+    I["OOVV"] = OOVV
+end
+
+function compute_OVOV!(I::IntegralHelper{T,E,O}) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
+    Bov = I["BOV"]
+    @tensoropt (i=>x, j=>x, k=>x, l=>x, a=>10x, b=>10x, c=>10x, d=>10x, Q=>20x) begin 
+        OVOV[i,a,j,b] :=  Bov[Q, i, a]*Bov[Q, j, b]
+    end
+    I["OVOV"] = OVOV
+end
+
+function compute_OVVV!(I::IntegralHelper{T,E,O}) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
+    Bov = I["BOV"]
+    Bvv = I["BVV"]
+    @tensoropt (i=>x, j=>x, k=>x, l=>x, a=>10x, b=>10x, c=>10x, d=>10x, Q=>20x) begin 
+        OVVV[i,a,b,c] :=  Bov[Q, i, a]*Bvv[Q, b, c]
+    end
+    I["OVVV"] = OVVV
+end
+
+function compute_VVVV!(I::IntegralHelper{T,E,O}) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
+    Bvv = I["BVV"]
+    @tensoropt (i=>x, j=>x, k=>x, l=>x, a=>10x, b=>10x, c=>10x, d=>10x, Q=>20x) begin 
+        VVVV[a,b,c,d] :=  Bvv[Q, a, b]*Bvv[Q, c, d]
+    end
+    I["VVVV"] = VVVV
 end
 
 function compute_OOOO!(I::IntegralHelper{T,E,O}) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
@@ -164,7 +227,7 @@ function compute_ERI!(I::IntegralHelper{T, RIFIT, O}, aoints::IntegralHelper{T, 
         Bμν = aoints["ERI"]
 
         C = I.orbitals.C
-        @tensoropt (Q=>5, p=>1, q=>1, μ=>1, ν=>1) begin
+        @tensoropt (Q=>50x, p=>x, q=>x, μ=>x, ν=>x) begin
             Bpq[Q,p,q] :=  Bμν[Q, μ, ν]*C[μ, p]*C[ν, q]
         end
         I["ERI"] = Bpq
@@ -195,7 +258,7 @@ function compute_BOO!(I::IntegralHelper{T, E, O}, aoints::IntegralHelper{T, E, A
         core = Options.get("drop_occ")
         o = (1+core):I.molecule.Nα
         Co = I.orbitals.C[:,o]
-        @tensoropt (Q=>20, i=>1, j=>1, μ=>10, ν=>10) begin
+        @tensoropt (Q=>50x, i=>x, j=>x, μ=>10x, ν=>10x) begin
             Bij[Q,i,j] :=  Bμν[Q, μ, ν]*Co[μ, i]*Co[ν, j]
         end
         I["BOO"] = Bij
@@ -210,7 +273,7 @@ function compute_BVV!(I::IntegralHelper{T, E, O}, aoints::IntegralHelper{T, E, A
         nbf = size(I.orbitals.C,1)
         v = (ndocc+1):(nbf - inac)
         Cv = I.orbitals.C[:,v]
-        @tensoropt (Q=>50, a=>8, b=>8, μ=>10, ν=>10) begin
+        @tensoropt (Q=>50x, a=>8x, b=>8x, μ=>10x, ν=>10x) begin
             Bab[Q,a,b] :=  Bμν[Q, μ, ν]*Cv[μ, a]*Cv[ν, b]
         end
         I["BVV"] = Bab
@@ -228,7 +291,7 @@ function compute_BOV!(I::IntegralHelper{T, E, O}, aoints::IntegralHelper{T, E, A
         v = (ndocc+1):(nbf - inac)
         Cv = I.orbitals.C[:,v]
         Co = I.orbitals.C[:,o]
-        @tensoropt (Q=>50, a=>8, i=>1, μ=>10, ν=>10) begin
+        @tensoropt (Q=>50x, a=>8x, i=>x, μ=>10x, ν=>10x) begin
             Bia[Q,i,a] :=  Bμν[Q, μ, ν]*Co[μ, i]*Cv[ν, a]
         end
         I["BOV"] = Bia
@@ -242,7 +305,7 @@ function compute_OOOO!(I::IntegralHelper{T,Chonky,O}, aoints::IntegralHelper{T,C
     ndocc = I.molecule.Nα
     o = (1+core):ndocc
     Co = I.orbitals.C[:,o]
-    @tensoropt (μ=>100, ν=>100, ρ=>100, σ=>100, i=>10, j=>10, k=>10, l=>10, a=>80, b=>80, c=>80, d=>80) begin 
+    @tensoropt (μ=>100x, ν=>100x, ρ=>100x, σ=>100x, i=>10x, j=>10x, k=>10x, l=>10x, a=>80x, b=>80x, c=>80x, d=>80) begin 
         OOOO[i,j,k,l] :=  AOERI[μ, ν, ρ, σ]*Co[μ, i]*Co[ν, j]*Co[ρ, k]*Co[σ, l]
     end
     I["OOOO"] = OOOO
@@ -260,7 +323,7 @@ function compute_OOOV!(I::IntegralHelper{T,Chonky,O}, aoints::IntegralHelper{T,C
     v = (ndocc+1):(nbf - inac)
     Cv = I.orbitals.C[:,v]
     Co = I.orbitals.C[:,o]
-    @tensoropt (μ=>100, ν=>100, ρ=>100, σ=>100, i=>10, j=>10, k=>10, l=>10, a=>80, b=>80, c=>80, d=>80) begin 
+    @tensoropt (μ=>100x, ν=>100x, ρ=>100x, σ=>100x, i=>10x, j=>10x, k=>10x, l=>10x, a=>80x, b=>80x, c=>80x, d=>80) begin 
         OOOV[i,j,k,a] :=  AOERI[μ, ν, ρ, σ]*Co[μ, i]*Co[ν, j]*Co[ρ, k]*Cv[σ, a]
     end
     I["OOOV"] = OOOV
@@ -278,7 +341,7 @@ function compute_OOVV!(I::IntegralHelper{T,Chonky,O}, aoints::IntegralHelper{T,C
     v = (ndocc+1):(nbf - inac)
     Cv = I.orbitals.C[:,v]
     Co = I.orbitals.C[:,o]
-    @tensoropt (μ=>100, ν=>100, ρ=>100, σ=>100, i=>10, j=>10, k=>10, l=>10, a=>80, b=>80, c=>80, d=>80) begin 
+    @tensoropt (μ=>100x, ν=>100x, ρ=>100x, σ=>100x, i=>10x, j=>10x, k=>10x, l=>10x, a=>80x, b=>80x, c=>80x, d=>80) begin 
         OOVV[i,j,a,b] :=  AOERI[μ, ν, ρ, σ]*Co[μ, i]*Co[ν, j]*Cv[ρ, a]*Cv[σ, b]
     end
     I["OOVV"] = OOVV
@@ -296,7 +359,7 @@ function compute_OVOV!(I::IntegralHelper{T,Chonky,O}, aoints::IntegralHelper{T,C
     v = (ndocc+1):(nbf - inac)
     Cv = I.orbitals.C[:,v]
     Co = I.orbitals.C[:,o]
-    @tensoropt (μ=>100, ν=>100, ρ=>100, σ=>100, i=>10, j=>10, k=>10, l=>10, a=>80, b=>80, c=>80, d=>80) begin 
+    @tensoropt (μ=>100x, ν=>100x, ρ=>100x, σ=>100x, i=>10x, j=>10x, k=>10x, l=>10x, a=>80x, b=>80x, c=>80x, d=>80) begin 
         OVOV[i,a,j,b] :=  AOERI[μ, ν, ρ, σ]*Co[μ, i]*Cv[ν, a]*Co[ρ, j]*Cv[σ, b]
     end
     I["OVOV"] = OVOV
@@ -314,7 +377,7 @@ function compute_OVVV!(I::IntegralHelper{T,Chonky,O}, aoints::IntegralHelper{T,C
     v = (ndocc+1):(nbf - inac)
     Cv = I.orbitals.C[:,v]
     Co = I.orbitals.C[:,o]
-    @tensoropt (μ=>100, ν=>100, ρ=>100, σ=>100, i=>10, j=>10, k=>10, l=>10, a=>80, b=>80, c=>80, d=>80) begin 
+    @tensoropt (μ=>100x, ν=>100x, ρ=>100x, σ=>100x, i=>10x, j=>10x, k=>10x, l=>10x, a=>80x, b=>80x, c=>80x, d=>80) begin 
         OVVV[i,a,b,c] :=  AOERI[μ, ν, ρ, σ]*Co[μ, i]*Cv[ν, a]*Cv[ρ, b]*Cv[σ, c]
     end
     I["OVVV"] = OVVV
@@ -329,7 +392,7 @@ function compute_VVVV!(I::IntegralHelper{T,Chonky,O}, aoints::IntegralHelper{T,C
     nbf = size(I.orbitals.C,1)
     v = (ndocc+1):(nbf - inac)
     Cv = I.orbitals.C[:,v]
-    @tensoropt (μ=>100, ν=>100, ρ=>100, σ=>100, i=>10, j=>10, k=>10, l=>10, a=>80, b=>80, c=>80, d=>80) begin 
+    @tensoropt (μ=>100x, ν=>100x, ρ=>100x, σ=>100x, i=>10x, j=>10x, k=>10x, l=>10x, a=>80x, b=>80x, c=>80x, d=>80) begin 
         VVVV[a,b,c,d] :=  AOERI[μ, ν, ρ, σ]*Cv[μ, a]*Cv[ν, b]*Cv[ρ, c]*Cv[σ, d]
     end
     I["VVVV"] = VVVV

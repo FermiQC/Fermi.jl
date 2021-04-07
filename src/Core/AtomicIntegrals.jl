@@ -47,7 +47,6 @@ function compute_ERI!(I::IntegralHelper{T, RIFIT, AtomicOrbitals}) where T<:Abst
             std_name = Regex("cc-pv.z")
             auxri = occursin(std_name, basis) ? basis*"-rifit" : "cc-pvqz-rifit"
         end
-
         I.cache["ERI"] = FermiMDArray(df_ao_eri(I.molecule, I.basis, auxri, normalize = I.normalize))
 end
 

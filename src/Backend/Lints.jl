@@ -83,7 +83,7 @@ function df_ao_eri(molecule::Molecule, basis::String, aux::String; normalize=tru
         J = Lints.make_ERI2(dfbas; normalize=normalize)
     end
     #Jh = Array(Hermitian(J)^(-1/2)) #sometimes Jh becomes complex slightly if J is not ~~exactly~~ hermitian 💔
-    Jh = real(J^(-1/2)) 
+    Jh = Array(real(J^(-1/2)))
     @tensor b[Q,p,q] := Pqp[P,p,q]*Jh[P,Q]
     return b
 end

@@ -84,6 +84,7 @@ end
 function RMP2_rhf_energy(ints::IntegralHelper{T,RIFIT,O}, ϵo::AbstractArray{T,1}, ϵv::AbstractArray{T,1}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
     Bov = ints["BOV"].data
 
+    println(size(Bov))
     output(" Computing DF-MP2 Energy... ", ending="")
     v_size = length(ϵv)
     o_size = length(ϵo)
@@ -94,17 +95,17 @@ function RMP2_rhf_energy(ints::IntegralHelper{T,RIFIT,O}, ϵo::AbstractArray{T,1
 
 
     # DEBUG
-    #t = @elapsed begin
-    #@tensor iajb[i,a,j,b] := Bov[Q,i,a]*Bov[Q,j,b]
+    t = @elapsed begin
+    @tensor iajb[i,a,j,b] := Bov[Q,i,a]*Bov[Q,j,b]
 
-    #D = [ϵo[i]-ϵv[a]+ϵo[j]-ϵv[b] for i=eachindex(ϵo), a=eachindex(ϵv), j=eachindex(ϵo), b=eachindex(ϵv)]
+    D = [ϵo[i]-ϵv[a]+ϵo[j]-ϵv[b] for i=eachindex(ϵo), a=eachindex(ϵv), j=eachindex(ϵo), b=eachindex(ϵv)]
 
-    #x1 = 2*iajb - permutedims(iajb,(1,4,3,2))
-    #x2 = x1 .* iajb
-    #Emp2 = sum(x2 ./ D)        
-    #end
-    #output("Done in {:5.5f} seconds.", t)
-    #return Emp2
+    x1 = 2*iajb - permutedims(iajb,(1,4,3,2))
+    x2 = x1 .* iajb
+    Emp2 = sum(x2 ./ D)        
+    end
+    output("Done in {:5.5f} seconds.", t)
+    return Emp2
     #DEBUG
 
     # Vector containing the energy contribution computed by each thread
