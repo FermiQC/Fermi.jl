@@ -189,9 +189,17 @@ function cc_update_T2_v4_term!(newT2::AbstractArray{T,4}, T1::AbstractArray{T,2}
                     alg::RCCSDa) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
                 
     Bvv = moints["BVV"]
-    @tensoropt (i=>x, j=>x, k=>x, l=>x, a=>10x, b=>10x, c=>10x, d=>10x, Q=>20x) begin
-        τ[i,j,a,b] := T2[i,j,a,b] + T1[i,a]*T1[j,b]
-        newT2[i,j,a,b] += τ[i,j,c,d]*Bvv[Q,c,a]*Bvv[Q,d,b]
+    @tensor τ[i,j,a,b] := T2[i,j,a,b] + T1[i,a]*T1[j,b]
+
+    o_size = size(T1, 1)
+    v_size = size(T1, 2)
+    cdb = FermiMDzeros(T, v_size, v_size, v_size)
+    newT2a = FermiMDzeros(T, o_size, o_size, v_size)
+    for a = 1:v_size
+        Ba = @views Bvv[:,:,a]
+        @tensor cdb[c,d,b] = Ba[Q,c]*Bvv[Q,d,b]
+        @tensor newT2a[i,j,b] = τ[i,j,c,d]*cdb[c,d,b]
+        newT2[:,:,a,:] += newT2a
     end
 end
 
@@ -243,8 +251,10 @@ function update_amp!(newT1::AbstractArray{T,2}, newT2::AbstractArray{T,4}, T1::A
     else
         Fd = moints["Fd"]
         ndocc = moints.molecule.Nα
-        ϵo = Fd[(1+Options.get("drop_occ"):ndocc)]
-        ϵv = Fd[(1+ndocc):size(T1,2)]
+        frozen = Options.get("drop_occ")
+        inac = Options.get("drop_vir")
+        ϵo = Fd[(1+frozen:ndocc)]
+        ϵv = Fd[(1+ndocc):end-inac]
 
         d = FermiMDArray([ϵo[i]-ϵv[a] for i=eachindex(ϵo), a=eachindex(ϵv)])
         moints["D1"] = d
@@ -255,10 +265,12 @@ function update_amp!(newT1::AbstractArray{T,2}, newT2::AbstractArray{T,4}, T1::A
     else
         Fd = moints["Fd"]
         ndocc = moints.molecule.Nα
-        ϵo = Fd[(1+Options.get("drop_occ"):ndocc)]
-        ϵv = Fd[(1+ndocc):size(T1,2)]
+        frozen = Options.get("drop_occ")
+        inac = Options.get("drop_vir")
+        ϵo = Fd[(1+frozen:ndocc)]
+        ϵv = Fd[(1+ndocc):end-inac]
 
-        D = FermiMDArray([ϵo[i]+ϵ[j]-ϵv[a]-ϵv[b] for i=eachindex(ϵo), j=eachindex(ϵo), a=eachindex(ϵv), b=eachindex(ϵv)])
+        D = FermiMDArray([ϵo[i]+ϵo[j]-ϵv[a]-ϵv[b] for i=eachindex(ϵo), j=eachindex(ϵo), a=eachindex(ϵv), b=eachindex(ϵv)])
         moints["D2"] = D
     end
 

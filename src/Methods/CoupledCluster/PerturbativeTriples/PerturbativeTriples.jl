@@ -9,17 +9,8 @@ _struct tree:_
 """
 struct RCCSDpT{T} <: AbstractCCWavefunction
     CCSD::RCCSD{T}
+    energy::T
     correction::T
-end
-
-function select_precision(A::String)
-    implemented = Dict{Any,Any}("single" => Float32,
-                                "double" => Float64)
-    try
-        return implemented[A]
-    catch KeyError
-        throw(Fermi.InvalidFermiOptions("Invalid precision: $(A)"))
-    end
 end
 
 #implementations

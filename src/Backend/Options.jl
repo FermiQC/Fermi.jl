@@ -157,9 +157,9 @@ function set(key::String, val::Union{String, Bool, Float64, Int})
                 # If the conversion is not possible
                 throw(InvalidFermiOption("Impossible to convert data type for $key. Expected: $dtype, Got: $(typeof(val))"))
             end
+        end
         # Otherwise, throw an error
         throw(InvalidFermiOption("Invalid data type for $key. Expected: $dtype, Got: $(typeof(val))"))
-        end
     else
         Current[key] = val
     end
@@ -214,8 +214,8 @@ macro get(opt="all")
         for k in keys(Fermi.Options.Current)
             out = out*"$k  =>  $(Fermi.Options.Current[k])\n"
         end
-        out = out[1:end-2]
-        return out
+        print(out) 
+        return nothing
     end
 
     A = symbol_to_string(opt)

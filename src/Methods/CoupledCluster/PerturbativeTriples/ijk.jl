@@ -1,30 +1,13 @@
-function RCCSDpT()
-    prec = select_precision(Fermi.CurrentOptions["precision"])
-    RCCSDpT{prec}()
-end
-
-function RCCSDpT(rhf::Fermi.HartreeFock.RHF)
-    prec = select_precision(Fermi.CurrentOptions["precision"])
-    ccsd_wfn = RCCSD(rhf)
-    RCCSDpT{prec}(ccsd_wfn, rhf.ints)
-end
-
-function RCCSDpT{T}() where T <: AbstractFloat
-    refwfn = Fermi.HartreeFock.RHF()
-    ccsd_wfn = RCCSD{T}()
-    RCCSDpT{T}(ccsd_wfn, refwfn.ints)
-end
-
-function RCCSDpT{T}(ccsd::RCCSD, ints::IntegralHelper) where T <: AbstractFloat
+function RCCSDpT{T}(ccsd::RCCSD, moints::IntegralHelper) where T <: AbstractFloat
 
     @output "\n   • Perturbative Triples Started\n\n"
 
     T1 = ccsd.T1.data
     T2 = ccsd.T2.data
 
-    Vvvvo = permutedims(ints["OVVV"], (4,2,3,1))
-    Vvooo = permutedims(ints["OOOV"], (4,2,1,3))
-    Vvovo = permutedims(ints["OOVV"], (3,1,4,2))
+    Vvvvo = ints["OVVV"]
+    Vvooo = ints["OOOV"]
+    Vvovo = ints["OOVV"]
 
     o,v = size(T1)
     Et::T = 0.0

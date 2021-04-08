@@ -87,8 +87,43 @@ function RCCSD(moints::IntegralHelper{T,E,O}) where {T<:AbstractFloat,E<:Abstrac
 
     o = moints.molecule.Nα - Options.get("drop_occ")
     v = size(moints.orbitals.C,1) - Options.get("drop_vir") - moints.molecule.Nα
-    T1guess = FermiMDzeros(T, o, v)
-    T2guess = FermiMDzeros(T, o, o, v, v)
+
+    output("Using MP2 guess")
+    T1guess = moints["Fia"]
+    T2guess = permutedims(moints["OVOV"], (1,3,2,4))
+
+    # Orbital energies line
+    if haskey(moints.cache, "D1")
+        d = moints["D1"]
+    else
+        Fd = moints["Fd"]
+        ndocc = moints.molecule.Nα
+        frozen = Options.get("drop_occ")
+        inac = Options.get("drop_vir")
+        ϵo = Fd[(1+frozen:ndocc)]
+        ϵv = Fd[(1+ndocc):end-inac]
+
+        d = FermiMDArray([ϵo[i]-ϵv[a] for i=eachindex(ϵo), a=eachindex(ϵv)])
+        moints["D1"] = d
+    end
+
+    if haskey(moints.cache, "D2")
+        D = moints["D2"]
+    else
+        Fd = moints["Fd"]
+        ndocc = moints.molecule.Nα
+        frozen = Options.get("drop_occ")
+        inac = Options.get("drop_vir")
+        ϵo = Fd[(1+frozen:ndocc)]
+        ϵv = Fd[(1+ndocc):end-inac]
+
+        D = FermiMDArray([ϵo[i]+ϵo[j]-ϵv[a]-ϵv[b] for i=eachindex(ϵo), j=eachindex(ϵo), a=eachindex(ϵv), b=eachindex(ϵv)])
+        moints["D2"] = D
+    end
+
+    T1guess ./= d
+    T2guess ./= D
+
     RCCSD(moints, T1guess, T2guess, get_rccsd_alg())
 end
 
