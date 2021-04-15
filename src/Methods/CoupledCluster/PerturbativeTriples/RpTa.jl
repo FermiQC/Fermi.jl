@@ -1,19 +1,19 @@
-function RCCSDpT{T}(ccsd::RCCSD, moints::IntegralHelper) where T <: AbstractFloat
+function RCCSDpT{T}(ccsd::RCCSD, moints::IntegralHelper{T,E,O}) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
 
     @output "\n   • Perturbative Triples Started\n\n"
 
-    T1 = ccsd.T1.data
-    T2 = ccsd.T2.data
+    T1 = ccsd.T1
+    T2 = ccsd.T2
 
-    Vvvvo = ints["OVVV"]
-    Vvooo = ints["OOOV"]
-    Vvovo = ints["OOVV"]
+    Vvvvo = permutedims(ints["OVVV"], (4,3,2,1))
+    Vvooo = permutedims(ints["OOOV"], (4,3,2,1))
+    Vvovo = permutedims(ints["OVOV"], (4,3,2,1))
 
     o,v = size(T1)
     Et::T = 0.0
 
-    fo = diag(ints["FOO"])
-    fv = diag(ints["FVV"])
+    fo = moints["Fii"]
+    fv = moints["Faa"]
 
     # Pre-allocate Intermediate arrays
     W  = Array{T}(undef, v,v,v)
@@ -110,6 +110,6 @@ function RCCSDpT{T}(ccsd::RCCSD, moints::IntegralHelper) where T <: AbstractFloa
         end
     end
     @output "Final (T) contribution: {:15.10f}\n" Et
-    @output "CCSD(T) energy:         {:15.10f}\n" Et+ccsd.CorrelationEnergy
+    @output "CCSD(T) energy:         {:15.10f}\n" Et+ccsd.energy
     return RCCSDpT{T}(ccsd, Et)
 end

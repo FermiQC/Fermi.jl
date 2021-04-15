@@ -429,6 +429,8 @@ function compute_F(I::IntegralHelper{T,Chonky,O}, aoints::IntegralHelper{T, Chon
 
     Fd = FermiMDArray(diag(Fmol))
     I["Fd"] = Fd
+    I["Fii"] = Fd[o]
+    I["Faa"] = Fd[v]
     I["Fia"] = Fmol[o,v] 
     I["Fij"] = Fmol[o,o] - diagm(Fd[o])
     I["Fab"] = Fmol[v,v] - diagm(Fd[v])
@@ -436,11 +438,13 @@ end
 
 function compute_F(I::IntegralHelper{T,E,O}, aoints::IntegralHelper{T, E, AtomicOrbitals}) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
 
+    core = Options.get("drop_occ")
+    inac = Options.get("drop_vir")
     ndocc = I.molecule.Nα
     nbf = size(I.orbitals.C,1)
 
-    o = 1:ndocc
-    v = (ndocc+1):nbf
+    o = (1+core):ndocc
+    v = (ndocc+1):(nbf - inac)
 
     Co = I.orbitals.C[:,1:ndocc]
 
@@ -458,6 +462,8 @@ function compute_F(I::IntegralHelper{T,E,O}, aoints::IntegralHelper{T, E, Atomic
 
     Fd = FermiMDArray(diag(Fmol))
     I["Fd"] = Fd
+    I["Fii"] = Fd[o]
+    I["Faa"] = Fd[v]
     I["Fia"] = Fmol[o,v] 
     I["Fij"] = Fmol[o,o] - diagm(Fd[o])
     I["Fab"] = Fmol[v,v] - diagm(Fd[v])

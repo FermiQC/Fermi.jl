@@ -44,6 +44,6 @@ abstract type AbstractCCWavefunction <: Fermi.AbstractWavefunction end
 
 #include("RCCD/RCCD.jl")
 include("RCCSD/RCCSD.jl")
-#include("PerturbativeTriples/PerturbativeTriples.jl")
+include("PerturbativeTriples/PerturbativeTriples.jl")
 
 end #module CC
