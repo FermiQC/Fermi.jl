@@ -1,13 +1,13 @@
-function RCCSDpT{T}(ccsd::RCCSD, moints::IntegralHelper{T,E,O}) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
+function RCCSDpT(ccsd::RCCSD, moints::IntegralHelper{T,E,O}, alg::RpTa) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
 
-    @output "\n   • Perturbative Triples Started\n\n"
+    output("\n   • Perturbative Triples Started\n")
 
     T1 = ccsd.T1
     T2 = ccsd.T2
 
-    Vvvvo = permutedims(ints["OVVV"], (4,3,2,1))
-    Vvooo = permutedims(ints["OOOV"], (4,3,2,1))
-    Vvovo = permutedims(ints["OVOV"], (4,3,2,1))
+    Vvvvo = permutedims(moints["OVVV"], (4,3,2,1))
+    Vvooo = permutedims(moints["OOOV"], (4,3,2,1))
+    Vvovo = permutedims(moints["OVOV"], (4,3,2,1))
 
     o,v = size(T1)
     Et::T = 0.0
@@ -44,9 +44,9 @@ function RCCSDpT{T}(ccsd::RCCSD, moints::IntegralHelper{T,E,O}) where {T<:Abstra
     T2_1j       = Array{T}(undef,o,v,v) 
     Vvovo_2i_4j = Array{T}(undef,v,v) 
     T1_1j       = Array{T}(undef,v) 
-    @output "Computing energy contribution from occupied orbitals:\n"
+    output("Computing energy contribution from occupied orbitals:")
     for i in 1:o
-        @output "→ Orbital {} of {}\n" i o
+        output("→ Orbital {} of {}", i, o)
         Vvvvo_4i .= view(Vvvvo, :,:,:,i)
         T2_1i    .= view(T2, i,:,:,:)
         T1_1i    .= view(T1, i, :)
@@ -101,15 +101,15 @@ function RCCSDpT{T}(ccsd::RCCSD, moints::IntegralHelper{T,E,O}) where {T<:Abstra
                             @inbounds X = (W[a,b,c]*V[a,b,c] + W[a,c,b]*V[a,c,b] + W[b,a,c]*V[b,a,c] + W[b,c,a]*V[b,c,a] + W[c,a,b]*V[c,a,b] + W[c,b,a]*V[c,b,a])
                             @inbounds Y = (V[a,b,c] + V[b,c,a] + V[c,a,b])
                             @inbounds Z = (V[a,c,b] + V[b,a,c] + V[c,b,a])
-                            E = (Y - 2*Z)*(W[a,b,c] + W[b,c,a] + W[c,a,b]) + (Z - 2*Y)*(W[a,c,b]+W[b,a,c]+W[c,b,a]) + 3*X
-                            Et += E*(2-δij-δjk)/(Dd*(1+δab+δbc))
+                            Ef = (Y - 2*Z)*(W[a,b,c] + W[b,c,a] + W[c,a,b]) + (Z - 2*Y)*(W[a,c,b]+W[b,a,c]+W[c,b,a]) + 3*X
+                            Et += Ef*(2-δij-δjk)/(Dd*(1+δab+δbc))
                         end
                     end
                 end
             end
         end
     end
-    @output "Final (T) contribution: {:15.10f}\n" Et
-    @output "CCSD(T) energy:         {:15.10f}\n" Et+ccsd.energy
-    return RCCSDpT{T}(ccsd, Et)
+    output("Final (T) contribution: {:15.10f}", Et)
+    output("CCSD(T) energy:         {:15.10f}", Et+ccsd.energy)
+    return RCCSDpT{T}(ccsd, Et+ccsd.energy, Et)
 end

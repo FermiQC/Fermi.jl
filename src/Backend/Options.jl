@@ -88,6 +88,7 @@ const Default = Dict{String,Union{Float64,Int,String,Bool}}(
                                   "diis_start" => 3,
                                   "cc_damp_ratio" => 0.0,
                                   "cc_diis_relax" => 3,
+                                  "pt_alg" => 1,
                                   "num_frozen" => 0,
                                   "aci_print_screen" => 0,
                                   "cas_frozen" => 0,

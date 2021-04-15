@@ -25,10 +25,11 @@ struct RCCSDpT{T} <: AbstractCCWavefunction
 end
 
 function RCCSDpT()
-    rhf = RHF()
+    aoints = IntegralHelper()
+    rhf = RHF(aoints)
     moints = IntegralHelper(orbitals=rhf.orbitals)
     ccsd = RCCSD(moints, aoints)
-    return RCCSDpT(ccsd, moints)
+    return RCCSDpT(ccsd, moints, get_rpt_alg())
 end
 #implementations
 struct RpTa <: RpTAlgorithm end
