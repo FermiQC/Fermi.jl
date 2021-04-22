@@ -38,6 +38,7 @@ Dictionary containing default options for Fermi. Any information not given
 explicitly to Methods is obtained from here.
 """
 const Default = Dict{String,Union{Float64,Int,String,Bool}}(
+                                  "lints" => true,
                                   "molstring" => """
                                   O        1.2091536548      1.7664118189     -0.0171613972
                                   H        2.1984800075      1.7977100627      0.0121161719

@@ -4,7 +4,7 @@ using Fermi.Geometry
 using Fermi.Options
 using Fermi.Libcint
 
-import Base: collect
+import Base: collect, +
 
 include("BasisParser.jl")
 
@@ -20,6 +20,7 @@ struct BasisSet
     basis::Dict{Atom,Array{BasisFunction,1}}
     natoms::Cint
     nbas::Cint
+    nshells::Int64
     lc_atoms::Array{Cint,1}
     lc_bas::Array{Cint, 1}
     lc_env::Array{Cdouble,1}
@@ -51,6 +52,7 @@ function BasisSet(mol::Molecule, basis_name::String)
 
     natm = length(atoms)
     nbas = 0
+    nshells = 0
     nexps = 0
     nprims = 0
     shells = Dict{Atom, Array{BasisFunction,1}}()
@@ -58,6 +60,7 @@ function BasisSet(mol::Molecule, basis_name::String)
     for A in atoms
         basis = read_basisset(basis_name, A.AtomicSymbol)
         for b in basis
+            nshells += 1
             nbas += 2*b.l + 1
             nexps += length(b.exp)
             nprims += length(b.coef)
@@ -67,7 +70,7 @@ function BasisSet(mol::Molecule, basis_name::String)
     end
 
     lc_atm = zeros(Cint, natm*ATM_SLOTS)
-    lc_bas = zeros(Cint, nbas*BAS_SLOTS)
+    lc_bas = zeros(Cint, nshells*BAS_SLOTS)
     env = zeros(Cdouble, 3*natm+nexps+nprims)
 
     # Prepare the lc_atom input 
@@ -112,7 +115,7 @@ function BasisSet(mol::Molecule, basis_name::String)
             ib += 1
         end
     end
-    return BasisSet(mol, basis_name, shells, natm, nbas, lc_atm, lc_bas, env)
+    return BasisSet(mol, basis_name, shells, natm, nbas, nshells, lc_atm, lc_bas, env)
 end
 
 function collect(BS::BasisSet)
@@ -121,6 +124,32 @@ function collect(BS::BasisSet)
         push!(out, BS.basis[A]...)
     end
     return out
+end
+
+function +(B1::BasisSet, B2::BasisSet)
+    basis_name = B1.basis_name*"+"*B2.basis_name
+
+    natm = B1.natoms + B2.natoms
+    nbas = B1.nbas + B2.nbas
+    nshells = B1.nshells + B2.nshells
+
+    b1atm = length(B1.lc_atoms)
+    b1bas = length(B1.lc_bas)
+    b1env = length(B1.lc_env)
+    b2atm = length(B2.lc_atoms)
+    b2bas = length(B2.lc_bas)
+    b2env = length(B2.lc_env)
+
+    lc_atom = zeros(Cint, b1atm+b2atm)
+    lc_atom .= vcat(B1.lc_atoms, B2.lc_atoms)
+
+    lc_bas = zeros(Cint, b1bas + b2bas)
+    lc_bas .= vcat(B1.lc_bas, B2.lc_bas)
+
+    lc_env = zeros(Cdouble, b1env + b2env)
+    lc_env .= vcat(B1.lc_env, B2.lc_env)
+
+    return BasisSet(B1.molecule, basis_name, B1.basis, natm, nbas, nshells, lc_atom, lc_bas, lc_env)
 end
 
 function ao_1e(BS::BasisSet, compute::String)
@@ -137,9 +166,8 @@ function ao_1e(BS::BasisSet, compute::String)
     icum = 1
     # Allocate output array
     out = zeros(Cdouble, BS.nbas, BS.nbas)
-    basis_list = collect(BS)
 
-    for i in eachindex(basis_list)
+    for i in 1:BS.nshells
 
         # Get number of primitive functions
         i_num_prim = Libcint.CINTcgtos_spheric(i-1, BS.lc_bas)
@@ -148,7 +176,7 @@ function ao_1e(BS::BasisSet, compute::String)
         ri = icum:(icum+ i_num_prim -1)
         # y accumulate the number of primitives in one dimension (j)
         jcum = 1
-        for j in eachindex(basis_list)
+        for j in 1:BS.nshells
 
             # Get number of primitive functions
             j_num_prim = Libcint.CINTcgtos_spheric(j-1, BS.lc_bas)
@@ -178,8 +206,7 @@ function ao_2e4c(BS::BasisSet)
     icum = 1
     # Allocate output array
     out = zeros(Cdouble, BS.nbas, BS.nbas, BS.nbas, BS.nbas)
-    basis_list = collect(BS)
-    for i in eachindex(basis_list)
+    for i in 1:BS.nshells
 
         # Get number of primitive functions
         i_num_prim = Libcint.CINTcgtos_spheric(i-1, BS.lc_bas)
@@ -189,7 +216,7 @@ function ao_2e4c(BS::BasisSet)
         icum += i_num_prim
         # y accumulate the number of primitives in one dimension (j)
         jcum = 1
-        for j in eachindex(basis_list)
+        for j in 1:BS.nshells
 
             # Get number of primitive functions
             j_num_prim = Libcint.CINTcgtos_spheric(j-1, BS.lc_bas)
@@ -199,7 +226,7 @@ function ao_2e4c(BS::BasisSet)
             jcum += j_num_prim
 
             kcum = 1
-            for k in eachindex(basis_list)
+            for k in 1:BS.nshells
                 # Get number of primitive functions
                 k_num_prim = Libcint.CINTcgtos_spheric(k-1, BS.lc_bas)
 
@@ -208,7 +235,7 @@ function ao_2e4c(BS::BasisSet)
                 kcum += k_num_prim
 
                 lcum = 1
-                for l in eachindex(basis_list)
+                for l in 1:BS.nshells
                     # Get number of primitive functions
                     l_num_prim = Libcint.CINTcgtos_spheric(l-1, BS.lc_bas)
 
@@ -228,6 +255,91 @@ function ao_2e4c(BS::BasisSet)
         end
     end
     return out
+end
+
+function ao_2e2c(BS::BasisSet)
+    # icum accumulate the number of primitives in one dimension (i)
+    icum = 1
+    # Allocate output array
+    out = zeros(Cdouble, BS.nbas, BS.nbas)
+    for i in 1:BS.nshells
+
+        # Get number of primitive functions
+        i_num_prim = Libcint.CINTcgtos_spheric(i-1, BS.lc_bas)
+
+        # Get slice corresponding to the address in S where the compute chunk goes
+        ri = icum:(icum+i_num_prim-1)
+        icum += i_num_prim
+        # y accumulate the number of primitives in one dimension (j)
+        jcum = 1
+        for j in 1:BS.nshells
+
+            # Get number of primitive functions
+            j_num_prim = Libcint.CINTcgtos_spheric(j-1, BS.lc_bas)
+
+            # Get slice corresponding to the address in S where the compute chunk goes
+            rj = jcum:(jcum+j_num_prim-1)
+            jcum += j_num_prim
+
+            buf = zeros(Cdouble, i_num_prim*j_num_prim)
+
+            # Call libcint
+            cint2c2e_sph(buf, Cint.([i-1,j-1]), BS.lc_atoms, BS.natoms, BS.lc_bas, BS.nbas, BS.lc_env)
+
+            # Save results into S
+            out[ri, rj] .= reshape(buf, (i_num_prim, j_num_prim))
+        end
+    end
+    return out
+end
+
+function ao_2e3c(BS::BasisSet, auxBS::BasisSet)
+
+    mergedBS = BS + auxBS
+    # icum accumulate the number of primitives in one dimension (i)
+    icum = 1
+    # Allocate output array
+    out = zeros(Cdouble, BS.nbas, BS.nbas, auxBS.nbas)
+
+    for i in 1:BS.nshells
+
+        # Get number of primitive functions
+        i_num_prim = Libcint.CINTcgtos_spheric(i-1, BS.lc_bas)
+
+        # Get slice corresponding to the address in S where the compute chunk goes
+        ri = icum:(icum+i_num_prim-1)
+        icum += i_num_prim
+        # y accumulate the number of primitives in one dimension (j)
+        jcum = 1
+        for j in 1:BS.nshells
+
+            # Get number of primitive functions
+            j_num_prim = Libcint.CINTcgtos_spheric(j-1, BS.lc_bas)
+
+            # Get slice corresponding to the address in S where the compute chunk goes
+            rj = jcum:(jcum+j_num_prim-1)
+            jcum += j_num_prim
+
+            Pcum = 1
+            for P in 1:auxBS.nshells
+
+                P_num_prim = Libcint.CINTcgtos_spheric(P-1, auxBS.lc_bas)
+
+                buf = zeros(Cdouble, i_num_prim*j_num_prim*P_num_prim)
+
+                rP = Pcum:(Pcum+P_num_prim-1)
+                Pcum += P_num_prim
+
+                # Call libcint
+                cint3c2e_sph(buf, Cint.([i-1,j-1, P+BS.nshells-1]), mergedBS.lc_atoms, mergedBS.natoms, mergedBS.lc_bas, mergedBS.nbas, mergedBS.lc_env)
+
+                # Save results into S
+                out[ri, rj, rP] .= reshape(buf, (i_num_prim, j_num_prim, P_num_prim))
+            end
+        end
+    end
+    return out
+
 end
 
 end #module

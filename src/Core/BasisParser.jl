@@ -2,7 +2,9 @@ using Fermi
 using Fermi.Error
 
 const LIBPATH = joinpath(@__DIR__, "../../deps/lib")
-const AM_pat = r"([SPDFGHI]{1,2})\s+?(\d+?)"
+const AM_pat = r"([SPDFGHI]{1,2})\s+?(\d++)"
+const prim_pat = r"([+-]?\d+?\.\d+[D+-]{0,2}\d\d)\s+?([+-]?\d+?\.\d+[D+-]{0,2}+\d\d)"
+const prim_pat3 = r"([+-]?\d+?\.\d+[D+-]{0,2}\d\d)\s+?([+-]?\d+?\.\d+[D+-]{0,2}+\d\d)\s+?([+-]?\d+?\.\d+[D+-]{0,2}+\d\d)"
 const AMDict = Dict(
         "S" => 0,
         "P" => 1, 
@@ -90,8 +92,6 @@ function basis_from_string(bstring::String)
     coef = zeros(nprim)
     exp = zeros(nprim)
 
-    prim_pat = r"([+-]?\d+?\.\d+[D+-]{0,2}\d\d)\s+?([+-]?\d+?\.\d+[D+-]{0,2}+\d\d)"
-
     for i in eachindex(exp)
         m = match(prim_pat, lines[i+1])
         e = replace(m.captures[1], "D"=>"E")
@@ -120,10 +120,8 @@ function two_basis_from_string(bstring::String)
     coef2 = zeros(nprim)
     exp = zeros(nprim)
 
-    prim_pat = r"([+-]?\d+?\.\d+[D+-]{0,2}\d\d)\s+?([+-]?\d+?\.\d+[D+-]{0,2}+\d\d)\s+?([+-]?\d+?\.\d+[D+-]{0,2}+\d\d)"
-
     for i in eachindex(exp)
-        m = match(prim_pat, lines[i+1])
+        m = match(prim_pat3, lines[i+1])
         e = replace(m.captures[1], "D"=>"E")
         c1 = replace(m.captures[2], "D"=>"E")
         c2 = replace(m.captures[3], "D"=>"E")
