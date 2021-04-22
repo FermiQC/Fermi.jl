@@ -127,18 +127,6 @@ function RCCSD(moints::IntegralHelper{T,E,O}) where {T<:AbstractFloat,E<:Abstrac
     RCCSD(moints, T1guess, T2guess, get_rccsd_alg())
 end
 
-
-"""
-    Fermi.CoupledCluster.RCCSD{T}()
-
-Compute a RCCSD wave function for a given precision T (Float64 or Float32)
-"""
-function RCCSD{T}(guess::RCCSD{Tb}) where { T <: AbstractFloat,
-                                           Tb <: AbstractFloat }
-    alg = select_algorithm(Fermi.CurrentOptions["cc_alg"])
-    RCCSD{T}(guess,alg)
-end
-
 # For each implementation a singleton type must be create
 struct RCCSDa <: RCCSDAlgorithm end
 include("RCCSDa.jl")

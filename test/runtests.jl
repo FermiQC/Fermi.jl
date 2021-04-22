@@ -9,5 +9,6 @@ tol = 1E-6
     include("test_RHF.jl")
     include("test_MP.jl")
     include("test_CCSD.jl")
+    include("test_pT.jl")
     @reset
 end

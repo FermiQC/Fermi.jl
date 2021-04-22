@@ -24,6 +24,14 @@ struct RCCSDpT{T} <: AbstractCCWavefunction
     correction::T
 end
 
+function RCCSDpT(x...)
+    if !any(i-> i isa RpTAlgorithm, x)
+        RCCSDpT(x..., get_rpt_alg())
+    else
+        throw(MethodArgument("invalid arguments for RCCSD(T) method: $(x[1:end-1])"))
+    end
+end
+
 function RCCSDpT()
     aoints = IntegralHelper()
     rhf = RHF(aoints)

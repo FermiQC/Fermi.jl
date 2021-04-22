@@ -84,7 +84,6 @@ end
 function RMP2_rhf_energy(ints::IntegralHelper{T,RIFIT,O}, ϵo::AbstractArray{T,1}, ϵv::AbstractArray{T,1}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
     Bov = ints["BOV"].data
 
-    println(size(Bov))
     output(" Computing DF-MP2 Energy... ", ending="")
     v_size = length(ϵv)
     o_size = length(ϵo)
