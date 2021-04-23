@@ -1,30 +1,31 @@
 @reset
 @set printstyle none
+@set lints false
 
 Econv = [
-  -76.330243064527579
-  -56.407496860743720
-  -231.145778408807132
-  -154.579751163193521
-  -114.174489244361155
-  -279.363387904070862
-  -40.427965089111645
-  -378.507540337610067
-  -228.295786774063146
-  -109.338053128796020
+-76.330243064527608
+-56.407496860743684
+-231.145778408807047
+-154.579751163193492
+-114.167209026284311
+-279.363387904071317
+-40.427965089111503
+-378.507540337610976
+-228.295786774063089
+-109.338053128796020
 ]
 
 Edf = [
-  -76.33022227893258
-  -56.40749546292524
-  -231.14577305753187
-  -154.57973239300361
-  -114.17447470611683
-  -279.36344752104367
-  -40.42793797440559
-  -378.50750865474572
-  -228.29574274137781
-  -109.33776675040049
+-76.33022227893399
+-56.40749546292774
+-231.14576763925319
+-154.57973239308316
+-114.16719481064435
+-279.36344752110256
+-40.42793797440178
+-378.50753650237135
+-228.29574274154695
+-109.33776675040524
 ]
 
 @testset "RMP2" begin
@@ -33,12 +34,9 @@ Edf = [
 
         for i = eachindex(molecules)
             # Read molecule
-            mol = open(f->read(f,String), "xyz/"*molecules[i]*".xyz")
+            path = joinpath(@__DIR__, "xyz/"*molecules[i]*".xyz")
+            mol = open(f->read(f,String), path)
 	    
-            if molecules[i] == "glycine"
-	        continue
-            end
-
             # Define options
             Fermi.Options.set("molstring", mol)
             Fermi.Options.set("basis", basis[i])
@@ -55,12 +53,8 @@ Edf = [
 
         for i = eachindex(molecules)
             # Read molecule
-            mol = open(f->read(f,String), "xyz/"*molecules[i]*".xyz")
-
-            # Skipping these cause there is some problem with Cart x Spherical
-            if molecules[i] in ["benzene", "phosphaethene", "glycine"]
-                continue
-            end
+            path = joinpath(@__DIR__, "xyz/"*molecules[i]*".xyz")
+            mol = open(f->read(f,String), path)
 
             # Define options
             Fermi.Options.set("molstring", mol)

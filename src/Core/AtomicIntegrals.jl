@@ -41,28 +41,51 @@ function compute_V!(I::IntegralHelper{T, E, AtomicOrbitals}) where {T<:AbstractF
 end
 
 function compute_ERI!(I::IntegralHelper{T, JKFIT, AtomicOrbitals}) where T<:AbstractFloat
-        auxjk = Options.get("jkfit")
-        basis = I.basis
+    auxjk = Options.get("jkfit")
+    basis = I.basis
 
-        # If aux is auto, determine the aux basis from the basis
-        if auxjk == "auto"
-            std_name = Regex("cc-pv.z")
-            auxjk = occursin(std_name, basis) ? basis*"-jkfit" : "cc-pvqz-jkfit"
-        end
+    # If aux is auto, determine the aux basis from the basis
+    if auxjk == "auto"
+        std_name = Regex("cc-pv.z")
+        auxjk = occursin(std_name, basis) ? basis*"-jkfit" : "cc-pvqz-jkfit"
+    end
 
+    if Options.get("lints")
         I.cache["ERI"] = FermiMDArray(df_ao_eri(I.molecule, I.basis, auxjk, normalize = I.normalize))
+    else
+        bs = Fermi.GaussianBasis.BasisSet(I.molecule, I.basis)
+        auxbs = Fermi.GaussianBasis.BasisSet(I.molecule, auxjk)
+        J = FermiMDArray(Fermi.GaussianBasis.ao_2e2c(auxbs))
+        Pqp = FermiMDArray(Fermi.GaussianBasis.ao_2e3c(bs, auxbs))
+        #display(Pqp)
+        Jh = Array(real(J^(-1/2)))
+        @tensor b[Q,p,q] := Pqp[p,q,P]*Jh[P,Q]
+        I.cache["ERI"] = b
+    end
 end
 
 function compute_ERI!(I::IntegralHelper{T, RIFIT, AtomicOrbitals}) where T<:AbstractFloat
-        auxri = Options.get("rifit")
-        basis = I.basis
+    auxri = Options.get("rifit")
+    basis = I.basis
 
-        # If aux is auto, determine the aux basis from the basis
-        if auxri == "auto"
-            std_name = Regex("cc-pv.z")
-            auxri = occursin(std_name, basis) ? basis*"-rifit" : "cc-pvqz-rifit"
-        end
+    # If aux is auto, determine the aux basis from the basis
+    if auxri == "auto"
+        std_name = Regex("cc-pv.z")
+        auxri = occursin(std_name, basis) ? basis*"-rifit" : "cc-pvqz-rifit"
+    end
+
+    if Options.get("lints")
         I.cache["ERI"] = FermiMDArray(df_ao_eri(I.molecule, I.basis, auxri, normalize = I.normalize))
+    else
+        bs = Fermi.GaussianBasis.BasisSet(I.molecule, I.basis)
+        auxbs = Fermi.GaussianBasis.BasisSet(I.molecule, auxri)
+        J = FermiMDArray(Fermi.GaussianBasis.ao_2e2c(auxbs))
+        Pqp = FermiMDArray(Fermi.GaussianBasis.ao_2e3c(bs, auxbs))
+        #display(Pqp)
+        Jh = Array(real(J^(-1/2)))
+        @tensor b[Q,p,q] := Pqp[p,q,P]*Jh[P,Q]
+        I.cache["ERI"] = b
+    end
 end
 
 function compute_ERI!(I::IntegralHelper{T, Chonky, AtomicOrbitals}) where T<:AbstractFloat

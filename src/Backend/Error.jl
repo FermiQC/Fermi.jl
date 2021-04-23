@@ -1,8 +1,6 @@
 module Error
 
-export InvalidFermiOption
-export MethodArgument
-export InvalidMolecule
+export InvalidFermiOption, MethodArgument, InvalidMolecule, BasisSetError
 
 """
     Fermi.Error.InvalidFermiOption
@@ -34,5 +32,10 @@ struct InvalidMolecule <: Exception
     msg::String
 end
 Base.showerror(io::IO, e::InvalidMolecule) = print(io, "InvalidMolecule: ", e.msg)
+
+struct BasisSetError <: Exception
+    msg::String
+end
+Base.showerror(io::IO, e::BasisSetError) = print(io, "BasisSet ERROR: ", e.msg)
 
 end # module

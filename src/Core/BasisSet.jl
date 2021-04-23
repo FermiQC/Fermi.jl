@@ -127,27 +127,10 @@ function collect(BS::BasisSet)
 end
 
 function +(B1::BasisSet, B2::BasisSet)
-    basis_name = B1.basis_name*"+"*B2.basis_name
 
-    natm = B1.natoms + B2.natoms
-    nbas = B1.nbas + B2.nbas
-    nshells = B1.nshells + B2.nshells
 
-    b1atm = length(B1.lc_atoms)
-    b1bas = length(B1.lc_bas)
-    b1env = length(B1.lc_env)
-    b2atm = length(B2.lc_atoms)
-    b2bas = length(B2.lc_bas)
-    b2env = length(B2.lc_env)
+    atoms = B1.molecule.atoms
 
-    lc_atom = zeros(Cint, b1atm+b2atm)
-    lc_atom .= vcat(B1.lc_atoms, B2.lc_atoms)
-
-    lc_bas = zeros(Cint, b1bas + b2bas)
-    lc_bas .= vcat(B1.lc_bas, B2.lc_bas)
-
-    lc_env = zeros(Cdouble, b1env + b2env)
-    lc_env .= vcat(B1.lc_env, B2.lc_env)
 
     return BasisSet(B1.molecule, basis_name, B1.basis, natm, nbas, nshells, lc_atom, lc_bas, lc_env)
 end
@@ -190,7 +173,7 @@ function ao_1e(BS::BasisSet, compute::String)
             # Call libcint
             libcint_1e(buf, Cint.([i-1,j-1]), BS.lc_atoms, BS.natoms, BS.lc_bas, BS.nbas, BS.lc_env)
 
-            # Save results into S
+            # Save results into out
             out[ri, rj] .= reshape(buf, (i_num_prim, j_num_prim))
 
             jcum += j_num_prim
@@ -248,7 +231,7 @@ function ao_2e4c(BS::BasisSet)
                     # Call libcint
                     cint2e_sph(buf, Cint.([i-1,j-1,k-1,l-1]), BS.lc_atoms, BS.natoms, BS.lc_bas, BS.nbas, BS.lc_env)
 
-                    # Save results into S
+                    # Save results into out
                     out[ri, rj, rk, rl] .= reshape(buf, (i_num_prim, j_num_prim, k_num_prim, l_num_prim))
                 end
             end
@@ -286,7 +269,7 @@ function ao_2e2c(BS::BasisSet)
             # Call libcint
             cint2c2e_sph(buf, Cint.([i-1,j-1]), BS.lc_atoms, BS.natoms, BS.lc_bas, BS.nbas, BS.lc_env)
 
-            # Save results into S
+            # Save results into out
             out[ri, rj] .= reshape(buf, (i_num_prim, j_num_prim))
         end
     end
@@ -295,7 +278,94 @@ end
 
 function ao_2e3c(BS::BasisSet, auxBS::BasisSet)
 
-    mergedBS = BS + auxBS
+    ATM_SLOTS = 6
+    BAS_SLOTS = 8
+
+    natm = BS.natoms
+    nbas = BS.nbas + auxBS.nbas
+    nshells = BS.nshells + auxBS.nshells
+
+    lc_atm = zeros(Cint, natm*ATM_SLOTS)
+    lc_bas = zeros(Cint, nshells*BAS_SLOTS)
+    env = zeros(Cdouble, length(BS.lc_env) + length(auxBS.lc_env) - 3*natm)
+
+    # Prepare the lc_atom input 
+    off = 0
+    ib = 0 
+    for i = eachindex(BS.molecule.atoms)
+        A = BS.molecule.atoms[i]
+        # lc_atom has ATM_SLOTS (6) "spaces" for each atom
+        # The first one (Z_INDEX) is the atomic number
+        lc_atm[1 + ATM_SLOTS*(i-1)] = Cint(A.Z)
+        # The second one is the env index address for xyz
+        lc_atm[2 + ATM_SLOTS*(i-1)] = off
+        env[off+1:off+3] .= A.xyz ./ Fermi.PhysicalConstants.bohr_to_angstrom
+        off += 3
+        # The remaining 4 slots are zero.
+    end
+
+    for i = eachindex(BS.molecule.atoms)
+        A = BS.molecule.atoms[i]
+        # Prepare the lc_bas input
+        for j = eachindex(BS.basis[A])
+            B = BS.basis[A][j] 
+            Ne = length(B.exp)
+            Nc = length(B.coef)
+            # lc_bas has BAS_SLOTS for each basis set
+            # The first one is the index of the atom starting from 0
+            lc_bas[1 + BAS_SLOTS*ib] = i-1
+            # The second one is the angular momentum
+            lc_bas[2 + BAS_SLOTS*ib] = B.l
+            # The third is the number of primitive functions
+            lc_bas[3 + BAS_SLOTS*ib] = Nc
+            # The fourth is the number of contracted functions
+            lc_bas[4 + BAS_SLOTS*ib] = 1
+            # The fifth is a κ parameter
+            lc_bas[5 + BAS_SLOTS*ib] = 0
+            # Sixth is the env index address for exponents
+            lc_bas[6 + BAS_SLOTS*ib] = off
+            env[off+1:off+Ne] .= B.exp
+            off += Ne
+            # Seventh is the env index address for contraction coeff
+            lc_bas[7 + BAS_SLOTS*ib] = off
+            env[off+1:off+Nc] .= B.coef
+            off += Nc
+            # Eigth, nothing
+            ib += 1
+        end
+    end
+
+    for i = eachindex(auxBS.molecule.atoms)
+        A = auxBS.molecule.atoms[i]
+        # Prepare the lc_bas input
+        for j = eachindex(auxBS.basis[A])
+            B = auxBS.basis[A][j] 
+            Ne = length(B.exp)
+            Nc = length(B.coef)
+            # lc_bas has BAS_SLOTS for each basis set
+            # The first one is the index of the atom starting from 0
+            lc_bas[1 + BAS_SLOTS*ib] = i-1
+            # The second one is the angular momentum
+            lc_bas[2 + BAS_SLOTS*ib] = B.l
+            # The third is the number of primitive functions
+            lc_bas[3 + BAS_SLOTS*ib] = Nc
+            # The fourth is the number of contracted functions
+            lc_bas[4 + BAS_SLOTS*ib] = 1
+            # The fifth is a κ parameter
+            lc_bas[5 + BAS_SLOTS*ib] = 0
+            # Sixth is the env index address for exponents
+            lc_bas[6 + BAS_SLOTS*ib] = off
+            env[off+1:off+Ne] .= B.exp
+            off += Ne
+            # Seventh is the env index address for contraction coeff
+            lc_bas[7 + BAS_SLOTS*ib] = off
+            env[off+1:off+Nc] .= B.coef
+            off += Nc
+            # Eigth, nothing
+            ib += 1
+        end
+    end
+
     # icum accumulate the number of primitives in one dimension (i)
     icum = 1
     # Allocate output array
@@ -331,15 +401,14 @@ function ao_2e3c(BS::BasisSet, auxBS::BasisSet)
                 Pcum += P_num_prim
 
                 # Call libcint
-                cint3c2e_sph(buf, Cint.([i-1,j-1, P+BS.nshells-1]), mergedBS.lc_atoms, mergedBS.natoms, mergedBS.lc_bas, mergedBS.nbas, mergedBS.lc_env)
+                cint3c2e_sph(buf, Cint.([i-1, j-1, P+BS.nshells-1]), lc_atm, natm, lc_bas, nbas, env)
 
-                # Save results into S
+                # Save results into out
                 out[ri, rj, rP] .= reshape(buf, (i_num_prim, j_num_prim, P_num_prim))
             end
         end
     end
     return out
-
 end
 
 end #module

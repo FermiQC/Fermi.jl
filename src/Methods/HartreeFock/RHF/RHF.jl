@@ -89,7 +89,7 @@ function string_repr(X::RHF)
 end
 
 function show(io::IO, ::MIME"text/plain", X::RHF)
-    print(string_repr(M))
+    print(string_repr(X))
 end
 
 function RHF(mol::Molecule)

@@ -1,30 +1,31 @@
 @reset
 @set printstyle none
+@set lints false
 
 Econv = [
-  -76.335767822597319
-  -56.422272522003759
-  -231.188695053088651
-  -154.616795317070171
-  -114.187588904912914
-  -279.415437830677320
-  -40.448675124014301
-  -378.532023978713198
-  -228.312964998766120
-  -109.342963378094467
+-76.335767822597347
+-56.422272522003723
+-231.188695053088594
+-154.616795317070142
+-114.180708994251702
+-279.415437830677774
+-40.448675124014166
+-378.532023978714108
+-228.312964998766091
+-109.342963378094467
 ]
 
 Edf = [
- -76.33577146094589
- -56.42227793333655
- -231.18869172128097
- -154.61678476264649
- -114.18757895139244
- -279.41549876119188
- -40.44867306183189
- -378.53199337419994
- -228.31293477894931
- -109.34269895623227
+-76.33577146094731
+-56.42227793333907
+-231.18868648219075
+-154.61678476272598
+-114.18069925474244
+-279.41549876125123
+-40.44867306182801
+-378.53202120936407
+-228.31293477911845
+-109.34269895623703
 ]
 
 @testset "CCSD" begin
@@ -33,7 +34,8 @@ Edf = [
 
         for i = eachindex(molecules)
             # Read molecule
-            mol = open(f->read(f,String), "xyz/"*molecules[i]*".xyz")
+            path = joinpath(@__DIR__, "xyz/"*molecules[i]*".xyz")
+            mol = open(f->read(f,String), path)
 	    
             # Define options
             Fermi.Options.set("molstring", mol)
@@ -44,27 +46,24 @@ Edf = [
         end
     end
     
-    #@testset "Density Fitted" begin
-    #    Fermi.Options.set("df", true)
-    #    Fermi.Options.set("jkfit", "cc-pvqz-jkfit")
-    #    Fermi.Options.set("rifit", "cc-pvqz-rifit")
+    @testset "Density Fitted" begin
+        Fermi.Options.set("df", true)
+        Fermi.Options.set("jkfit", "cc-pvqz-jkfit")
+        Fermi.Options.set("rifit", "cc-pvqz-rifit")
 
-    #    for i = eachindex(molecules)
-    #        # Read molecule
-    #        mol = open(f->read(f,String), "xyz/"*molecules[i]*".xyz")
+        for i = eachindex(molecules)
+            # Read molecule
+            path = joinpath(@__DIR__, "xyz/"*molecules[i]*".xyz")
+            mol = open(f->read(f,String), path)
 
-    #        # Skipping these cause there is some problem with Cart x Spherical
-    #        if molecules[i] in ["benzene", "phosphaethene"]
-    #            continue
-    #        end
 
-    #        # Define options
-    #        Fermi.Options.set("molstring", mol)
-    #        Fermi.Options.set("basis", basis[i])
+            # Define options
+            Fermi.Options.set("molstring", mol)
+            Fermi.Options.set("basis", basis[i])
 
-    #        wf = @energy ccsd
-    #        @test isapprox(wf.energy, Edf[i], rtol=tol) # Energy from Psi4
-    #    end
-    #end
+            wf = @energy ccsd
+            @test isapprox(wf.energy, Edf[i], rtol=tol) # Energy from Psi4
+        end
+    end
 end
 

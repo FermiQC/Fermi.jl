@@ -280,7 +280,7 @@ macro set(A::Symbol, B::Symbol)
     end
 end
 
-macro set(A::Symbol, B::Union{Number, Bool})
+macro set(A::Symbol, B::Union{Number, Bool, String})
     clean_up(s) = String(filter(c->!occursin(c," ():"),s))
     key = clean_up(repr(A))
     quote
@@ -333,7 +333,7 @@ macro set(block::Expr)
         valtype = typeof(val)
 
         # First we check the easy case: B is a Number or Bool
-        if valtype <: Union{Number, Bool}
+        if valtype <: Union{Number, Bool, String}
             push!(out.args, quote Fermi.Options.set($key, $val) end)
 
         # Now the case where B is a Symbol. 

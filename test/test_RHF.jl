@@ -1,30 +1,31 @@
 @reset
 @set printstyle none
+@set lints false
 
 Econv = [
--76.05293659641387
--56.20535441552491
--230.62430998333491
--154.09239259145315
--113.86547542905063
--279.11530153592190
--40.21342962572423
--378.34082589236152
--227.76309337209906
--108.95448240313175
+-76.05293659641389
+-56.20535441552476
+-230.62430998333460
+-154.09239259145326
+-113.86482635166755
+-279.11530153592219
+-40.21342962572409
+-378.34082589236215
+-227.76309337209935
+-108.95448240313179
 ]
 
 Edf = [
--76.05293666271385
--56.20536076021163
--230.62430735896447
--154.09238732181598
--113.86547012724539
--279.11536397681431
--40.21342776121698
--378.34079658679821
--227.76307917179560
--108.95446350767733
+-76.05293666271527
+-56.20536076021406
+-230.62430445834565
+-154.09238732189544
+-113.86482178236324
+-279.11536397687240
+-40.21342776121311
+-378.34082725476162
+-227.76307917196510
+-108.95446350768205
 ]
 
 @testset "RHF" begin
@@ -33,7 +34,8 @@ Edf = [
 
         for i = eachindex(molecules)
             # Read molecule
-            mol = open(f->read(f,String), "xyz/"*molecules[i]*".xyz")
+            path = joinpath(@__DIR__, "xyz/"*molecules[i]*".xyz")
+            mol = open(f->read(f,String), path)
 
             # Define options
             Fermi.Options.set("molstring", mol)
@@ -50,12 +52,8 @@ Edf = [
 
         for i = eachindex(molecules)
             # Read molecule
-            mol = open(f->read(f,String), "xyz/"*molecules[i]*".xyz")
-
-            # Skipping these cause there is some problem with Cart x Spherical
-            if molecules[i] in ["benzene", "phosphaethene"]
-                continue
-            end
+            path = joinpath(@__DIR__, "xyz/"*molecules[i]*".xyz")
+            mol = open(f->read(f,String), path)
 
             # Define options
             Fermi.Options.set("molstring", mol)

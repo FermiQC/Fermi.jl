@@ -1,7 +1,15 @@
 function mo_from_ao(I::IntegralHelper{T1,E1,O}, aoints::IntegralHelper{T2,E2,AtomicOrbitals}, entries...) where {T1<:AbstractFloat,T2<:AbstractFloat,
                                                             E1<:AbstractERI,E2<:AbstractERI,O<:AbstractRestrictedOrbitals}
     if T1 !== T2 || E1 !== E2 
-        output("!! AO Integrals are not the same type as the MO. New integrals will be computed")
+        output("!! AO Integrals are not the same type as the MO. New integrals will be computed.")
+        for entry in entries
+            if occursin(r"F[dijab]{0,2}", entry)
+                output("Fock matrix will be computed using old ERI")
+                compute_F(I, aoints)
+            end
+            entries = [entries...]
+            filter!(i->i==entry, entries)
+        end
         aoints = IntegralHelper(I, AtomicOrbitals())
     end
     t = @elapsed begin
@@ -34,7 +42,7 @@ function compute!(I::IntegralHelper{T,Chonky,O}, entry::String, x...) where {T<:
         compute_OVVV!(I, x...)
     elseif entry == "VVVV"
         compute_VVVV!(I, x...)
-    elseif entry in ["Fd", "Fia", "Fij", "Fab"]
+    elseif occursin(r"F[dijab]{0,2}", entry)
         compute_F(I, x...)
     else
         throw(Fermi.InvalidFermiOption("Invalid key for IntegralHelper: $(entry)."))
@@ -68,7 +76,7 @@ function compute!(I::IntegralHelper{T,E,O}, entry::String, x...) where {T<: Abst
         compute_OVVV!(I, x...)
     elseif entry == "VVVV"
         compute_VVVV!(I, x...)
-    elseif entry in ["Fd", "Fia", "Fij", "Fab"]
+    elseif occursin(r"F[dijab]{0,2}", entry)
         compute_F(I, x...)
     else
         throw(Fermi.InvalidFermiOption("Invalid key for IntegralHelper: $(entry)."))
@@ -436,7 +444,8 @@ function compute_F(I::IntegralHelper{T,Chonky,O}, aoints::IntegralHelper{T, Chon
     I["Fab"] = Fmol[v,v] - diagm(Fd[v])
 end
 
-function compute_F(I::IntegralHelper{T,E,O}, aoints::IntegralHelper{T, E, AtomicOrbitals}) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
+function compute_F(I::IntegralHelper{T,E1,O}, aoints::IntegralHelper{T, E2, AtomicOrbitals}) where {T<:AbstractFloat, 
+                                                    E1<:AbstractDFERI, E2<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
 
     core = Options.get("drop_occ")
     inac = Options.get("drop_vir")
@@ -470,9 +479,7 @@ function compute_F(I::IntegralHelper{T,E,O}, aoints::IntegralHelper{T, E, Atomic
 end
 
 function compute_F(I::IntegralHelper{T,E,RHFOrbitals}) where {T<:AbstractFloat, E<:AbstractERI}
-    ndocc = I.molecule.Nα
     I["Fd"] = I.orbitals.eps
-    I["Fij"] = FermiMDzeros(ndocc, ndocc)
 end
 
 function compute_ref_energy(I::IntegralHelper{T,Chonky,O}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}

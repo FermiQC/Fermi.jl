@@ -3,8 +3,8 @@ using Fermi.Error
 
 const LIBPATH = joinpath(@__DIR__, "../../deps/lib")
 const AM_pat = r"([SPDFGHI]{1,2})\s+?(\d++)"
-const prim_pat = r"([+-]?\d+?\.\d+[D+-]{0,2}\d\d)\s+?([+-]?\d+?\.\d+[D+-]{0,2}+\d\d)"
-const prim_pat3 = r"([+-]?\d+?\.\d+[D+-]{0,2}\d\d)\s+?([+-]?\d+?\.\d+[D+-]{0,2}+\d\d)\s+?([+-]?\d+?\.\d+[D+-]{0,2}+\d\d)"
+const prim_pat = r"([+-]?\d*?\.\d+[D+-]{0,2}\d\d)\s+?([+-]?\d*?\.\d+[D+-]{0,2}+\d\d)"
+const prim_pat3 = r"([+-]?\d*?\.\d+[D+-]{0,2}\d\d)\s+?([+-]?\d*?\.\d+[D+-]{0,2}+\d\d)\s+?([+-]?\d*?\.\d+[D+-]{0,2}+\d\d)"
 const AMDict = Dict(
         "S" => 0,
         "P" => 1, 
@@ -86,6 +86,11 @@ function basis_from_string(bstring::String)
     lines = split(strip(bstring), "\n")
     head = lines[1]
     m = match(AM_pat, head)
+
+    if m === nothing
+        throw(BasisSetError("cannot parse basis set file line: $head"))
+    end
+
     AMsymbol = String(m.captures[1])
     l = AMDict[AMsymbol]
     nprim = parse(Int, m.captures[2])
@@ -94,6 +99,11 @@ function basis_from_string(bstring::String)
 
     for i in eachindex(exp)
         m = match(prim_pat, lines[i+1])
+
+        if m === nothing
+            throw(BasisSetError("cannot parse basis set file line: $(lines[i+1])"))
+        end
+
         e = replace(m.captures[1], "D"=>"E")
         c = replace(m.captures[2], "D"=>"E")
         coef[i] = parse(Float64, c)
@@ -108,6 +118,9 @@ function two_basis_from_string(bstring::String)
     lines = split(strip(bstring), "\n")
     head = lines[1]
     m = match(AM_pat, head)
+    if m === nothing
+        throw(BasisSetError("cannot parse basis set file line: $head"))
+    end
     AMsymbol = String(m.captures[1])
 
     length(AMsymbol) == 2 || throw(MethodArgument("cannot extract two basis from $AMsymbol function"))
@@ -122,6 +135,11 @@ function two_basis_from_string(bstring::String)
 
     for i in eachindex(exp)
         m = match(prim_pat3, lines[i+1])
+
+        if m === nothing
+            throw(BasisSetError("cannot parse basis set file line: $(lines[i+1])"))
+        end
+
         e = replace(m.captures[1], "D"=>"E")
         c1 = replace(m.captures[2], "D"=>"E")
         c2 = replace(m.captures[3], "D"=>"E")
