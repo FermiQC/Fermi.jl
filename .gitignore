@@ -9,4 +9,5 @@ Manifest.toml
 *.so
 output*
 *.log
+deps/libcint
 
