@@ -11,9 +11,9 @@ run(`make`)
 
 # Fetch binary 
 println("Cleaning up...")
-if islinux()
+if Sys.islinux()
     run(`cp libcint.so ../../libcint`)
-elseif isappled()
+elseif Sys.isapple()
     run(`cp libcint.dylib ../../libcint`)
 else
     error("Could not resolve OS")
