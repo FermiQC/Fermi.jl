@@ -12,9 +12,9 @@ run(`make`)
 # Fetch binary 
 println("Cleaning up...")
 if Sys.islinux()
-    run(`cp libcint.so ../../libcint`)
+    run(`cp libcint.so ../../libcint.bin`)
 elseif Sys.isapple()
-    run(`cp libcint.dylib ../../libcint`)
+    run(`cp libcint.dylib ../../libcint.bin`)
 else
     error("Could not resolve OS")
 end
@@ -23,4 +23,3 @@ end
 cd(@__DIR__)
 run(`tar -zxf lib.gz`)
 rm(joinpath(@__DIR__, "libcint"), recursive=true, force=true)
-rm(joinpath(@__DIR__, "lib.gz"), recursive=true, force=true)

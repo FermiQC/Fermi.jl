@@ -2,7 +2,7 @@ module Libcint
 
 export cint1e_kin_sph!, cint1e_nuc_sph!, cint1e_ovlp_sph!, cint2c2e_sph!, cint2e_sph!, cint3c2e_sph!
 
-const LIBCINT = joinpath(@__DIR__, "../../deps/libcint")
+const LIBCINT = joinpath(@__DIR__, "../../deps/libcint.bin")
 
 function CINTcgtos_spheric(bas_id, bas)
     @ccall LIBCINT.CINTcgtos_spheric(bas_id::Cint, bas::Ptr{Cint})::Cint
