@@ -15,7 +15,7 @@ function oind2eins(oindA::NTuple{NAo}, cindA::NTuple{NAc},
     # to represent contractions into an Einsum scheme.
 
 
-    # Check contraction conssitency.
+    # Check contraction consistency.
     NAo + NBo == NCt || throw(IndexError("number of outer index not consistent."))
     NAc == NBc || throw(IndexError("number of contracted index not consistent."))
 

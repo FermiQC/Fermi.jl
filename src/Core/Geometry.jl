@@ -13,13 +13,14 @@ module Geometry
 export Molecule
 export Atom
 
+import Base: show
+
 using Fermi
 using Fermi.Error
 using Fermi.PhysicalConstants: atomic_number, bohr_to_angstrom
 using LinearAlgebra
 using Lints
 using Formatting
-import Base: show
 
 """
     Fermi.Atom
@@ -183,24 +184,23 @@ function get_xyz(M::Molecule)
 end
 
 """
-    Fermi.get_string(M::Molecule)
+    Fermi.string_repr(M::Molecule)
 
 Returns a nicely formatted string with all the molecule's information
 """
-function get_string(M::Molecule)
+function string_repr(M::Molecule)
     out = ""
     out = out*format("Molecule:\n\n")
-    out = out*format(get_xyz(M))
+    out = out*format(Fermi.Geometry.get_xyz(M))
     out = out*format("\n")
     out = out*format("\nCharge: {}   ", M.charge)
     out = out*format("Multiplicity: {}   \n", M.multiplicity)
-    out = out*format("Nuclear repulsion: {:15.10f}\n", M.Vnuc)
+    out = out*format("Nuclear repulsion: {:15.10f}", M.Vnuc)
     return out
 end
 
 # Pretty printing
 function show(io::IO, ::MIME"text/plain", M::Molecule)
-    print(get_string(M))
+    print(string_repr(M))
 end
-
 end #Module

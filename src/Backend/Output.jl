@@ -11,7 +11,7 @@ Writes a Python-style String `str` formatted with the values `x...`. The formatt
 The string is printed into the standard output or written into a file depending on the `printstyle` option. See below:
 
     printstyle: 
-    "stdout"  Default - Returns the string into the Julia REPL (standard output)
+    "repl"  Default - Returns the string into the Julia REPL (standard output)
     "file"    Write the string into a file. Path must be specified with the keyword `output`
     "both"    Returns the value into stdout and also writes to file
     "none"    Does not write or print anything
@@ -40,7 +40,7 @@ function output(str, x...; ending="\n")
 
     if style == "none"
         nothing
-    elseif style == "stdout"
+    elseif style == "repl"
         print(f)
     elseif style == "file"
         path = Options.get("output")
@@ -56,6 +56,6 @@ function output(str, x...; ending="\n")
         end
         print(f)
     else
-        throw(InvalidFermiOption("printing style not recognized: $style. Accepted `printstyle` values: stdout, file, both, and none"))
+        throw(InvalidFermiOption("printing style not recognized: $style. Accepted `printstyle` values: repl, file, both, and none"))
     end
 end

@@ -32,7 +32,7 @@ function RHF_gwh_guess(ints::IntegralHelper)
     molecule = ints.molecule
     S = ints["S"]
     d, U = diagonalize(S, sortby = x->1/abs(x))
-    Λ = S^(-1/2)
+    Λ = FermiMDArray(Hermitian(S.data)^(-1/2))
     idxs = [abs(d[i]) > 1E-7 for i = eachindex(d)]
 
     H = real.(ints["T"] + ints["V"])

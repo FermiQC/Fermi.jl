@@ -2,6 +2,8 @@ module Orbitals
 
 using Fermi
 using Fermi.Geometry
+using Fermi.GaussianBasis
+using TensorOperations
 
 export AbstractOrbitals, AtomicOrbitals, AbstractRestrictedOrbitals, AbstractUnrestrictedOrbitals
 export GeneralRestrictedOrbitals
@@ -17,7 +19,14 @@ _struct tree:_
 **AbstractOrbitals**  (Top level)
 """
 abstract type AbstractOrbitals end
-struct AtomicOrbitals <: AbstractOrbitals end
+
+struct AtomicOrbitals <: AbstractOrbitals 
+    basisset::BasisSet
+end
+
+function AtomicOrbitals()
+    return AtomicOrbitals(BasisSet())
+end
 
 abstract type AbstractRestrictedOrbitals <: AbstractOrbitals end
 abstract type AbstractUnrestrictedOrbitals <: AbstractOrbitals end
@@ -48,19 +57,20 @@ _struct tree:_
 
 **GeneralRestrictedOrbitals** <: AbstractOrbitals
 """
-struct GeneralRestrictedOrbitals{T} <: AbstractRestrictedOrbitals 
+mutable struct GeneralRestrictedOrbitals{T} <: AbstractRestrictedOrbitals 
     name::String
     basis::String
     molecule::Molecule
+    sd_energy::T
     C::AbstractArray{T,2}
 end
 
-function GeneralRestrictedOrbitals(C::AbstractArray{T,2}; mol=nothing, name="Custom", basis="undef") where T <: AbstractFloat
+function GeneralRestrictedOrbitals(C::AbstractArray{T,2}; mol=nothing, name="Custom", basis="undef", sd_energy=zero(T)) where T <: AbstractFloat
 
     mol === nothing ? mol = Fermi.Geometry.Molecule() : nothing
     basis == "undef" ? basis = Fermi.Options.get("basis") : nothing
 
-    GeneralRestrictedOrbitals{T}(name, basis, mol, C)
+    GeneralRestrictedOrbitals{T}(name, basis, mol, sd_energy, C)
 end
 
 """
@@ -79,6 +89,7 @@ struct RHFOrbitals <: AbstractRestrictedOrbitals
     molecule::Molecule
     basis::String
     eps::AbstractArray{Float64,1}
+    sd_energy::Float64
     C::AbstractArray{Float64,2}
 end
 

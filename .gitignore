@@ -5,4 +5,8 @@ docs/build/
 output.dat
 Manifest.toml
 .vscode
+*.gbs
+*.so
+output*
+*.log
 

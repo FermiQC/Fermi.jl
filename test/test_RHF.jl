@@ -1,33 +1,31 @@
 @reset
 @set printstyle none
-
-molecules = ["water", "ammonia", "benzene", "ethanol", "formaldehyde", "glycine", "methane", "phosphaethene", "acetic_acid", "nitrogen"]
-basis = ["cc-pvtz", "aug-cc-pvdz", "6-31g", "cc-pvdz", "6-31g*", "sto-3g", "cc-pvtz", "3-21g", "6-311+g", "cc-pcvdz"]
+@set lints false
 
 Econv = [
--76.0529365964
--56.2053544136
--230.6243099831 
--154.0923925902 
--113.8654754290 
--279.1153015356 
--40.2134296254 
--378.3408258921 
--227.7630933676 
--108.9544824030
+-76.05293659641389
+-56.20535441552476
+-230.62430998333460
+-154.09239259145326
+-113.86482635166755
+-279.11530153592219
+-40.21342962572409
+-378.34082589236215
+-227.76309337209935
+-108.95448240313179
 ]
 
 Edf = [
-  -76.0529366627
-  -56.2053607582
-  -230.6243073587
-  -154.0923873206
-  -113.8654701272
-  -279.1153639765
-  -40.2134277609
-  -378.3407965866
-  -227.7630791673
-  -108.9544635076
+-76.05293666271527
+-56.20536076021406
+-230.62430445834565
+-154.09238732189544
+-113.86482178236324
+-279.11536397687240
+-40.21342776121311
+-378.34082725476162
+-227.76307917196510
+-108.95446350768205
 ]
 
 @testset "RHF" begin
@@ -36,7 +34,8 @@ Edf = [
 
         for i = eachindex(molecules)
             # Read molecule
-            mol = open(f->read(f,String), "xyz/"*molecules[i]*".xyz")
+            path = joinpath(@__DIR__, "xyz/"*molecules[i]*".xyz")
+            mol = open(f->read(f,String), path)
 
             # Define options
             Fermi.Options.set("molstring", mol)
@@ -53,12 +52,8 @@ Edf = [
 
         for i = eachindex(molecules)
             # Read molecule
-            mol = open(f->read(f,String), "xyz/"*molecules[i]*".xyz")
-
-            # Skipping these cause there is some problem with Cart x Spherical
-            if molecules[i] in ["benzene", "phosphaethene"]
-                continue
-            end
+            path = joinpath(@__DIR__, "xyz/"*molecules[i]*".xyz")
+            mol = open(f->read(f,String), path)
 
             # Define options
             Fermi.Options.set("molstring", mol)

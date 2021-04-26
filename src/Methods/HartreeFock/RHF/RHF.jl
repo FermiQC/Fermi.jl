@@ -2,7 +2,6 @@ using TensorOperations
 using LinearAlgebra
 using Fermi.DIIS
 using Fermi.Integrals: projector
-
 import Base: show
 
 export RHF
@@ -79,12 +78,18 @@ struct RHF <: AbstractHFWavefunction
 end
 
 # Pretty printing
+function string_repr(X::RHF)
+    out = ""
+    out = out*" ⇒ Fermi Restricted Hartree--Fock Wave function\n"
+    out = out*" ⋅ Basis:                  $(X.orbitals.basis)\n"
+    out = out*" ⋅ Energy:                 $(X.energy)\n"
+    out = out*" ⋅ Occ. Spartial Orbitals: $(X.ndocc)\n"
+    out = out*" ⋅ Vir. Spartial Orbitals: $(X.nvir)"
+    return out
+end
+
 function show(io::IO, ::MIME"text/plain", X::RHF)
-    print(" ⇒ Fermi Restricted Hartree--Fock Wave function\n")
-    print(" ⋅ Basis:                  $(X.orbitals.basis)\n")
-    print(" ⋅ Energy:                 $(X.energy)\n")
-    print(" ⋅ Occ. Spartial Orbitals: $(X.ndocc)\n")
-    print(" ⋅ Vir. Spartial Orbitals: $(X.nvir)")
+    print(string_repr(X))
 end
 
 function RHF(mol::Molecule)
