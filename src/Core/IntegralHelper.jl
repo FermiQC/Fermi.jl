@@ -72,7 +72,7 @@ function IntegralHelper{T}(;molecule = Molecule(), orbitals = AtomicOrbitals(),
     if Options.get("df") && eri_type === nothing
         # If the associated orbitals are AtomicOrbitals and DF is requested, JKFIT is set by default
         # Otherwise, the ERI type will be RIFIT
-        eri_type = orbitals === AtomicOrbitals() ? JKFIT() : RIFIT()
+        eri_type = typeof(orbitals) === AtomicOrbitals ? JKFIT() : RIFIT()
     elseif !(typeof(eri_type) <: AbstractERI)
         eri_type = Chonky()
     end

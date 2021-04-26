@@ -6,6 +6,8 @@ using Fermi.Libcint
 
 import Base: collect, +
 
+export BasisSet, BasisFunction
+
 include("BasisParser.jl")
 
 struct BasisFunction
@@ -138,47 +140,56 @@ end
 function ao_1e(BS::BasisSet, compute::String)
 
     if compute == "overlap"
-        libcint_1e =  cint1e_ovlp_sph
+        libcint_1e! =  cint1e_ovlp_sph!
     elseif compute == "kinetic"
-        libcint_1e =  cint1e_kin_sph
+        libcint_1e! =  cint1e_kin_sph!
     elseif compute == "nuclear"
-        libcint_1e =  cint1e_nuc_sph
+        libcint_1e! =  cint1e_nuc_sph!
     end
 
-    # x accumulate the number of primitives in one dimension (i)
-    icum = 1
+    # Save a list containing the number of primitives for each shell
+    num_prim = [Libcint.CINTcgtos_spheric(i-1, BS.lc_bas) for i = 1:BS.nshells]
+
+    # Get slice corresponding to the address in S where the compute chunk goes
+    ranges = UnitRange{Int64}[]
+    iaccum = 1
+    for i = 1:BS.nshells
+        push!(ranges, iaccum:(iaccum+ num_prim[i] -1))
+        iaccum += num_prim[i]
+    end
+
     # Allocate output array
     out = zeros(Cdouble, BS.nbas, BS.nbas)
-
-    for i in 1:BS.nshells
+    @sync for i in 1:BS.nshells
+    Threads.@spawn begin
 
         # Get number of primitive functions
-        i_num_prim = Libcint.CINTcgtos_spheric(i-1, BS.lc_bas)
+        i_num_prim = num_prim[i]
 
-        # Get slice corresponding to the address in S where the compute chunk goes
-        ri = icum:(icum+ i_num_prim -1)
-        # y accumulate the number of primitives in one dimension (j)
-        jcum = 1
-        for j in 1:BS.nshells
+        # Get slice 
+        ri = ranges[i]
+
+        for j in i:BS.nshells
 
             # Get number of primitive functions
-            j_num_prim = Libcint.CINTcgtos_spheric(j-1, BS.lc_bas)
+            j_num_prim = num_prim[j]
 
-            # Get slice corresponding to the address in S where the compute chunk goes
-            rj = jcum:(jcum+ j_num_prim -1)
+            # Get slice 
+            rj = ranges[j]
 
             # Array where results are written 
             buf = zeros(Cdouble, i_num_prim*j_num_prim)
 
             # Call libcint
-            libcint_1e(buf, Cint.([i-1,j-1]), BS.lc_atoms, BS.natoms, BS.lc_bas, BS.nbas, BS.lc_env)
+            libcint_1e!(buf, Cint.([i-1,j-1]), BS.lc_atoms, BS.natoms, BS.lc_bas, BS.nbas, BS.lc_env)
 
             # Save results into out
             out[ri, rj] .= reshape(buf, (i_num_prim, j_num_prim))
-
-            jcum += j_num_prim
+            if j != i
+                out[rj, ri] .= transpose(out[ri, rj])
+            end    
         end
-        icum += i_num_prim
+    end
     end
     return out
 end
@@ -229,7 +240,7 @@ function ao_2e4c(BS::BasisSet)
                     buf = zeros(Cdouble, i_num_prim*j_num_prim*k_num_prim*l_num_prim)
 
                     # Call libcint
-                    cint2e_sph(buf, Cint.([i-1,j-1,k-1,l-1]), BS.lc_atoms, BS.natoms, BS.lc_bas, BS.nbas, BS.lc_env)
+                    cint2e_sph!(buf, Cint.([i-1,j-1,k-1,l-1]), BS.lc_atoms, BS.natoms, BS.lc_bas, BS.nbas, BS.lc_env)
 
                     # Save results into out
                     out[ri, rj, rk, rl] .= reshape(buf, (i_num_prim, j_num_prim, k_num_prim, l_num_prim))
@@ -241,37 +252,50 @@ function ao_2e4c(BS::BasisSet)
 end
 
 function ao_2e2c(BS::BasisSet)
-    # icum accumulate the number of primitives in one dimension (i)
-    icum = 1
+
+    # Save a list containing the number of primitives for each shell
+    num_prim = [Libcint.CINTcgtos_spheric(i-1, BS.lc_bas) for i = 1:BS.nshells]
+
+    # Get slice corresponding to the address in S where the compute chunk goes
+    ranges = UnitRange{Int64}[]
+    iaccum = 1
+    for i = 1:BS.nshells
+        push!(ranges, iaccum:(iaccum+ num_prim[i] -1))
+        iaccum += num_prim[i]
+    end
+
     # Allocate output array
     out = zeros(Cdouble, BS.nbas, BS.nbas)
-    for i in 1:BS.nshells
+    @sync for i in 1:BS.nshells
+    Threads.@spawn begin
 
         # Get number of primitive functions
-        i_num_prim = Libcint.CINTcgtos_spheric(i-1, BS.lc_bas)
+        i_num_prim = num_prim[i]
 
-        # Get slice corresponding to the address in S where the compute chunk goes
-        ri = icum:(icum+i_num_prim-1)
-        icum += i_num_prim
-        # y accumulate the number of primitives in one dimension (j)
-        jcum = 1
-        for j in 1:BS.nshells
+        # Get slice 
+        ri = ranges[i]
+
+        for j in i:BS.nshells
 
             # Get number of primitive functions
-            j_num_prim = Libcint.CINTcgtos_spheric(j-1, BS.lc_bas)
+            j_num_prim = num_prim[j]
 
-            # Get slice corresponding to the address in S where the compute chunk goes
-            rj = jcum:(jcum+j_num_prim-1)
-            jcum += j_num_prim
+            # Get slice 
+            rj = ranges[j]
 
+            # Array where results are written 
             buf = zeros(Cdouble, i_num_prim*j_num_prim)
 
             # Call libcint
-            cint2c2e_sph(buf, Cint.([i-1,j-1]), BS.lc_atoms, BS.natoms, BS.lc_bas, BS.nbas, BS.lc_env)
+            cint2c2e_sph!(buf, Cint.([i-1,j-1]), BS.lc_atoms, BS.natoms, BS.lc_bas, BS.nbas, BS.lc_env)
 
             # Save results into out
             out[ri, rj] .= reshape(buf, (i_num_prim, j_num_prim))
+            if j != i
+                out[rj, ri] .= transpose(out[ri, rj])
+            end    
         end
+    end
     end
     return out
 end
@@ -366,47 +390,66 @@ function ao_2e3c(BS::BasisSet, auxBS::BasisSet)
         end
     end
 
-    # icum accumulate the number of primitives in one dimension (i)
-    icum = 1
     # Allocate output array
     out = zeros(Cdouble, BS.nbas, BS.nbas, auxBS.nbas)
 
-    for i in 1:BS.nshells
+    # Save a list containing the number of primitives for each shell
+    num_prim = [Libcint.CINTcgtos_spheric(i-1, BS.lc_bas) for i = 1:BS.nshells]
+    Pnum_prim = [Libcint.CINTcgtos_spheric(P-1, auxBS.lc_bas) for P = 1:auxBS.nshells]
+
+    # Get slice corresponding to the address in S where the compute chunk goes
+    ranges = UnitRange{Int64}[]
+    iaccum = 1
+    for i = eachindex(num_prim)
+        push!(ranges, iaccum:(iaccum+ num_prim[i] - 1))
+        iaccum += num_prim[i]
+    end
+
+    Pranges = UnitRange{Int64}[]
+    paccum = 1
+    for i = eachindex(Pnum_prim)
+        push!(Pranges, paccum:(paccum+ Pnum_prim[i] - 1))
+        paccum += Pnum_prim[i]
+    end
+
+    # icum accumulate the number of primitives in one dimension (i)
+    Pcum = 1
+    @sync for P in 1:auxBS.nshells
+    Threads.@spawn begin
 
         # Get number of primitive functions
-        i_num_prim = Libcint.CINTcgtos_spheric(i-1, BS.lc_bas)
+        P_num_prim = Pnum_prim[P]
 
         # Get slice corresponding to the address in S where the compute chunk goes
-        ri = icum:(icum+i_num_prim-1)
-        icum += i_num_prim
+        rP = Pranges[P]
         # y accumulate the number of primitives in one dimension (j)
-        jcum = 1
-        for j in 1:BS.nshells
+        for i in 1:BS.nshells
 
             # Get number of primitive functions
-            j_num_prim = Libcint.CINTcgtos_spheric(j-1, BS.lc_bas)
+            i_num_prim = num_prim[i]
 
             # Get slice corresponding to the address in S where the compute chunk goes
-            rj = jcum:(jcum+j_num_prim-1)
-            jcum += j_num_prim
+            ri = ranges[i]
 
-            Pcum = 1
-            for P in 1:auxBS.nshells
+            for j in i:BS.nshells
 
-                P_num_prim = Libcint.CINTcgtos_spheric(P-1, auxBS.lc_bas)
+                j_num_prim = num_prim[j]
 
                 buf = zeros(Cdouble, i_num_prim*j_num_prim*P_num_prim)
 
-                rP = Pcum:(Pcum+P_num_prim-1)
-                Pcum += P_num_prim
+                rj = ranges[j]
 
                 # Call libcint
-                cint3c2e_sph(buf, Cint.([i-1, j-1, P+BS.nshells-1]), lc_atm, natm, lc_bas, nbas, env)
+                cint3c2e_sph!(buf, Cint.([i-1, j-1, P+BS.nshells-1]), lc_atm, natm, lc_bas, nbas, env)
 
                 # Save results into out
                 out[ri, rj, rP] .= reshape(buf, (i_num_prim, j_num_prim, P_num_prim))
+                if i != j
+                    out[rj, ri, rP] .= permutedims(out[ri, rj, rP], (2,1,3))
+                end
             end
         end
+    end
     end
     return out
 end

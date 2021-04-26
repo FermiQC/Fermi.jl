@@ -92,23 +92,10 @@ function RMP2_rhf_energy(ints::IntegralHelper{T,RIFIT,O}, ϵo::AbstractArray{T,1
     BABs = [zeros(T, v_size, v_size) for i=1:Threads.nthreads()]
     BBAs = [zeros(T, v_size, v_size) for i=1:Threads.nthreads()]
 
-
-    # DEBUG
-    t = @elapsed begin
-    @tensor iajb[i,a,j,b] := Bov[Q,i,a]*Bov[Q,j,b]
-
-    D = [ϵo[i]-ϵv[a]+ϵo[j]-ϵv[b] for i=eachindex(ϵo), a=eachindex(ϵv), j=eachindex(ϵo), b=eachindex(ϵv)]
-
-    x1 = 2*iajb - permutedims(iajb,(1,4,3,2))
-    x2 = x1 .* iajb
-    Emp2 = sum(x2 ./ D)        
-    end
-    output("Done in {:5.5f} seconds.", t)
-    return Emp2
-    #DEBUG
-
     # Vector containing the energy contribution computed by each thread
     ΔMP2s = zeros(T,Threads.nthreads())
+    TWO = T(2.0)
+    ONE = one(T)
     t = @elapsed begin
         @sync for i in 1:o_size
             Threads.@spawn begin
@@ -136,8 +123,8 @@ function RMP2_rhf_energy(ints::IntegralHelper{T,RIFIT,O}, ϵo::AbstractArray{T,1
                         end
                     end
                 end
-                fac = i != j ? T(2) : one(T)
-                dmp2 = T(2)*dmp2_1 - dmp2_2
+                fac = i != j ? TWO : ONE 
+                dmp2 = TWO*dmp2_1 - dmp2_2
                 ΔMP2s[id] += fac*dmp2
             end
             end
@@ -153,18 +140,17 @@ function RMP2_rhf_energy(ints::IntegralHelper{T,Chonky,O}, ϵo::AbstractArray{T,
     ovov = ints["OVOV"]
 
     ΔMP2s = zeros(T,Threads.nthreads())
+    TWO = T(2.0)
     t = @elapsed begin
-        Emp2 = zero(T)
         @sync for b in eachindex(ϵv)
             Threads.@spawn begin
             id = Threads.threadid()
             for a in eachindex(ϵv)
-                ϵ_ab = ϵv[a] + ϵv[b]
+                @inbounds ϵ_ab = ϵv[a] + ϵv[b]
                 for j in eachindex(ϵo)
-                    ϵ_abj = ϵo[j] - ϵ_ab
-                    @fastmath for i in eachindex(ϵo)
-                        @inbounds ΔMP2s[id] += ovov[i,a,j,b]*(T(2)*ovov[i,a,j,b] - ovov[i,b,j,a]) /
-                        (ϵo[i]+ϵ_abj)
+                    @inbounds ϵ_abj = ϵo[j] - ϵ_ab
+                    for i in eachindex(ϵo)
+                        @fastmath @inbounds ΔMP2s[id] += ovov[i,a,j,b]*(TWO*ovov[i,a,j,b] - ovov[i,b,j,a]) / (ϵo[i]+ϵ_abj)
                     end
                 end
             end

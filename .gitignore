@@ -7,4 +7,6 @@ Manifest.toml
 .vscode
 *.gbs
 *.so
+benchmark/output*
+*.log
 

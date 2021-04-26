@@ -17,7 +17,7 @@ function compute_S!(I::IntegralHelper{T, E, AtomicOrbitals}) where {T<:AbstractF
         if Options.get("lints")
             I.cache["S"] = FermiMDArray(ao_overlap(I.molecule, I.basis, normalize = I.normalize))
         else
-            bs = Fermi.GaussianBasis.BasisSet(I.molecule, I.basis)
+            bs = I.orbitals.basisset
             I.cache["S"] = FermiMDArray(Fermi.GaussianBasis.ao_1e(bs, "overlap"))
         end
 end
@@ -26,7 +26,7 @@ function compute_T!(I::IntegralHelper{T, E, AtomicOrbitals}) where {T<:AbstractF
         if Options.get("lints")
             I.cache["T"] = FermiMDArray(ao_kinetic(I.molecule, I.basis, normalize = I.normalize))
         else
-            bs = Fermi.GaussianBasis.BasisSet(I.molecule, I.basis)
+            bs = I.orbitals.basisset
             I.cache["T"] = FermiMDArray(Fermi.GaussianBasis.ao_1e(bs, "kinetic"))
         end
 end
@@ -35,7 +35,7 @@ function compute_V!(I::IntegralHelper{T, E, AtomicOrbitals}) where {T<:AbstractF
         if Options.get("lints")
             I.cache["V"] = FermiMDArray(ao_nuclear(I.molecule, I.basis, normalize = I.normalize))
         else
-            bs = Fermi.GaussianBasis.BasisSet(I.molecule, I.basis)
+            bs = I.orbitals.basisset
             I.cache["V"] = FermiMDArray(Fermi.GaussianBasis.ao_1e(bs, "nuclear"))
         end
 end
@@ -53,7 +53,7 @@ function compute_ERI!(I::IntegralHelper{T, JKFIT, AtomicOrbitals}) where T<:Abst
     if Options.get("lints")
         I.cache["ERI"] = FermiMDArray(df_ao_eri(I.molecule, I.basis, auxjk, normalize = I.normalize))
     else
-        bs = Fermi.GaussianBasis.BasisSet(I.molecule, I.basis)
+        bs = I.orbitals.basisset
         auxbs = Fermi.GaussianBasis.BasisSet(I.molecule, auxjk)
         J = FermiMDArray(Fermi.GaussianBasis.ao_2e2c(auxbs))
         Pqp = FermiMDArray(Fermi.GaussianBasis.ao_2e3c(bs, auxbs))
@@ -77,7 +77,7 @@ function compute_ERI!(I::IntegralHelper{T, RIFIT, AtomicOrbitals}) where T<:Abst
     if Options.get("lints")
         I.cache["ERI"] = FermiMDArray(df_ao_eri(I.molecule, I.basis, auxri, normalize = I.normalize))
     else
-        bs = Fermi.GaussianBasis.BasisSet(I.molecule, I.basis)
+        bs = I.orbitals.basisset
         auxbs = Fermi.GaussianBasis.BasisSet(I.molecule, auxri)
         J = FermiMDArray(Fermi.GaussianBasis.ao_2e2c(auxbs))
         Pqp = FermiMDArray(Fermi.GaussianBasis.ao_2e3c(bs, auxbs))
@@ -92,7 +92,7 @@ function compute_ERI!(I::IntegralHelper{T, Chonky, AtomicOrbitals}) where T<:Abs
         if Options.get("lints")
             I.cache["ERI"] = FermiMDArray(ao_eri(I.molecule, I.basis, normalize = I.normalize))
         else
-            bs = Fermi.GaussianBasis.BasisSet(I.molecule, I.basis)
+            bs = I.orbitals.basisset
             I.cache["ERI"] = FermiMDArray(Fermi.GaussianBasis.ao_2e4c(bs))
         end
 end
