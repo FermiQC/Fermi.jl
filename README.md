@@ -1,5 +1,5 @@
 [![CI](https://github.com/FermiQC/Fermi.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/FermiQC/Fermi.jl/actions/workflows/CI.yml)
-[![Coverage Status](https://coveralls.io/repos/github/FermiQC/Fermi.jl/badge.svg?branch=master)](https://coveralls.io/github/FermiQC/Fermi.jl?branch=master)
+[![codecov](https://codecov.io/gh/FermiQC/Fermi.jl/branch/master/graph/badge.svg?token=EWRG6Q7FK9)](https://codecov.io/gh/FermiQC/Fermi.jl)
 
 <img src="images/fermi_logo.png" alt="Fermi Logo" width="350"/>
 
