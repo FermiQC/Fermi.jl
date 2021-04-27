@@ -1,5 +1,6 @@
 using Fermi
 using Fermi.Error
+using Memoize
 
 const LIBPATH = joinpath(@__DIR__, "../../deps/lib")
 const AM_pat = r"([SPDFGHI]{1,2})\s+?(\d++)"
@@ -15,7 +16,7 @@ const AMDict = Dict(
         "I" => 6, 
     )
 
-function read_basisset(bname::String, AtomSymbol::String)
+@memoize function read_basisset(bname::String, AtomSymbol::String)
 
     clean_bname = replace(bname, "*"=>"_st_")
     file_path = joinpath(LIBPATH, clean_bname*".gbs")
@@ -43,11 +44,15 @@ function read_basisset(bname::String, AtomSymbol::String)
     for b in BasisStrings
         r = r"[SPDFGHI]{2}"
         if occursin(r, b)
-            b1, b2 = two_basis_from_string(b)
-            push!(out, b1)
-            push!(out, b2)
+            bf1, bf2 = two_basis_from_string(b)
+            normalize_basisfunction!(bf1)
+            normalize_basisfunction!(bf2)
+            push!(out, bf1)
+            push!(out, bf2)
         else
-            push!(out, basis_from_string(b))
+            bf = basis_from_string(b)
+            normalize_basisfunction!(bf)
+            push!(out, bf)
         end
     end
     output("")
