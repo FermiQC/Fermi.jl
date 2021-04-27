@@ -1,7 +1,7 @@
 [![CI](https://github.com/FermiQC/Fermi.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/FermiQC/Fermi.jl/actions/workflows/CI.yml)
 [![codecov](https://codecov.io/gh/FermiQC/Fermi.jl/branch/master/graph/badge.svg?token=EWRG6Q7FK9)](https://codecov.io/gh/FermiQC/Fermi.jl)
 
-<img src="images/Fermi_logo.jpg" alt="Fermi Logo" width="350"/>
+<img src="images/Fermi_logo.jpg" alt="Fermi Logo" width="400"/>
 
 Fermi is a quantum chemistry program written in (nearly) pure Julia. This code is developed at
 the [Center for Computational Quantum Chemistry](https://github.com/CCQC) at the University of Georgia under the supervision 
