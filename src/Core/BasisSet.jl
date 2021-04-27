@@ -46,6 +46,7 @@ end
 
 function BasisSet(mol::Molecule, basis_name::String)
 
+    output("\n  ⇒ Preparing new Basis Set: {:s}", basis_name)
     atoms = mol.atoms
     ATM_SLOTS = 6
     BAS_SLOTS = 8
@@ -64,7 +65,6 @@ function BasisSet(mol::Molecule, basis_name::String)
             nbas += 2*b.l + 1
             nexps += length(b.exp)
             nprims += length(b.coef)
-            normalize_basisfunction!(b)
         end
         shells[A] = basis
     end
@@ -115,6 +115,8 @@ function BasisSet(mol::Molecule, basis_name::String)
             ib += 1
         end
     end
+    empty!(memoize_cache(read_basisset))
+    output("")
     return BasisSet(mol, basis_name, shells, natm, nbas, nshells, lc_atm, lc_bas, env)
 end
 

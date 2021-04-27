@@ -38,7 +38,8 @@ Nvals = collect(1:20)
 @energy rmp2;
 
 @set {
-    printstyle both
+    printstyle file
+    output hydrocarbon.out
     df true
     basis cc-pvdz
     jkfit cc-pvtz-jkfit
