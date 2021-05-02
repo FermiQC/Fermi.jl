@@ -83,8 +83,8 @@ function string_repr(X::RHF)
     out = out*" ⇒ Fermi Restricted Hartree--Fock Wave function\n"
     out = out*" ⋅ Basis:                  $(X.orbitals.basis)\n"
     out = out*" ⋅ Energy:                 $(X.energy)\n"
-    out = out*" ⋅ Occ. Spartial Orbitals: $(X.ndocc)\n"
-    out = out*" ⋅ Vir. Spartial Orbitals: $(X.nvir)"
+    out = out*" ⋅ Occ. Spatial Orbitals: $(X.ndocc)\n"
+    out = out*" ⋅ Vir. Spatial Orbitals: $(X.nvir)"
     return out
 end
 
@@ -92,49 +92,12 @@ function show(io::IO, ::MIME"text/plain", X::RHF)
     print(string_repr(X))
 end
 
-function RHF(mol::Molecule)
-    RHF(IntegralHelper{Float64}(molecule=mol))
-end
-
-function RHF(ints::IntegralHelper{Float64} = IntegralHelper{Float64}())
-
-    guess = Options.get("scf_guess")
-    if guess == "core"
-        C, Λ = RHF_core_guess(ints)
-    elseif guess == "gwh"
-        C, Λ = RHF_gwh_guess(ints)
+function RHF(x...)
+    if !any(i-> i isa RHFAlgorithm, x)
+        RHF(x..., get_scf_alg())
+    else
+        throw(MethodArgument("invalid arguments for RHF method: $(x[1:end-1])"))
     end
-
-    RHF(ints, C, Λ, get_scf_alg())
-end
-
-function RHF(wfn::RHF)
-
-    # Projection of A→ B done using equations described in Werner 2004 
-    # https://doi.org/10.1080/0026897042000274801
-
-    output("Using {} wave function as initial guess", wfn.orbitals.basis)
-
-    intsB = IntegralHelper{Float64}()
-
-    # Assert both A and B have the same molecule.
-    if intsB.molecule != wfn.molecule
-        output(" ! Input molecule does not match the molecule from the RHF wave function !")
-    end
-
-    basisB = Options.get("basis")
-
-    Sbb = intsB["S"]
-    Λ = Array(Sbb^(-1/2))
-
-    Ca = wfn.orbitals.C
-    Sab = projector(wfn.molecule, wfn.orbitals.basis, intsB.molecule, basisB)
-
-    T = transpose(Ca)*Sab*(Sbb^-1.0)*transpose(Sab)*Ca
-    Cb = (Sbb^-1.0)*transpose(Sab)*Ca*T^(-1/2)
-    Cb = real.(Cb)
-
-    RHF(intsB, FermiMDArray(Cb), FermiMDArray(Λ), get_scf_alg())
 end
 
 # Actual HF routine is in here

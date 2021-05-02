@@ -52,7 +52,7 @@ end
 
 function RMP2(moints::IntegralHelper{T1,Chonky,O}, aoints::IntegralHelper{T2,Chonky,AtomicOrbitals}) where {T1<:AbstractFloat,
                                                                                         T2<:AbstractFloat,O<:AbstractOrbitals}
-    Fermi.Integrals.mo_from_ao(moints, aoints, "Fia","OVOV")
+    mo_from_ao!(moints, aoints, "Fia","OVOV")
     RMP2(moints)
 end
 

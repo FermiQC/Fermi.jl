@@ -49,13 +49,13 @@ end
 
 function RCCSD(moints::IntegralHelper{T1,Chonky,O}, aoints::IntegralHelper{T2,Chonky,AtomicOrbitals}) where {T1<:AbstractFloat,
                                                                                         T2<:AbstractFloat,O<:AbstractOrbitals}
-    Fermi.Integrals.mo_from_ao(moints, aoints, "Fd","OOOO", "OOOV", "OOVV", "OVOV", "OVVV", "VVVV")
+    mo_from_ao!(moints, aoints, "Fd","OOOO", "OOOV", "OOVV", "OVOV", "OVVV", "VVVV")
     RCCSD(moints)
 end
 
 function RCCSD(moints::IntegralHelper{T1,E1,O}, aoints::IntegralHelper{T2,E2,AtomicOrbitals}) where {T1<:AbstractFloat,T2<:AbstractFloat,
                                                                                 E1<:AbstractDFERI,E2<:AbstractDFERI,O<:AbstractOrbitals}
-    Fermi.Integrals.mo_from_ao(moints, aoints, "Fd","BOO", "BOV", "BVV")
+    mo_from_ao!(moints, aoints, "Fd","BOO", "BOV", "BVV")
     RCCSD(moints)
 end
 

@@ -10,7 +10,7 @@ Module for storing physical constants and conversion factors used in computation
 module PhysicalConstants
 using Fermi.Error
 
-export atomic_number
+export atomic_number, num_core_electrons
 
 """
     Fermi.PhysicalConstants.AvogadroNumber
@@ -84,7 +84,18 @@ function atomic_number(atom::String)
     end
 end
 
-atom_num = Dict(
+function num_core_electrons(atom::String)
+    
+    Z = atomic_number(atom)
+
+    for k in keys(core_elec_perrow)
+        if Z in k
+            return core_elec_perrow[k]
+        end
+    end
+end
+
+const atom_num = Dict(
     "H" => 1,
     "He" => 2,
     "Li" => 3,
@@ -205,4 +216,13 @@ atom_num = Dict(
     "Og" => 118
 )
 
+const core_elec_perrow = Dict(
+    1:2    => 0,
+    3:10   => 2,
+    11:18  => 10,
+    19:36  => 18,
+    37:54  => 36,
+    55:86  => 54,
+    87:118 => 86
+)
 end #module

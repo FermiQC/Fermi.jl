@@ -13,34 +13,34 @@ using LinearAlgebra
 using TensorOperations
 using Fermi.Orbitals
 
-import Base: getindex, setindex!, delete!
+import Base: getindex, setindex!, delete!, show
 
-export IntegralHelper
-export delete!
+export IntegralHelper, delete!, mo_from_ao!
 
 include("../Backend/Lints.jl")
 
 """
     IntegralHelper{T}
 
-Structure to assist with computing and storing integrals. 
+Manager for integrals computation and storage.
 Accesss like a dictionary e.g.,
-    ints["S"]
-
+```
+julia> ints = Fermi.Integrals.IntegralHelper()
+julia> ints["S"] #Returns overlap matrix
+```
 A key is associated with each type of integral
 
-    "S"           -> AO overlap integral
-    "T"           -> AO electron kinetic energy integral
-    "V"           -> AO electron-nuclei attraction integral
-    "ERI"         -> AO electron repulsion integral
-    "JKERI"       -> AO JK density fitted electron repulsion integral
-    "RIERI"       -> AO RI density fitted electron repulsion integral
+    "S"           -> Overlap integral
+    "T"           -> Electron kinetic energy integral
+    "V"           -> Electron-nuclei attraction integral
+    "ERI"         -> Electron repulsion integral
 
 # Fields
-    mol                         Associated Fermi Molecule object
-    basis                       Basis set used within the helper
-    aux                         Auxiliar basis set used in density fitting
-    cache                       Holds integrals already computed 
+    molecule                    Molecule object
+    orbitals                    Orbitals used in the integral computation
+    basis                       Basis set name
+    cache                       Holds integrals computed 
+    eri_type                    Defines whether/how density-fitting is done
     normalize                   Do normalize integrals? `true` or `false`
 """
 struct IntegralHelper{T<:AbstractFloat,E<:AbstractERI,O<:AbstractOrbitals}
@@ -51,6 +51,27 @@ struct IntegralHelper{T<:AbstractFloat,E<:AbstractERI,O<:AbstractOrbitals}
     eri_type::E
     normalize::Bool
 end
+
+# Pretty printing
+function string_repr(X::IntegralHelper{T,E,O}) where {T,E,O}
+    out = ""
+    out = out*" ⇒ Fermi IntegralHelper\n"
+    out = out*" ⋅ Data Type:                 $(T)\n"
+    out = out*" ⋅ Basis:                     $(X.basis)\n"
+    out = out*" ⋅ ERI:                       $(E)\n"
+    out = out*" ⋅ Orbitals:                  $(O)\n"
+    cache_str = ""
+    for k in keys(X.cache)
+        cache_str *= k*" "
+    end
+    out = out*" ⋅ Stored Integrals:          $(cache_str)"
+    return out
+end
+
+function show(io::IO, ::MIME"text/plain", X::IntegralHelper)
+    print(string_repr(X))
+end
+
 
 function IntegralHelper(;molecule = Molecule(), orbitals = AtomicOrbitals(), 
                            basis = Options.get("basis"), normalize = false, eri_type = nothing)

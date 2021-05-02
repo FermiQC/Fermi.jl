@@ -1,0 +1,56 @@
+
+  ⇒ Preparing new Basis Set: sto-3g
+
+Looking for atom H in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/sto-3g.gbs
+Basis functions for H: S 
+
+Using GWH Guess
+================================================================================
+|                                 Hartree-Fock                                 |
+|                                  Module  by                                  |
+|                         G.J.R Aroeira and M.M. Davis                         |
+================================================================================
+Molecule:
+
+H    0.740000000000    0.000000000000    0.000000000000
+H    0.000000000000    0.000000000000    0.000000000000
+
+
+Charge: 0   Multiplicity: 1   
+Nuclear repulsion:    0.7151043391
+ Number of AOs:                            2
+ Number of Doubly Occupied Orbitals:       1
+ Number of Virtual Spatial Orbitals:       1
+ Guess Energy    -1.83186364656447
+
+ Iter.            E[RHF]         ΔE     √|ΔD|²        t     DIIS     damp
+--------------------------------------------------------------------------------
+    1     -1.1167593075  -1.117e+00   2.001e-16     0.00    false    0.0000
+    2     -1.1167593075   0.000e+00   0.000e+00     0.00    false    0.0000
+    3     -1.1167593075   0.000e+00   0.000e+00     0.00    false    0.0000
+    4     -1.1167593075   0.000e+00   0.000e+00     0.00    false    0.0000
+    5     -1.1167593075   0.000e+00   0.000e+00     0.00    false    0.0000
+--------------------------------------------------------------------------------
+    RHF done in  0.00s
+    @Final RHF Energy          -1.116759307506 Eₕ
+
+   • Orbitals Summary
+
+    Orbital            Energy    Occupancy
+          1     -0.5785538592       ↿⇂
+          2      0.6711434842         
+
+   ✔  SCF Equations converged 😄
+--------------------------------------------------------------------------------
+
+  ⇒ Preparing new Basis Set: sto-3g
+
+Looking for atom H in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/sto-3g.gbs
+Basis functions for H: S 
+
+
+  ⇒ Preparing new Basis Set: sto-3g
+
+Looking for atom H in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/sto-3g.gbs
+Basis functions for H: S 
+

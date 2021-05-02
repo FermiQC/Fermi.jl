@@ -29,7 +29,7 @@ t_libcint = []
 e_libcint = []
 
 @reset
-Nvals = collect(1:20)
+Nvals = collect(1:1)
 
 # Cold run
 @set printstyle none
@@ -51,12 +51,12 @@ for N = Nvals
     get_hc(N)
 
     @set lints true
-    t = @elapsed e = @energy rmp2;
+    t = @elapsed e = @energy ccsd;
     push!(t_lints, t)
     push!(e_lints, e.energy)
 
     @set lints false
-    t = @elapsed e = @energy rmp2;
+    t = @elapsed e = @energy ccsd;
     push!(t_libcint, t)
     push!(e_libcint, e.energy)
 end

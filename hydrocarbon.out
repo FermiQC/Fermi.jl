@@ -1,0 +1,787 @@
+
+  ⇒ Preparing new Basis Set: cc-pvdz
+
+Looking for atom C in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvdz.gbs
+Basis functions for C: S S S P P D 
+
+Looking for atom H in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvdz.gbs
+Basis functions for H: S S P 
+
+Using GWH Guess
+================================================================================
+|                                 Hartree-Fock                                 |
+|                                  Module  by                                  |
+|                         G.J.R Aroeira and M.M. Davis                         |
+================================================================================
+Molecule:
+
+C   -5.900247461700    2.909829231900   -0.000000353200
+H   -4.790846679900    2.909830907800    0.000000570900
+H   -6.270045407400    1.881555924000   -0.191503820700
+H   -6.270048364000    3.589811552900   -0.794759077800
+H   -6.270049410100    3.258118556800    0.986260954100
+
+
+Charge: 0   Multiplicity: 1   
+Nuclear repulsion:   13.2004359656
+ Number of AOs:                           34
+ Number of Doubly Occupied Orbitals:       5
+ Number of Virtual Spatial Orbitals:      29
+ Guess Energy   -52.89866155767363
+
+ Iter.            E[RHF]         ΔE     √|ΔD|²        t     DIIS     damp
+--------------------------------------------------------------------------------
+    1    -40.1466872946  -4.015e+01   1.535e+00     0.00    false    0.0000
+    2    -40.1908180485  -4.413e-02   4.142e-01     0.00    false    0.0000
+    3    -40.1967729278  -5.955e-03   2.296e-01     0.00    false    0.0240
+    4    -40.1976651534  -8.922e-04   6.360e-02     0.00    false    0.0000
+    5    -40.1977837450  -1.186e-04   3.325e-02     0.00     true    0.0000
+    6    -40.1978051895  -2.144e-05   7.314e-03     0.00     true    0.0000
+    7    -40.1978051905  -1.015e-09   1.237e-04     0.00     true    0.0000
+    8    -40.1978051906  -1.158e-11   1.137e-05     0.00     true    0.0000
+    9    -40.1978051906  -3.411e-13   1.356e-06     0.00     true    0.0000
+    10   -40.1978051906  -2.061e-13   2.012e-07     0.00     true    0.0000
+    11   -40.1978051906   1.990e-13   3.108e-08     0.00     true    0.0000
+    12   -40.1978051906  -5.684e-14   2.006e-09     0.00     true    0.0000
+    13   -40.1978051906  -9.948e-14   1.445e-10     0.00     true    0.0000
+--------------------------------------------------------------------------------
+    RHF done in  0.03s
+    @Final RHF Energy         -40.197805190553 Eₕ
+
+   • Orbitals Summary
+
+    Orbital            Energy    Occupancy
+          1    -11.2251029495       ↿⇂
+          2     -0.9340590151       ↿⇂
+          3     -0.5377304840       ↿⇂
+          4     -0.5377303108       ↿⇂
+          5     -0.5377302987       ↿⇂
+          6      0.1904288207         
+          7      0.2708985441         
+          8      0.2708985533         
+          9      0.2708985575         
+         10      0.5906726779         
+         11      0.5906726873         
+         12      0.5906728846         
+         13      0.8798726899         
+         14      0.8798727131         
+         15      0.8798727692         
+         16      0.9105302190         
+         17      1.1290115015         
+         18      1.1290116910         
+         19      1.2538366645         
+         20      1.6705961131         
+         21      1.6705962574         
+         22      1.6705962813         
+         23      1.8740969234         
+         24      1.8740969974         
+         25      1.8740970075         
+         26      2.1926838403         
+         27      2.1926842702         
+         28      2.1926843071         
+         29      2.5117327574         
+         30      2.5117332103         
+         31      2.6934718813         
+         32      2.7535274700         
+         33      2.7535276559         
+         34      2.7535277210         
+
+   ✔  SCF Equations converged 😄
+--------------------------------------------------------------------------------
+!! AO Integrals are not the same type as the MO. New integrals will be computed.
+Fock matrix will be computed using old ERI
+
+  ⇒ Preparing new Basis Set: cc-pvdz
+
+Looking for atom C in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvdz.gbs
+Basis functions for C: S S S P P D 
+
+Looking for atom H in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvdz.gbs
+Basis functions for H: S S P 
+
+Computing MO Integrals...
+Done in 0.00001 seconds.
+Using MP2 guess
+
+  ⇒ Preparing new Basis Set: cc-pvdz
+
+Looking for atom C in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvdz.gbs
+Basis functions for C: S S S P P D 
+
+Looking for atom H in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvdz.gbs
+Basis functions for H: S S P 
+
+================================================================================
+//    _____                   _          _   _____ _           _              \\ 
+//   /  __ \                 | |        | | /  __ \ |         | |             \\   
+//   | /  \/ ___  _   _ _ __ | | ___  __| | | /  \/ |_   _ ___| |_ ___ _ __   \\   
+//   | |    / _ \| | | | '_ \| |/ _ \/ _` | | |   | | | | / __| __/ _ \ '__|  \\   
+//   | \__/\ (_) | |_| | |_) | |  __/ (_| | | \__/\ | |_| \__ \ ||  __/ |     \\  
+//    \____/\___/ \__,_| .__/|_|\___|\__,_|  \____/_|\__,_|___/\__\___|_|     \\  
+//                    | |                                                     \\   
+//                    |_|                                                     \\   
+//                                                                            \\     
+//                 Module by G.J.R. Aroeira and M. M. Davis                   \\       
+================================================================================
+
+	Dropped Occupied Orbitals →   0.
+	Dropped Virtual Orbitals  →   0.
+
+
+--------------------------------------------------------------------------------
+	Options:
+	Precision? Float64
+	DIIS? true
+	DIIS Vectors? 3
+	DIIS Precision? Float32
+	Preconverge T1 amplitudes? true
+	Damping percentage ? 0.0
+		cc_max_iter →   50
+		cc_e_conv   →  1.e-10
+		cc_max_rms  →  1.e-10
+--------------------------------------------------------------------------------
+	Guess Correlation Energy:     -0.1649082344
+	Guess Total Energy:          -40.3627134249
+
+    Starting CC Iterations
+
+Preconverging T1 amplitudes
+Taking one T2 step
+Iteration     CC Energy          ΔE              Max RMS (T1)    Time (s)  
+
+  ⇒ Preparing new Basis Set: cc-pvdz
+
+Looking for atom C in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvdz.gbs
+Basis functions for C: S S S P P D 
+
+Looking for atom H in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvdz.gbs
+Basis functions for H: S S P 
+
+
+  ⇒ Preparing new Basis Set: cc-pvdz
+
+Looking for atom C in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvdz.gbs
+Basis functions for C: S S S P P D 
+
+Looking for atom H in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvdz.gbs
+Basis functions for H: S S P 
+
+    pre      -0.1824865315      -0.0175782971    0.0000875501    4.50534   
+    1        -0.1824881008      -0.0000015694    0.0002267795    0.47784   
+    2        -0.1824962451      -0.0000081443    0.0002607691    0.00199   
+    3        -0.1825052131      -0.0000089680    0.0003966655    0.09691   
+    4        -0.1825102845      -0.0000050714    0.0003192512    0.00205   
+    5        -0.1825099088      +0.0000003757    0.0000257686    0.00188   
+    6        -0.1825096245      +0.0000002843    0.0000191292    0.00181   
+    7        -0.1825096420      -0.0000000174    0.0000011508    0.00211   
+    8        -0.1825096419      +0.0000000000    0.0000000020    0.02600   
+    9        -0.1825096419      +0.0000000000    0.0000000003    0.00153   
+    10       -0.1825096419      +0.0000000000    0.0000000001    0.00155   
+
+T1 pre-convergence took 5.119000175000001s
+Including T2 update
+Iteration     CC Energy          ΔE              Max RMS         Time (s)  
+    1        -0.1865020095      -0.0039923676    0.0007629046    0.12077   
+    2        -0.1878714197      -0.0013694102    0.0001472062    0.01762   
+    3        -0.1886932607      -0.0008218410    0.0000686772    0.62782   
+    4        -0.1885966194      +0.0000966414    0.0000156501    0.01774   
+    5        -0.1885636978      +0.0000329216    0.0000036403    0.01638   
+    6        -0.1885514996      +0.0000121983    0.0000013972    0.09350   
+    7        -0.1885486859      +0.0000028137    0.0000001579    0.01803   
+    8        -0.1885484269      +0.0000002590    0.0000001310    0.02428   
+    9        -0.1885484100      +0.0000000169    0.0000000261    0.02567   
+    10       -0.1885483428      +0.0000000671    0.0000000220    0.02577   
+    11       -0.1885483376      +0.0000000053    0.0000000024    0.03453   
+    12       -0.1885483358      +0.0000000017    0.0000000014    0.02043   
+    13       -0.1885483363      -0.0000000004    0.0000000005    0.01931   
+    14       -0.1885483363      -0.0000000001    0.0000000001    0.01922   
+
+Main CCSD iterations done in 1.08105s
+Average time per iteration 0.07722
+
+ 🍾 Equations Converged!
+ @Final CCSD Correlation Energy:       -0.1885483363
+ @Final CCSD Energy:                  -40.3863535269
+--------------------------------------------------------------------------------
+
+  ⇒ Preparing new Basis Set: cc-pvdz
+
+Looking for atom C in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvdz.gbs
+Basis functions for C: S S S P P D 
+
+Looking for atom H in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvdz.gbs
+Basis functions for H: S S P 
+
+Using GWH Guess
+================================================================================
+|                                 Hartree-Fock                                 |
+|                                  Module  by                                  |
+|                         G.J.R Aroeira and M.M. Davis                         |
+================================================================================
+Molecule:
+
+C   -5.900247461700    2.909829231900   -0.000000353200
+H   -4.790846679900    2.909830907800    0.000000570900
+H   -6.270045407400    1.881555924000   -0.191503820700
+H   -6.270048364000    3.589811552900   -0.794759077800
+H   -6.270049410100    3.258118556800    0.986260954100
+
+
+Charge: 0   Multiplicity: 1   
+Nuclear repulsion:   13.2004359656
+ Number of AOs:                           34
+ Number of Doubly Occupied Orbitals:       5
+ Number of Virtual Spatial Orbitals:      29
+
+  ⇒ Preparing new Basis Set: cc-pvtz-jkfit
+
+Looking for atom C in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvtz-jkfit.gbs
+Basis functions for C: S S S S S S S S S S P P P P P P P D D D D D F F G 
+
+Looking for atom H in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvtz-jkfit.gbs
+Basis functions for H: S S S S P P P D D F 
+
+ Guess Energy   -52.89866175027922
+
+ Iter.            E[RHF]         ΔE     √|ΔD|²        t     DIIS     damp
+--------------------------------------------------------------------------------
+    1    -40.1466872646  -4.015e+01   1.535e+00     0.00    false    0.0000
+    2    -40.1908180379  -4.413e-02   4.142e-01     0.00    false    0.0000
+    3    -40.1967729256  -5.955e-03   2.296e-01     0.00    false    0.0240
+    4    -40.1976651555  -8.922e-04   6.360e-02     0.00    false    0.0000
+    5    -40.1977837453  -1.186e-04   3.325e-02     0.00     true    0.0000
+    6    -40.1978051895  -2.144e-05   7.314e-03     0.00     true    0.0000
+    7    -40.1978051905  -1.015e-09   1.237e-04     0.00     true    0.0000
+    8    -40.1978051906  -1.147e-11   1.137e-05     0.00     true    0.0000
+    9    -40.1978051906  -2.700e-13   1.356e-06     0.00     true    0.0000
+    10   -40.1978051906  -2.203e-13   2.012e-07     0.00     true    0.0000
+    11   -40.1978051906   2.061e-13   3.108e-08     0.01     true    0.0000
+    12   -40.1978051906  -1.776e-13   2.006e-09     0.00     true    0.0000
+    13   -40.1978051906   1.492e-13   1.445e-10     0.00     true    0.0000
+--------------------------------------------------------------------------------
+    RHF done in  0.04s
+    @Final RHF Energy         -40.197805190555 Eₕ
+
+   • Orbitals Summary
+
+    Orbital            Energy    Occupancy
+          1    -11.2251029495       ↿⇂
+          2     -0.9340590151       ↿⇂
+          3     -0.5377304840       ↿⇂
+          4     -0.5377303108       ↿⇂
+          5     -0.5377302987       ↿⇂
+          6      0.1904288207         
+          7      0.2708985441         
+          8      0.2708985533         
+          9      0.2708985575         
+         10      0.5906726779         
+         11      0.5906726873         
+         12      0.5906728846         
+         13      0.8798726899         
+         14      0.8798727131         
+         15      0.8798727692         
+         16      0.9105302190         
+         17      1.1290115015         
+         18      1.1290116910         
+         19      1.2538366645         
+         20      1.6705961131         
+         21      1.6705962574         
+         22      1.6705962813         
+         23      1.8740969234         
+         24      1.8740969974         
+         25      1.8740970075         
+         26      2.1926838403         
+         27      2.1926842702         
+         28      2.1926843071         
+         29      2.5117327574         
+         30      2.5117332103         
+         31      2.6934718813         
+         32      2.7535274700         
+         33      2.7535276559         
+         34      2.7535277210         
+
+   ✔  SCF Equations converged 😄
+--------------------------------------------------------------------------------
+!! AO Integrals are not the same type as the MO. New integrals will be computed.
+Fock matrix will be computed using old ERI
+
+  ⇒ Preparing new Basis Set: cc-pvdz
+
+Looking for atom C in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvdz.gbs
+Basis functions for C: S S S P P D 
+
+Looking for atom H in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvdz.gbs
+Basis functions for H: S S P 
+
+Computing MO Integrals...
+Done in 0.00001 seconds.
+Using MP2 guess
+
+  ⇒ Preparing new Basis Set: cc-pvdz
+
+Looking for atom C in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvdz.gbs
+Basis functions for C: S S S P P D 
+
+Looking for atom H in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvdz.gbs
+Basis functions for H: S S P 
+
+
+  ⇒ Preparing new Basis Set: cc-pvtz-rifit
+
+Looking for atom C in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvtz-rifit.gbs
+Basis functions for C: S S S S S S S S P P P P P P D D D D D F F F G 
+
+Looking for atom H in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvtz-rifit.gbs
+Basis functions for H: S S S S P P P D D F 
+
+================================================================================
+//    _____                   _          _   _____ _           _              \\ 
+//   /  __ \                 | |        | | /  __ \ |         | |             \\   
+//   | /  \/ ___  _   _ _ __ | | ___  __| | | /  \/ |_   _ ___| |_ ___ _ __   \\   
+//   | |    / _ \| | | | '_ \| |/ _ \/ _` | | |   | | | | / __| __/ _ \ '__|  \\   
+//   | \__/\ (_) | |_| | |_) | |  __/ (_| | | \__/\ | |_| \__ \ ||  __/ |     \\  
+//    \____/\___/ \__,_| .__/|_|\___|\__,_|  \____/_|\__,_|___/\__\___|_|     \\  
+//                    | |                                                     \\   
+//                    |_|                                                     \\   
+//                                                                            \\     
+//                 Module by G.J.R. Aroeira and M. M. Davis                   \\       
+================================================================================
+
+	Dropped Occupied Orbitals →   0.
+	Dropped Virtual Orbitals  →   0.
+
+
+--------------------------------------------------------------------------------
+	Options:
+	Precision? Float64
+	DIIS? true
+	DIIS Vectors? 3
+	DIIS Precision? Float32
+	Preconverge T1 amplitudes? true
+	Damping percentage ? 0.0
+		cc_max_iter →   50
+		cc_e_conv   →  1.e-10
+		cc_max_rms  →  1.e-10
+--------------------------------------------------------------------------------
+	Guess Correlation Energy:     -0.1649082344
+	Guess Total Energy:          -40.3627134249
+
+    Starting CC Iterations
+
+Preconverging T1 amplitudes
+Taking one T2 step
+Iteration     CC Energy          ΔE              Max RMS (T1)    Time (s)  
+
+  ⇒ Preparing new Basis Set: cc-pvdz
+
+Looking for atom C in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvdz.gbs
+Basis functions for C: S S S P P D 
+
+Looking for atom H in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvdz.gbs
+Basis functions for H: S S P 
+
+
+  ⇒ Preparing new Basis Set: cc-pvtz-rifit
+
+Looking for atom C in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvtz-rifit.gbs
+Basis functions for C: S S S S S S S S P P P P P P D D D D D F F F G 
+
+Looking for atom H in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvtz-rifit.gbs
+Basis functions for H: S S S S P P P D D F 
+
+
+  ⇒ Preparing new Basis Set: cc-pvdz
+
+Looking for atom C in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvdz.gbs
+Basis functions for C: S S S P P D 
+
+Looking for atom H in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvdz.gbs
+Basis functions for H: S S P 
+
+
+  ⇒ Preparing new Basis Set: cc-pvtz-rifit
+
+Looking for atom C in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvtz-rifit.gbs
+Basis functions for C: S S S S S S S S P P P P P P D D D D D F F F G 
+
+Looking for atom H in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvtz-rifit.gbs
+Basis functions for H: S S S S P P P D D F 
+
+    pre      -0.1824865315      -0.0175782971    0.0000875501    0.09803   
+    1        -0.1824881008      -0.0000015694    0.0002267795    0.00200   
+    2        -0.1824962451      -0.0000081443    0.0002607691    0.00191   
+    3        -0.1825052139      -0.0000089688    0.0003967068    0.00189   
+    4        -0.1825102847      -0.0000050708    0.0003192260    0.00188   
+    5        -0.1825099089      +0.0000003758    0.0000257783    0.00186   
+    6        -0.1825096245      +0.0000002843    0.0000191353    0.00187   
+    7        -0.1825096420      -0.0000000174    0.0000011505    0.00187   
+    8        -0.1825096419      +0.0000000000    0.0000000020    0.00188   
+    9        -0.1825096419      +0.0000000000    0.0000000003    0.00189   
+    10       -0.1825096419      +0.0000000000    0.0000000001    0.00190   
+
+T1 pre-convergence took 0.11698104100000001s
+Including T2 update
+Iteration     CC Energy          ΔE              Max RMS         Time (s)  
+    1        -0.1865020095      -0.0039923676    0.0007629046    0.02698   
+    2        -0.1878714197      -0.0013694102    0.0001472062    0.01898   
+    3        -0.1886932607      -0.0008218410    0.0000686772    0.01967   
+    4        -0.1885966194      +0.0000966413    0.0000156501    0.01924   
+    5        -0.1885636978      +0.0000329216    0.0000036403    0.02034   
+    6        -0.1885514996      +0.0000121983    0.0000013972    0.02645   
+    7        -0.1885486859      +0.0000028137    0.0000001579    0.01931   
+    8        -0.1885484269      +0.0000002590    0.0000001310    0.01948   
+    9        -0.1885484100      +0.0000000169    0.0000000261    0.02035   
+    10       -0.1885483428      +0.0000000671    0.0000000220    0.01917   
+    11       -0.1885483376      +0.0000000053    0.0000000024    0.02445   
+    12       -0.1885483358      +0.0000000017    0.0000000014    0.02057   
+    13       -0.1885483363      -0.0000000004    0.0000000005    0.01941   
+    14       -0.1885483363      -0.0000000001    0.0000000001    0.01926   
+
+Main CCSD iterations done in 0.29366s
+Average time per iteration 0.02098
+
+ 🍾 Equations Converged!
+ @Final CCSD Correlation Energy:       -0.1885483363
+ @Final CCSD Energy:                  -40.3863535269
+--------------------------------------------------------------------------------
+
+
+N    E(Lints)          t(Lints)   E(Libcint)        t(libcint)   ΔE                Δt   
+ 1    -40.3863535269   29.20951    -40.3863535269   0.53532     -0.0000000000   -28.67419
+
+  ⇒ Preparing new Basis Set: cc-pvdz
+
+Looking for atom C in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvdz.gbs
+Basis functions for C: S S S P P D 
+
+Looking for atom H in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvdz.gbs
+Basis functions for H: S S P 
+
+Using GWH Guess
+================================================================================
+|                                 Hartree-Fock                                 |
+|                                  Module  by                                  |
+|                         G.J.R Aroeira and M.M. Davis                         |
+================================================================================
+Molecule:
+
+C   -6.219464561100    2.826172072500   -0.013508878100
+C   -4.693606094300    2.810374931500   -0.018569834400
+H   -6.603007706100    1.801645182900   -0.203792434000
+H   -6.601291705200    3.502114674100   -0.808122386200
+H   -6.598822122200    3.170537359900    0.972189370300
+H   -4.342109070800    2.441602562700   -1.006932651500
+H   -4.339638437000    2.110682689000    0.769809731100
+C   -4.124634090800    4.209914508600    0.241306335100
+H   -4.485390242500    4.905306780400   -0.548665312000
+C   -2.591823796900    4.189126796500    0.235284266800
+H   -4.482900208000    4.574085057300    1.229636246000
+H   -2.226779200100    3.829263447000   -0.751450466700
+H   -2.224283285600    3.498320755500    1.025287630600
+C   -2.020830284600    5.580435967300    0.493633683800
+H   -2.355067125400    6.287624194500   -0.295208096500
+H   -0.911402179200    5.535287933900    0.483661006200
+H   -2.352558738400    5.956011987800    1.485097104800
+
+
+Charge: 0   Multiplicity: 1   
+Nuclear repulsion:  184.7197793696
+ Number of AOs:                          130
+ Number of Doubly Occupied Orbitals:      21
+ Number of Virtual Spatial Orbitals:     109
+
+  ⇒ Preparing new Basis Set: cc-pvtz-jkfit
+
+Looking for atom C in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvtz-jkfit.gbs
+Basis functions for C: S S S S S S S S S S P P P P P P P D D D D D F F G 
+
+Looking for atom H in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvtz-jkfit.gbs
+Basis functions for H: S S S S P P P D D F 
+
+ Guess Energy  -368.38011267128462
+
+ Iter.            E[RHF]         ΔE     √|ΔD|²        t     DIIS     damp
+--------------------------------------------------------------------------------
+    1   -177.7123965007  -1.777e+02   7.538e+00     0.12    false    0.8112
+    2   -195.0667086364  -1.735e+01   6.159e+00     0.18    false    0.0000
+    3   -195.9443426503  -8.776e-01   2.517e+00     0.31    false    0.5192
+    4   -196.3148380837  -3.705e-01   7.933e-01     0.12    false    0.0000
+    5   -196.3371041141  -2.227e-02   3.820e-01     0.21    false    0.3334
+    6   -196.3429144275  -5.810e-03   1.223e-01     0.13    false    0.0000
+    7   -196.3431530117  -2.386e-04   2.853e-02     0.13    false    0.0000
+    8   -196.3431802752  -2.726e-05   1.010e-02     0.13     true    0.0000
+    9   -196.3431842232  -3.948e-06   5.208e-03     0.13     true    0.0000
+    10  -196.3431842393  -1.614e-08   3.357e-04     0.13     true    0.0000
+    11  -196.3431842402  -8.890e-10   6.772e-05     0.14     true    0.0000
+    12  -196.3431842402  -5.321e-11   1.629e-05     0.13     true    0.0000
+    13  -196.3431842402  -5.116e-12   4.832e-06     0.13     true    0.0000
+    14  -196.3431842402   3.979e-13   8.865e-07     0.13     true    0.0000
+    15  -196.3431842402  -1.535e-12   2.256e-07     0.13     true    0.0000
+    16  -196.3431842402   1.762e-12   7.530e-08     0.13     true    0.0000
+    17  -196.3431842402  -3.979e-13   2.394e-08     0.13     true    0.0000
+    18  -196.3431842402  -2.842e-12   4.578e-09     0.13     true    0.0000
+    19  -196.3431842402   2.217e-12   1.428e-09     0.13     true    0.0000
+    20  -196.3431842402  -3.411e-13   3.498e-10     0.16     true    0.0000
+--------------------------------------------------------------------------------
+    RHF done in  2.92s
+    @Final RHF Energy        -196.343184240238 Eₕ
+
+   • Orbitals Summary
+
+    Orbital            Energy    Occupancy
+          1    -11.2233975138       ↿⇂
+          2    -11.2232732872       ↿⇂
+          3    -11.2220148854       ↿⇂
+          4    -11.2211782633       ↿⇂
+          5    -11.2211705845       ↿⇂
+          6     -1.0783187025       ↿⇂
+          7     -1.0120370511       ↿⇂
+          8     -0.9117756153       ↿⇂
+          9     -0.8083807085       ↿⇂
+         10     -0.7771620599       ↿⇂
+         11     -0.6455693943       ↿⇂
+         12     -0.5934736585       ↿⇂
+         13     -0.5906376529       ↿⇂
+         14     -0.5480943689       ↿⇂
+         15     -0.5397839185       ↿⇂
+         16     -0.5223398557       ↿⇂
+         17     -0.4880087488       ↿⇂
+         18     -0.4730620265       ↿⇂
+         19     -0.4606452855       ↿⇂
+         20     -0.4596417929       ↿⇂
+         21     -0.4363463444       ↿⇂
+         22      0.1816756777         
+         23      0.1954456749         
+         24      0.2099695500         
+         25      0.2141751558         
+         26      0.2417579816         
+         27      0.2634413396         
+         28      0.2667669360         
+         29      0.2802517746         
+         30      0.2893283360         
+         31      0.2929092988         
+         32      0.3012192221         
+         33      0.3241000453         
+         34      0.3776598338         
+         35      0.3860978084         
+         36      0.4138547408         
+         37      0.4421557780         
+         38      0.5823587517         
+         39      0.5928852009         
+         40      0.5965417064         
+         41      0.6112507392         
+         42      0.6181852423         
+         43      0.6265630159         
+         44      0.6981143114         
+         45      0.7531064096         
+         46      0.7795223479         
+         47      0.8288246529         
+         48      0.8717088007         
+         49      0.8781750709         
+         50      0.8835489433         
+         51      0.8841810983         
+         52      0.8867544088         
+         53      0.8891262771         
+         54      0.8967999566         
+         55      0.8976646627         
+         56      0.9090495425         
+         57      0.9095564434         
+         58      0.9104008575         
+         59      0.9241679102         
+         60      0.9380418120         
+         61      0.9571253074         
+         62      0.9635666692         
+         63      1.0033237346         
+         64      1.0166403912         
+         65      1.1229099371         
+         66      1.1354240781         
+         67      1.1695411295         
+         68      1.3042249863         
+         69      1.4280400660         
+         70      1.4566671375         
+         71      1.4625609484         
+         72      1.4726719040         
+         73      1.4774703721         
+         74      1.4826198249         
+         75      1.5659314889         
+         76      1.5965439975         
+         77      1.6421947691         
+         78      1.6751919583         
+         79      1.6762295510         
+         80      1.7310830342         
+         81      1.8092457894         
+         82      1.8498376829         
+         83      1.8615234450         
+         84      1.8989065248         
+         85      1.9011129972         
+         86      1.9032744135         
+         87      1.9043675550         
+         88      1.9136314186         
+         89      1.9172769650         
+         90      1.9328972648         
+         91      1.9560006296         
+         92      1.9655127168         
+         93      1.9685077278         
+         94      1.9738432754         
+         95      1.9786172182         
+         96      1.9934148169         
+         97      2.0293931208         
+         98      2.0378634196         
+         99      2.0401387955         
+        100      2.0491911598         
+        101      2.0820428794         
+        102      2.1722964692         
+        103      2.1747465355         
+        104      2.2282913855         
+        105      2.2724692330         
+        106      2.2814719820         
+        107      2.3610861447         
+        108      2.3645350763         
+        109      2.3706114908         
+        110      2.4421510579         
+        111      2.4831394915         
+        112      2.4953299586         
+        113      2.5008942878         
+        114      2.5551828706         
+        115      2.5817070575         
+        116      2.6087336043         
+        117      2.6263901158         
+        118      2.6303871939         
+        119      2.6916040367         
+        120      2.7334444937         
+        121      2.7358447173         
+        122      2.7619714612         
+        123      2.7918524937         
+        124      2.8167085615         
+        125      2.8751920612         
+        126      2.9063151099         
+        127      2.9202327944         
+        128      2.9400562568         
+        129      3.0571493665         
+        130      3.0760131435         
+
+   ✔  SCF Equations converged 😄
+--------------------------------------------------------------------------------
+!! AO Integrals are not the same type as the MO. New integrals will be computed.
+Fock matrix will be computed using old ERI
+
+  ⇒ Preparing new Basis Set: cc-pvdz
+
+Looking for atom C in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvdz.gbs
+Basis functions for C: S S S P P D 
+
+Looking for atom H in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvdz.gbs
+Basis functions for H: S S P 
+
+Computing MO Integrals...
+Done in 0.00001 seconds.
+Using MP2 guess
+
+  ⇒ Preparing new Basis Set: cc-pvdz
+
+Looking for atom C in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvdz.gbs
+Basis functions for C: S S S P P D 
+
+Looking for atom H in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvdz.gbs
+Basis functions for H: S S P 
+
+
+  ⇒ Preparing new Basis Set: cc-pvtz-rifit
+
+Looking for atom C in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvtz-rifit.gbs
+Basis functions for C: S S S S S S S S P P P P P P D D D D D F F F G 
+
+Looking for atom H in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvtz-rifit.gbs
+Basis functions for H: S S S S P P P D D F 
+
+================================================================================
+//    _____                   _          _   _____ _           _              \\ 
+//   /  __ \                 | |        | | /  __ \ |         | |             \\   
+//   | /  \/ ___  _   _ _ __ | | ___  __| | | /  \/ |_   _ ___| |_ ___ _ __   \\   
+//   | |    / _ \| | | | '_ \| |/ _ \/ _` | | |   | | | | / __| __/ _ \ '__|  \\   
+//   | \__/\ (_) | |_| | |_) | |  __/ (_| | | \__/\ | |_| \__ \ ||  __/ |     \\  
+//    \____/\___/ \__,_| .__/|_|\___|\__,_|  \____/_|\__,_|___/\__\___|_|     \\  
+//                    | |                                                     \\   
+//                    |_|                                                     \\   
+//                                                                            \\     
+//                 Module by G.J.R. Aroeira and M. M. Davis                   \\       
+================================================================================
+
+	Dropped Occupied Orbitals →   0.
+	Dropped Virtual Orbitals  →   0.
+
+
+--------------------------------------------------------------------------------
+	Options:
+	Precision? Float64
+	DIIS? true
+	DIIS Vectors? 3
+	DIIS Precision? Float32
+	Preconverge T1 amplitudes? true
+	Damping percentage ? 0.0
+		cc_max_iter →   50
+		cc_e_conv   →  1.e-10
+		cc_max_rms  →  1.e-10
+--------------------------------------------------------------------------------
+	Guess Correlation Energy:     -0.7478735154
+	Guess Total Energy:         -197.0910577557
+
+    Starting CC Iterations
+
+Preconverging T1 amplitudes
+Taking one T2 step
+Iteration     CC Energy          ΔE              Max RMS (T1)    Time (s)  
+
+  ⇒ Preparing new Basis Set: cc-pvdz
+
+Looking for atom C in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvdz.gbs
+Basis functions for C: S S S P P D 
+
+Looking for atom H in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvdz.gbs
+Basis functions for H: S S P 
+
+
+  ⇒ Preparing new Basis Set: cc-pvtz-rifit
+
+Looking for atom C in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvtz-rifit.gbs
+Basis functions for C: S S S S S S S S P P P P P P D D D D D F F F G 
+
+Looking for atom H in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvtz-rifit.gbs
+Basis functions for H: S S S S P P P D D F 
+
+
+  ⇒ Preparing new Basis Set: cc-pvdz
+
+Looking for atom C in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvdz.gbs
+Basis functions for C: S S S P P D 
+
+Looking for atom H in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvdz.gbs
+Basis functions for H: S S P 
+
+
+  ⇒ Preparing new Basis Set: cc-pvtz-rifit
+
+Looking for atom C in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvtz-rifit.gbs
+Basis functions for C: S S S S S S S S P P P P P P D D D D D F F F G 
+
+Looking for atom H in basisset file at: /home/aroeira/Fermi.jl/src/Core/../../deps/lib/cc-pvtz-rifit.gbs
+Basis functions for H: S S S S P P P D D F 
+
+    pre      -0.7991059131      -0.0512323976    0.0000138320    21.89405  
+    1        -0.7991112711      -0.0000053580    0.0001172217    0.36805   
+    2        -0.7991157902      -0.0000045191    0.0001365480    0.39256   
+    3        -0.7991263186      -0.0000105285    0.0004113466    0.39386   
+    4        -0.7991309881      -0.0000046695    0.0001492799    0.39363   
+    5        -0.7991299793      +0.0000010088    0.0000279760    0.39637   
+    6        -0.7991290530      +0.0000009263    0.0000261767    0.39973   
+    7        -0.7991290533      -0.0000000003    0.0000000152    0.39935   
+    8        -0.7991290533      +0.0000000000    0.0000000040    0.40026   
+    9        -0.7991290533      +0.0000000000    0.0000000007    0.40444   
+    10       -0.7991290533      +0.0000000000    0.0000000000    0.39742   
+
+T1 pre-convergence took 25.839727748s
+Including T2 update
+Iteration     CC Energy          ΔE              Max RMS         Time (s)  
+    1        -0.8147809905      -0.0156519372    0.0005184125    16.00816  
+    2        -0.8203984474      -0.0056174569    0.0000989463    15.79990  
+    3        -0.8234002648      -0.0030018175    0.0000539604    15.15270  

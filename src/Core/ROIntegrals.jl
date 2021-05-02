@@ -1,4 +1,4 @@
-function mo_from_ao(I::IntegralHelper{T1,E1,O}, aoints::IntegralHelper{T2,E2,AtomicOrbitals}, entries...) where {T1<:AbstractFloat,T2<:AbstractFloat,
+function mo_from_ao!(I::IntegralHelper{T1,E1,O}, aoints::IntegralHelper{T2,E2,AtomicOrbitals}, entries...) where {T1<:AbstractFloat,T2<:AbstractFloat,
                                                             E1<:AbstractERI,E2<:AbstractERI,O<:AbstractRestrictedOrbitals}
     if T1 !== T2 || E1 !== E2 
         output("!! AO Integrals are not the same type as the MO. New integrals will be computed.")
@@ -479,7 +479,21 @@ function compute_F(I::IntegralHelper{T,E1,O}, aoints::IntegralHelper{T, E2, Atom
 end
 
 function compute_F(I::IntegralHelper{T,E,RHFOrbitals}) where {T<:AbstractFloat, E<:AbstractERI}
+    core = Options.get("drop_occ")
+    inac = Options.get("drop_vir")
+    ndocc = I.molecule.Nα
+    nbf = size(I.orbitals.C,1)
+    o = (1+core):ndocc
+    v = (ndocc+1):(nbf - inac)
+    No = length(o)
+    Nv = length(v)
+
     I["Fd"] = I.orbitals.eps
+    I["Fii"] = I.orbitals.eps[o]
+    I["Faa"] = I.orbitals.eps[v]
+    I["Fia"] = FermiMDzeros(T, No,Nv)
+    I["Fij"] = FermiMDzeros(T, No,No)
+    I["Fab"] = FermiMDzeros(T, Nv,Nv)
 end
 
 function compute_ref_energy(I::IntegralHelper{T,Chonky,O}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}

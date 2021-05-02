@@ -173,7 +173,7 @@ function ao_1e(BS::BasisSet, compute::String)
                     end    
                 end
             end #inbounds
-        end #spwan
+        end #spawn
     end #sync
     return out
 end
