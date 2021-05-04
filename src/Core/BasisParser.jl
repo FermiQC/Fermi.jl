@@ -1,7 +1,3 @@
-using Fermi
-using Fermi.Error
-using Memoize
-
 const LIBPATH = joinpath(@__DIR__, "../../deps/lib")
 const AM_pat = r"([SPDFGHI]{1,2})\s+?(\d++)"
 const prim_pat = r"([+-]?\d*?\.\d+[D+-]{0,2}\d\d)\s+?([+-]?\d*?\.\d+[D+-]{0,2}+\d\d)"
