@@ -1,23 +1,70 @@
 """
     Fermi.Integrals
 
-Module to compute integrals using Lints.jl
+Module to compute integrals using Libcints
 """
 module Integrals
 
 using Fermi
+using Fermi.Libcint
 using Fermi.Error
 using Fermi.Options
-using Fermi.Geometry: Molecule
+using Fermi.Geometry
+using Fermi.GaussianBasis
+using Fermi.Orbitals
 using LinearAlgebra
 using TensorOperations
-using Fermi.Orbitals
 
 import Base: getindex, setindex!, delete!, show
 
-export IntegralHelper, delete!, mo_from_ao!
+export IntegralHelper, delete!, mo_from_ao!, JKFIT, RIFIT, Chonky, AbstractDFERI, AbstractERI
 
-include("../Backend/Lints.jl")
+abstract type AbstractERI end
+abstract type AbstractDFERI <: AbstractERI end
+
+struct JKFIT <: AbstractDFERI
+    basisset::BasisSet
+end
+
+function JKFIT(mol::Molecule = Molecule())
+
+    auxjk = Options.get("jkfit")
+    # If aux is auto, determine the aux basis from the basis
+    if auxjk == "auto"
+        basis = Options.get("basis")
+        dunning_name = Regex("cc-pv.z")
+        auxjk = occursin(dunning_name, basis) ? basis*"-jkfit" : "cc-pvqz-jkfit"
+    end
+
+    return JKFIT(mol, auxjk)
+end
+
+function JKFIT(mol::Molecule, basis::String)
+    return JKFIT(BasisSet(mol, basis))
+end
+
+struct RIFIT <: AbstractDFERI 
+    basisset::BasisSet
+end
+
+function RIFIT(mol::Molecule = Molecule())
+
+    auxri = Options.get("rifit")
+    # If aux is auto, determine the aux basis from the basis
+    if auxri == "auto"
+        basis = Options.get("basis")
+        dunning_name = Regex("cc-pv.z")
+        auxri = occursin(dunning_name, basis) ? basis*"-rifit" : "cc-pvqz-rifit"
+    end
+
+    return RIFIT(mol, auxri)
+end
+
+function RIFIT(mol::Molecule, basis::String)
+    return RIFIT(BasisSet(mol, basis))
+end
+
+struct Chonky <:AbstractERI end
 
 """
     IntegralHelper{T}
@@ -41,7 +88,6 @@ A key is associated with each type of integral
     basis                       Basis set name
     cache                       Holds integrals computed 
     eri_type                    Defines whether/how density-fitting is done
-    normalize                   Do normalize integrals? `true` or `false`
 """
 struct IntegralHelper{T<:AbstractFloat,E<:AbstractERI,O<:AbstractOrbitals}
     molecule::Molecule
@@ -49,17 +95,18 @@ struct IntegralHelper{T<:AbstractFloat,E<:AbstractERI,O<:AbstractOrbitals}
     basis::String
     cache::Dict{String,FermiMDArray{T}} 
     eri_type::E
-    normalize::Bool
 end
 
 # Pretty printing
 function string_repr(X::IntegralHelper{T,E,O}) where {T,E,O}
+    eri_string = replace("$E", "Fermi.Integrals."=>"")
+    orb_string = replace("$O", "Fermi.Orbitals."=>"")
     out = ""
     out = out*" ⇒ Fermi IntegralHelper\n"
     out = out*" ⋅ Data Type:                 $(T)\n"
     out = out*" ⋅ Basis:                     $(X.basis)\n"
-    out = out*" ⋅ ERI:                       $(E)\n"
-    out = out*" ⋅ Orbitals:                  $(O)\n"
+    out = out*" ⋅ ERI:                       $(eri_string)\n"
+    out = out*" ⋅ Orbitals:                  $(orb_string)\n"
     cache_str = ""
     for k in keys(X.cache)
         cache_str *= k*" "
@@ -73,51 +120,37 @@ function show(io::IO, ::MIME"text/plain", X::IntegralHelper)
 end
 
 
-function IntegralHelper(;molecule = Molecule(), orbitals = AtomicOrbitals(), 
-                           basis = Options.get("basis"), normalize = false, eri_type = nothing)
+function IntegralHelper(x...;k...)
 
     precision = Options.get("precision")
     if precision == "single"
-        IntegralHelper{Float32}(molecule=molecule, orbitals=orbitals, basis=basis, normalize=normalize, eri_type = eri_type)
+        IntegralHelper{Float32}(x...; k...)
     elseif precision == "double"
-        IntegralHelper{Float64}(molecule=molecule, orbitals=orbitals, basis=basis, normalize=normalize, eri_type = eri_type)
+        IntegralHelper{Float64}(x...; k...)
     else
         throw(InvalidFermiOption("precision can only be `single` or `double`. Got $precision"))
     end
 end
 
 function IntegralHelper{T}(;molecule = Molecule(), orbitals = AtomicOrbitals(), 
-                           basis = Options.get("basis"), normalize = false, eri_type = nothing) where T<:AbstractFloat
+                           basis = Options.get("basis"), eri_type=nothing) where T<:AbstractFloat
 
-    # Check if density-fitting is requested
-    if Options.get("df") && eri_type === nothing
-        # If the associated orbitals are AtomicOrbitals and DF is requested, JKFIT is set by default
-        # Otherwise, the ERI type will be RIFIT
-        eri_type = typeof(orbitals) === AtomicOrbitals ? JKFIT() : RIFIT()
+    # If the associated orbitals are AtomicOrbitals and DF is requested, JKFIT is set by default
+    if Options.get("df") && orbitals isa AtomicOrbitals && eri_type == nothing
+        eri_type = JKFIT(molecule)
+
+    # If df is requested, but the orbitals are not AtomicOrbitals then RIFIT is set by default
+    elseif Options.get("df") && eri_type == nothing
+
+        eri_type = RIFIT(molecule)
+
+    # Else, if eri_type is not an AbstractERI object, Chonky is used. This will overwrite invalid entries for eri_type
     elseif !(typeof(eri_type) <: AbstractERI)
         eri_type = Chonky()
     end
 
-    # Starts an empty cache
-    cache = Dict{String,FermiMDArray{T}}()
-
-    # Return IntegralHelper object
-    IntegralHelper(molecule, orbitals, basis, cache, eri_type, normalize)
-end
-
-function IntegralHelper(I::IntegralHelper{T,E,O}, A::AtomicOrbitals) where {T<:AbstractFloat,E<:AbstractERI,O<:AbstractOrbitals}
     cache = Dict{String, FermiMDArray{T}}() 
-    return IntegralHelper{T,E,AtomicOrbitals}(I.molecule, A, I.basis, cache, E(), I.normalize)
-end
-
-# Clears cache and change normalize key
-function normalize!(I::IntegralHelper,normalize::Bool)
-    if I.normalize != normalize
-        I.normalize = normalize
-        for entry in keys(I.cache)
-            delete!(I.cache, entry)
-        end
-    end
+    IntegralHelper(molecule, orbitals, basis, cache, eri_type)
 end
 
 """

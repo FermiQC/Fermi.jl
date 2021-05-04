@@ -28,6 +28,10 @@ function AtomicOrbitals()
     return AtomicOrbitals(BasisSet())
 end
 
+function AtomicOrbitals(mol:: Molecule, basis::String)
+    return AtomicOrbitals(BasisSet(mol, basis))
+end
+
 abstract type AbstractRestrictedOrbitals <: AbstractOrbitals end
 abstract type AbstractUnrestrictedOrbitals <: AbstractOrbitals end
 

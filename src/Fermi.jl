@@ -7,6 +7,17 @@ GitHub: [Fermi.jl](https://github.com/FermiQC/Fermi.jl)
 """
 module Fermi
 
+"""
+    Fermi.AbstractWavefunction
+
+Abstract type common to all wave functions.
+
+_struct tree:_
+
+**AbstractWavefunction**  (Top level)
+"""
+abstract type AbstractWavefunction end
+
 include("Backend/Error.jl")
 include("Backend/Options.jl")                             
 include("Backend/Arrays.jl")
@@ -18,7 +29,6 @@ include("Core/PhysicalConstants.jl")
 include("Core/Geometry.jl")                               
 include("Core/BasisSet.jl")
 include("Core/Orbitals.jl")
-include("Core/AuxiliarStructs.jl")                  
 include("Core/IntegralHelper.jl")
 include("Methods/HartreeFock/HartreeFock.jl")
 include("Methods/MollerPlesset/MollerPlesset.jl")

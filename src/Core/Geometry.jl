@@ -19,7 +19,6 @@ using Fermi
 using Fermi.Error
 using Fermi.PhysicalConstants: atomic_number, bohr_to_angstrom
 using LinearAlgebra
-using Lints
 using Formatting
 
 """

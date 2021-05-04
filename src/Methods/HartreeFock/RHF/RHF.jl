@@ -1,7 +1,6 @@
 using TensorOperations
 using LinearAlgebra
 using Fermi.DIIS
-using Fermi.Integrals: projector
 import Base: show
 
 export RHF
