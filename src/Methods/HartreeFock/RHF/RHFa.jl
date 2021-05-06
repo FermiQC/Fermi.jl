@@ -1,13 +1,15 @@
-function RHF(mol::Molecule, Alg::RHFa)
-    RHF(IntegralHelper{Float64}(molecule=mol))
-end
-
 function RHF(Alg::RHFa)
     ints = IntegralHelper{Float64}()
     RHF(ints, Alg)
 end
 
+function RHF(mol::Molecule, Alg::RHFa)
+    RHF(IntegralHelper{Float64}(molecule=mol), Alg)
+end
+
 function RHF(ints::IntegralHelper{Float64}, Alg::RHFa)
+
+    Fermi.HartreeFock.hf_header()
 
     guess = Options.get("scf_guess")
     if guess == "core"
@@ -16,10 +18,12 @@ function RHF(ints::IntegralHelper{Float64}, Alg::RHFa)
         C, Λ = RHF_gwh_guess(ints)
     end
 
-    RHF(ints, C, Λ, get_scf_alg())
+    RHF(ints, C, Λ, Alg)
 end
 
 function RHF(wfn::RHF, Alg::RHFa)
+
+    Fermi.HartreeFock.hf_header()
 
     # Projection of A→ B done using equations described in Werner 2004 
     # https://doi.org/10.1080/0026897042000274801
@@ -52,7 +56,6 @@ end
 
 function RHF(ints::IntegralHelper{Float64}, C::FermiMDArray{Float64,2}, Λ::FermiMDArray{Float64,2}, Alg::RHFa)
 
-    Fermi.HartreeFock.hf_header()
     molecule = ints.molecule
     output(Fermi.Geometry.string_repr(molecule))
     # Grab some options
@@ -78,7 +81,7 @@ function RHF(ints::IntegralHelper{Float64}, C::FermiMDArray{Float64,2}, Λ::Ferm
     do_diis ? DM = Fermi.DIIS.DIISManager{Float64,Float64}(size=Options.get("ndiis")) : nothing 
     do_diis ? diis_start = Options.get("diis_start") : nothing
 
-    #grab ndocc,nvir
+    # Grab ndocc,nvir
     ndocc = try
         Int((molecule.Nα + molecule.Nβ)/2)
     catch InexactError
@@ -108,9 +111,10 @@ function RHF(ints::IntegralHelper{Float64}, C::FermiMDArray{Float64,2}, Λ::Ferm
     build_fock!(F, T + V, D, ERI)
     F̃ = deepcopy(F)
     D̃ = deepcopy(D)
+    N = length(D) # Number of elements in D (For RMS computation)
     output(" Guess Energy {:20.14f}", RHFEnergy(D,T+V,F))
 
-    output("\n Iter.   {:>15} {:>10} {:>10} {:>8} {:>8} {:>8}", "E[RHF]", "ΔE", "√|ΔD|²", "t", "DIIS", "damp")
+    output("\n Iter.   {:>15} {:>10} {:>10} {:>8} {:>8} {:>8}", "E[RHF]", "ΔE", "Dᵣₘₛ", "t", "DIIS", "damp")
     output(repeat("-",80))
     t = @elapsed while ite ≤ maxit
         t_iter = @elapsed begin
@@ -169,7 +173,7 @@ function RHF(ints::IntegralHelper{Float64}, C::FermiMDArray{Float64,2}, Λ::Ferm
 
             # Compute the Density RMS
             ΔD = D - D_old
-            Drms = sqrt(sum(ΔD.^2))
+            Drms = √(sum(ΔD.^2) / N)
 
             # Compute Energy Change
             ΔE = Enew - E
@@ -203,5 +207,5 @@ function RHF(ints::IntegralHelper{Float64}, C::FermiMDArray{Float64,2}, Λ::Ferm
 
     Orbitals = RHFOrbitals(molecule, ints.basis, eps, E, C)
 
-    return RHF(molecule, E, ndocc, nvir, Orbitals, converged)
+    return RHF(molecule, E, ndocc, nvir, Orbitals, ΔE, Drms)
 end

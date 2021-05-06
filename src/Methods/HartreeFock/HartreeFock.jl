@@ -8,9 +8,8 @@ module HartreeFock
 using Fermi
 using Fermi.Options
 using Fermi.Error
-using Fermi: AbstractWavefunction
-using Fermi.Geometry: Molecule
-using Fermi.Integrals: IntegralHelper
+using Fermi.Geometry
+using Fermi.Integrals
 using Fermi.Orbitals
 
 function hf_header()
@@ -30,7 +29,9 @@ _struct tree:_
 
 **AbstractHFWavefunction** <: AbstractWavefunction
 """
-abstract type AbstractHFWavefunction <: AbstractWavefunction end
+abstract type AbstractHFWavefunction <: Fermi.AbstractWavefunction end
+
+# Different Hartree-Fock methods are included here:
 
 # Restricted Hartree--Fock
 include("RHF/RHF.jl")
