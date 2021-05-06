@@ -1,4 +1,4 @@
-function mo_from_ao(I::IntegralHelper{T1,E1,O}, aoints::IntegralHelper{T2,E2,AtomicOrbitals}, entries...) where {T1<:AbstractFloat,T2<:AbstractFloat,
+function mo_from_ao!(I::IntegralHelper{T1,E1,O}, aoints::IntegralHelper{T2,E2,AtomicOrbitals}, entries...) where {T1<:AbstractFloat,T2<:AbstractFloat,
                                                             E1<:AbstractERI,E2<:AbstractERI,O<:AbstractRestrictedOrbitals}
     if T1 !== T2 || E1 !== E2 
         output("!! AO Integrals are not the same type as the MO. New integrals will be computed.")
@@ -10,7 +10,9 @@ function mo_from_ao(I::IntegralHelper{T1,E1,O}, aoints::IntegralHelper{T2,E2,Ato
             entries = [entries...]
             filter!(i->i==entry, entries)
         end
-        aoints = IntegralHelper(I, AtomicOrbitals())
+        basis = I.orbitals.basis
+        aoorbs = AtomicOrbitals(I.molecule, basis)
+        aoints = IntegralHelper(molecule=I.molecule, orbitals=aoorbs, basis=basis, eri_type=I.eri_type)
     end
     t = @elapsed begin
         output("Computing MO Integrals...")
@@ -85,25 +87,33 @@ end
 
 function compute_S!(I::IntegralHelper{T, E, O}) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
         # Create AO integral object
-        aoints = IntegralHelper(I, AtomicOrbitals())
+        basis = I.orbitals.basis
+        aoorbs = AtomicOrbitals(I.molecule, basis)
+        aoints = IntegralHelper(molecule=I.molecule, orbitals=aoorbs, basis=basis, eri_type=I.eri_type)
         compute_S!(I, aoints)
 end
 
 function compute_T!(I::IntegralHelper{T, E, O}) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
         # Create AO integral object
-        aoints = IntegralHelper(I, AtomicOrbitals())
+        basis = I.orbitals.basis
+        aoorbs = AtomicOrbitals(I.molecule, basis)
+        aoints = IntegralHelper(molecule=I.molecule, orbitals=aoorbs, basis=basis, eri_type=I.eri_type)
         compute_T!(I,aoints)
 end
 
 function compute_V!(I::IntegralHelper{T, E, O}) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
         # Create AO integral object
-        aoints = IntegralHelper(I, AtomicOrbitals())
+        basis = I.orbitals.basis
+        aoorbs = AtomicOrbitals(I.molecule, basis)
+        aoints = IntegralHelper(molecule=I.molecule, orbitals=aoorbs, basis=basis, eri_type=I.eri_type)
         compute_V!(I,aoints)
 end
 
 function compute_ERI!(I::IntegralHelper{T, E, O}) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
         # Create AO integral object
-        aoints = IntegralHelper(I, AtomicOrbitals())
+        basis = I.orbitals.basis
+        aoorbs = AtomicOrbitals(I.molecule, basis)
+        aoints = IntegralHelper(molecule=I.molecule, orbitals=aoorbs, basis=basis, eri_type=I.eri_type)
         compute_ERI!(I,aoints)
 end
 
@@ -160,36 +170,45 @@ end
 
 function compute_OOOO!(I::IntegralHelper{T,E,O}) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
         # Create AO integral object
-        aoints = IntegralHelper(I, AtomicOrbitals())
+        basis = I.orbitals.basis
+        aoorbs = AtomicOrbitals(I.molecule, basis)
+        aoints = IntegralHelper(molecule=I.molecule, orbitals=aoorbs, basis=basis, eri_type=I.eri_type)
         compute_OOOO!(I,aoints)
 end
 
 function compute_OOOV!(I::IntegralHelper{T,E,O}) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
         # Create AO integral object
-        aoints = IntegralHelper(I, AtomicOrbitals())
+        basis = I.orbitals.basis
+        aoorbs = AtomicOrbitals(I.molecule, basis)
+        aoints = IntegralHelper(molecule=I.molecule, orbitals=aoorbs, basis=basis, eri_type=I.eri_type)
         compute_OOOV!(I,aoints)
 end
 
 function compute_OOVV!(I::IntegralHelper{T,E,O}) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
         # Create AO integral object
-        aoints = IntegralHelper(I, AtomicOrbitals())
+        basis = I.orbitals.basis
+        aoorbs = AtomicOrbitals(I.molecule, basis)
+        aoints = IntegralHelper(molecule=I.molecule, orbitals=aoorbs, basis=basis, eri_type=I.eri_type)
         compute_OOVV!(I,aoints)
 end
 
 function compute_OVOV!(I::IntegralHelper{T,E,O}) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
         # Create AO integral object
-        aoints = IntegralHelper(I, AtomicOrbitals())
+        basis = I.orbitals.basis
+        aoorbs = AtomicOrbitals(I.molecule, basis)
+        aoints = IntegralHelper(molecule=I.molecule, orbitals=aoorbs, basis=basis, eri_type=I.eri_type)
         compute_OVOV!(I,aoints)
 end
 
 function compute_OVVV!(I::IntegralHelper{T,E,O}) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
         # Create AO integral object
-        aoints = IntegralHelper(I, AtomicOrbitals())
         compute_OVVV!(I,aoints)
 end
 function compute_VVVV!(I::IntegralHelper{T,E,O}) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
         # Create AO integral object
-        aoints = IntegralHelper(I, AtomicOrbitals())
+        basis = I.orbitals.basis
+        aoorbs = AtomicOrbitals(I.molecule, basis)
+        aoints = IntegralHelper(molecule=I.molecule, orbitals=aoorbs, basis=basis, eri_type=I.eri_type)
         compute_VVVV!(I,aoints)
 end
 
@@ -243,19 +262,25 @@ end
 
 function compute_BOO!(I::IntegralHelper{T, E, O}) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
         # Create AO integral object
-        aoints = IntegralHelper(I, AtomicOrbitals())
+        basis = I.orbitals.basis
+        aoorbs = AtomicOrbitals(I.molecule, basis)
+        aoints = IntegralHelper(molecule=I.molecule, orbitals=aoorbs, basis=basis, eri_type=I.eri_type)
         compute_BOO!(I,aoints)
 end
 
 function compute_BVV!(I::IntegralHelper{T, E, O}) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
         # Create AO integral object
-        aoints = IntegralHelper(I, AtomicOrbitals())
+        basis = I.orbitals.basis
+        aoorbs = AtomicOrbitals(I.molecule, basis)
+        aoints = IntegralHelper(molecule=I.molecule, orbitals=aoorbs, basis=basis, eri_type=I.eri_type)
         compute_BVV!(I,aoints)
 end
 
 function compute_BOV!(I::IntegralHelper{T, E, O}) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
         # Create AO integral object
-        aoints = IntegralHelper(I, AtomicOrbitals())
+        basis = I.orbitals.basis
+        aoorbs = AtomicOrbitals(I.molecule, basis)
+        aoints = IntegralHelper(molecule=I.molecule, orbitals=aoorbs, basis=basis, eri_type=I.eri_type)
         compute_BOV!(I,aoints)
 end
 
@@ -407,7 +432,9 @@ function compute_VVVV!(I::IntegralHelper{T,Chonky,O}, aoints::IntegralHelper{T,C
 end
 
 function compute_F(I::IntegralHelper{T,E,O}) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
-    aoints = IntegralHelper(I, AtomicOrbitals())
+    basis = I.orbitals.basis
+    aoorbs = AtomicOrbitals(I.molecule, basis)
+    aoints = IntegralHelper(molecule=I.molecule, orbitals=aoorbs, basis=basis, eri_type=I.eri_type)
     compute_F(I, aoints)
 end
 
@@ -479,7 +506,21 @@ function compute_F(I::IntegralHelper{T,E1,O}, aoints::IntegralHelper{T, E2, Atom
 end
 
 function compute_F(I::IntegralHelper{T,E,RHFOrbitals}) where {T<:AbstractFloat, E<:AbstractERI}
+    core = Options.get("drop_occ")
+    inac = Options.get("drop_vir")
+    ndocc = I.molecule.Nα
+    nbf = size(I.orbitals.C,1)
+    o = (1+core):ndocc
+    v = (ndocc+1):(nbf - inac)
+    No = length(o)
+    Nv = length(v)
+
     I["Fd"] = I.orbitals.eps
+    I["Fii"] = I.orbitals.eps[o]
+    I["Faa"] = I.orbitals.eps[v]
+    I["Fia"] = FermiMDzeros(T, No,Nv)
+    I["Fij"] = FermiMDzeros(T, No,No)
+    I["Fab"] = FermiMDzeros(T, Nv,Nv)
 end
 
 function compute_ref_energy(I::IntegralHelper{T,Chonky,O}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}

@@ -32,13 +32,6 @@ function RCCSDpT(x...)
     end
 end
 
-function RCCSDpT()
-    aoints = IntegralHelper()
-    rhf = RHF(aoints)
-    moints = IntegralHelper(orbitals=rhf.orbitals)
-    ccsd = RCCSD(moints, aoints)
-    return RCCSDpT(ccsd, moints, get_rpt_alg())
-end
 #implementations
 struct RpTa <: RpTAlgorithm end
 include("RpTa.jl")

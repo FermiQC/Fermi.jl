@@ -13,14 +13,15 @@ module Geometry
 export Molecule
 export Atom
 
-import Base: show
-
 using Fermi
 using Fermi.Error
+using Fermi.Options
 using Fermi.PhysicalConstants: atomic_number, bohr_to_angstrom
+
 using LinearAlgebra
-using Lints
 using Formatting
+
+import Base: show
 
 """
     Fermi.Atom
@@ -63,14 +64,14 @@ struct Molecule
 end
 
 function Molecule()
-    molstring = Fermi.Options.get("molstring")
-    unit = Fermi.Options.get("unit")
+    molstring = Options.get("molstring")
+    unit = Options.get("unit")
     Molecule(molstring, unit)
 end
 
 function Molecule(molstring::String, unit::String="angstrom")
-    charge = Fermi.Options.get("charge")
-    multiplicity = Fermi.Options.get("multiplicity")
+    charge = Options.get("charge")
+    multiplicity = Options.get("multiplicity")
     Molecule(molstring, charge, multiplicity, unit)
 end
 
@@ -160,7 +161,7 @@ end
 """
     Fermi.Geometry.nuclear_repulsion(A::Atom, B::Atom)
 
-Returns the repulsion energy between the two given atoms.
+Returns the repulsion energy between atoms A and B.
 """
 function nuclear_repulsion(A::Atom, B::Atom)
     return (A.Z*B.Z)/(√((A.xyz.-B.xyz)⋅(A.xyz.-B.xyz))/bohr_to_angstrom)
@@ -199,8 +200,19 @@ function string_repr(M::Molecule)
     return out
 end
 
+"""
+    Fermi.string_repr(A::Atom)
+
+Returns a nicely formatted string for Atom object.
+"""
+function string_repr(A::Atom)
+    out = "Symbol:           $(A.AtomicSymbol)\n"
+    out = out*"Atomic Number:    $(A.Z)\n"
+    out = out*"Position: $(format("{:2.5f}  {:2.5f}  {:2.5f}", A.xyz...))"
+end
+
 # Pretty printing
-function show(io::IO, ::MIME"text/plain", M::Molecule)
-    print(string_repr(M))
+function show(io::IO, ::MIME"text/plain", X::T) where T<:Union{Molecule, Atom}
+    print(string_repr(X))
 end
 end #Module

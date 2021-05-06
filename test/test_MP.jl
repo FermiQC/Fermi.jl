@@ -1,6 +1,5 @@
 @reset
 @set printstyle none
-@set lints false
 
 Econv = [
 -76.330243064527608

@@ -15,7 +15,7 @@ Please checkout at v0.2.0 version to try the code.
 
 ## Documentation
 
-[DEV](https://FermiQC.github.io/Fermi.jl/dev)
+Coming soon...
 
 Fermi focuses on post Hartree--Fock methods. Currently, only restricted references are supported.
 This is intended as a research code with an ever growing collection of methods implemented in
@@ -27,17 +27,9 @@ Currently, we have implementations of:
 | Method    | Conv. | DF |
 |-----------|-------|----|
 | RHF       |  Y    |  Y |
-<!--- | RMP2      |  Y    |  Y |
-| RMP3      |  N    |  Y |
+| RMP2      |  Y    |  Y |
 | RCCSD     |  Y    |  Y |
 | RCCSD(T)  |  Y    |  Y |
-| BCCD      |  Y    |  Y |
-| CASCI     |  Y    |  N |
-| ACI       |  Y    |  N |
-| ecCCSD    |  Y    |  N |
-| ecCCSD(T) |  Y    |  N |
--->
-
 
 
 ## Contribute
@@ -51,12 +43,10 @@ pkg> add Fermi
 ```
 If you would like the latest updates, use instead
 ```
-pkg> add Fermi#master
+pkg> add Fermi
 ```
-Everything should work automatically on x86 architechtures for Linux and macOS. Windows is not
-supported. You may run into issues when building Lints, the interface software between the
-Libint2 integral code and Fermi. These errors can be a bit cryptic, so please reach out 
-if you encounter any.
+Everything should work automatically, the most flagile part is building the integral library [libcint](https://github.com/sunqm/libcint). The file [`deps/build.jl`](https://github.com/gustavojra/Fermi.jl/blob/master/deps/build.jl) contains simple commands to clone and build this library, you might need to modify it to better suit your system. If you do, rerun the build step using `pkg> build Fermi`. Please reach out 
+if you encounter any problem.
 
 ## Running single point energies
 A minimal example of a computation is provided here. For more info check the documentation.
