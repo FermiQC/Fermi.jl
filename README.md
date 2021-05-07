@@ -1,21 +1,40 @@
-[![CI](https://github.com/FermiQC/Fermi.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/FermiQC/Fermi.jl/actions/workflows/CI.yml)
-[![codecov](https://codecov.io/gh/FermiQC/Fermi.jl/branch/master/graph/badge.svg?token=EWRG6Q7FK9)](https://codecov.io/gh/FermiQC/Fermi.jl)
+<p align="center">
+  <img src="docs/src/assets/logo.svg" width="400" alt=""/>
+</p>
 
-<img src="images/Fermi_logo.png" alt="Fermi Logo" width="400"/>
+<table align="center">
+  <tr>
+    <th>Documentation</th>
+    <th>Build Status</th>
+    <th>License</th>
+  </tr>
+  <tr>
+    <td align="center">
+      <a href=https://FermiQC.github.io/Fermi.jl/dev>
+      <img src=https://img.shields.io/badge/docs-dev-blue.svg>
+      </a> 
+    </td>
+    <td align="center">
+      <a href=https://github.com/FermiQC/Fermi.jl/actions/workflows/CI.yml>
+      <img src=https://github.com/FermiQC/Fermi.jl/actions/workflows/CI.yml/badge.svg>
+      </a> 
+      <a href=https://codecov.io/gh/FermiQC/Fermi.jl>
+      <img src=https://codecov.io/gh/FermiQC/Fermi.jl/branch/master/graph/badge.svg?token=EWRG6Q7FK9>
+      </a> 
+    </td>
+    <td align="center">
+      <a href=https://github.com/FermiQC/Fermi.jl/blob/master/LICENSE>
+      <img src=https://img.shields.io/badge/License-MIT-blue.svg>
+      </a>
+    </td>
+  </tr>
+</table>
 
 Fermi is a quantum chemistry program written in (nearly) pure Julia. This code is developed at
 the [Center for Computational Quantum Chemistry](https://github.com/CCQC) at the University of Georgia under the supervision 
 of [Dr. Justin M. Turney](https://github.com/jturney) and Prof. Henry F. Schaefer.
 
 This work is supported by the U.S. National Science Foundation under grant number CHE-1661604.
-
-### !! Warning
-> Fermi is going through a major refactorization. Much of the code will be non functional. 
-Please checkout at v0.2.0 version to try the code.
-
-## Documentation
-
-Coming soon...
 
 Fermi focuses on post Hartree--Fock methods. Currently, only restricted references are supported.
 This is intended as a research code with an ever growing collection of methods implemented in
