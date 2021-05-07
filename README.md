@@ -1,22 +1,34 @@
 <p align="center">
-  <img src="images/Fermi_logo.png" />
+  <img src="docs/src/assets/logo.svg" width="400" alt=""/>
 </p>
 
-| **Documentation**| **Build** | **License**|
-|:--:|:--:|:--:| 
-|[![DEV][ddocs-img]][ddocs-url] | [![CI][ci-img]][ci-url] [![codecov][ccov-img]][ccov-url]| [![MIT license][lic-img]][lic-url]
-
-[ddocs-img]: https://img.shields.io/badge/docs-dev-blue.svg
-[ddocs-url]: https://FermiQC.github.io/Fermi.jl/dev
-
-[ci-img]: https://github.com/FermiQC/Fermi.jl/actions/workflows/CI.yml/badge.svg
-[ci-url]: https://github.com/FermiQC/Fermi.jl/actions/workflows/CI.yml
-
-[ccov-img]: https://codecov.io/gh/FermiQC/Fermi.jl/branch/master/graph/badge.svg?token=EWRG6Q7FK9
-[ccov-url]: https://codecov.io/gh/FermiQC/Fermi.jl
-
-[lic-img]:https://img.shields.io/badge/License-MIT-blue.svg
-[lic-url]:https://github.com/FermiQC/Fermi.jl/blob/master/LICENSE
+<table align="center">
+  <tr>
+    <th>Documentation</th>
+    <th>Build Status</th>
+    <th>License</th>
+  </tr>
+  <tr>
+    <td align="center">
+      <a href=https://FermiQC.github.io/Fermi.jl/dev>
+      <img src=https://img.shields.io/badge/docs-dev-blue.svg>
+      </a> 
+    </td>
+    <td align="center">
+      <a href=https://github.com/FermiQC/Fermi.jl/actions/workflows/CI.yml>
+      <img src=https://github.com/FermiQC/Fermi.jl/actions/workflows/CI.yml/badge.svg>
+      </a> 
+      <a href=https://codecov.io/gh/FermiQC/Fermi.jl>
+      <img src=https://codecov.io/gh/FermiQC/Fermi.jl/branch/master/graph/badge.svg?token=EWRG6Q7FK9>
+      </a> 
+    </td>
+    <td align="center">
+      <a href=https://github.com/FermiQC/Fermi.jl/blob/master/LICENSE>
+      <img src=https://img.shields.io/badge/License-MIT-blue.svg>
+      </a>
+    </td>
+  </tr>
+</table>
 
 Fermi is a quantum chemistry program written in (nearly) pure Julia. This code is developed at
 the [Center for Computational Quantum Chemistry](https://github.com/CCQC) at the University of Georgia under the supervision 
