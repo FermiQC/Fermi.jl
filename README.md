@@ -1,21 +1,28 @@
-[![CI](https://github.com/FermiQC/Fermi.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/FermiQC/Fermi.jl/actions/workflows/CI.yml)
-[![codecov](https://codecov.io/gh/FermiQC/Fermi.jl/branch/master/graph/badge.svg?token=EWRG6Q7FK9)](https://codecov.io/gh/FermiQC/Fermi.jl)
+<p align="center">
+  <img src="images/Fermi_logo.png" />
+</p>
 
-<img src="images/Fermi_logo.png" alt="Fermi Logo" width="400"/>
+| **Documentation**| **Build** | **License**|
+|:--:|:--:|:--:| 
+|[![DEV][ddocs-img]][ddocs-url] | [![CI][ci-img]][ci-url] [![codecov][ccov-img]][ccov-url]| [![MIT license][lic-img]][lic-url]
+
+[ddocs-img]: https://img.shields.io/badge/docs-dev-blue.svg
+[ddocs-url]: https://FermiQC.github.io/Fermi.jl/dev
+
+[ci-img]: https://github.com/FermiQC/Fermi.jl/actions/workflows/CI.yml/badge.svg
+[ci-url]: https://github.com/FermiQC/Fermi.jl/actions/workflows/CI.yml
+
+[ccov-img]: https://codecov.io/gh/FermiQC/Fermi.jl/branch/master/graph/badge.svg?token=EWRG6Q7FK9
+[ccov-url]: https://codecov.io/gh/FermiQC/Fermi.jl
+
+[lic-img]:https://img.shields.io/badge/License-MIT-blue.svg
+[lic-url]:https://github.com/FermiQC/Fermi.jl/blob/master/LICENSE
 
 Fermi is a quantum chemistry program written in (nearly) pure Julia. This code is developed at
 the [Center for Computational Quantum Chemistry](https://github.com/CCQC) at the University of Georgia under the supervision 
 of [Dr. Justin M. Turney](https://github.com/jturney) and Prof. Henry F. Schaefer.
 
 This work is supported by the U.S. National Science Foundation under grant number CHE-1661604.
-
-### !! Warning
-> Fermi is going through a major refactorization. Much of the code will be non functional. 
-Please checkout at v0.2.0 version to try the code.
-
-## Documentation
-
-Coming soon...
 
 Fermi focuses on post Hartree--Fock methods. Currently, only restricted references are supported.
 This is intended as a research code with an ever growing collection of methods implemented in

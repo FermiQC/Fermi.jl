@@ -15,3 +15,7 @@ makedocs(
         "Index" => "indice.md"
     ]
 )
+
+deploydocs(
+    repo = "github.com/FermiQC/Fermi.jl.git",
+)
