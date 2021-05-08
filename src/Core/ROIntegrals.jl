@@ -12,7 +12,7 @@ function mo_from_ao!(I::IntegralHelper{T1,E1,O}, aoints::IntegralHelper{T2,E2,At
         end
         basis = I.orbitals.basis
         aoorbs = AtomicOrbitals(I.molecule, basis)
-        aoints = IntegralHelper(molecule=I.molecule, orbitals=aoorbs, basis=basis, eri_type=I.eri_type)
+        aoints = IntegralHelper{T1}(molecule=I.molecule, orbitals=aoorbs, basis=basis, eri_type=I.eri_type)
     end
     t = @elapsed begin
         output("Computing MO Integrals...")
@@ -202,6 +202,9 @@ end
 
 function compute_OVVV!(I::IntegralHelper{T,E,O}) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
         # Create AO integral object
+        basis = I.orbitals.basis
+        aoorbs = AtomicOrbitals(I.molecule, basis)
+        aoints = IntegralHelper(molecule=I.molecule, orbitals=aoorbs, basis=basis, eri_type=I.eri_type)
         compute_OVVV!(I,aoints)
 end
 function compute_VVVV!(I::IntegralHelper{T,E,O}) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
@@ -438,7 +441,7 @@ function compute_F(I::IntegralHelper{T,E,O}) where {T<:AbstractFloat, E<:Abstrac
     compute_F(I, aoints)
 end
 
-function compute_F(I::IntegralHelper{T,Chonky,O}, aoints::IntegralHelper{T, Chonky, AtomicOrbitals}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+function compute_F(I::IntegralHelper{<:AbstractFloat,Chonky,<:AbstractRestrictedOrbitals}, aoints::IntegralHelper{<:AbstractFloat, Chonky, AtomicOrbitals})
 
     core = Options.get("drop_occ")
     inac = Options.get("drop_vir")
@@ -471,8 +474,7 @@ function compute_F(I::IntegralHelper{T,Chonky,O}, aoints::IntegralHelper{T, Chon
     I["Fab"] = Fmol[v,v] - diagm(Fd[v])
 end
 
-function compute_F(I::IntegralHelper{T,E1,O}, aoints::IntegralHelper{T, E2, AtomicOrbitals}) where {T<:AbstractFloat, 
-                                                    E1<:AbstractDFERI, E2<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
+function compute_F(I::IntegralHelper{<:AbstractFloat,<:AbstractDFERI,<:AbstractRestrictedOrbitals}, aoints::IntegralHelper{<:AbstractFloat, <:AbstractDFERI, AtomicOrbitals}) 
 
     core = Options.get("drop_occ")
     inac = Options.get("drop_vir")
