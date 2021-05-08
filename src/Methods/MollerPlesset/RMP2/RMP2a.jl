@@ -1,8 +1,47 @@
 using TensorOperations
 using LinearAlgebra
 
-function RMP2(ints::IntegralHelper{T,E,O}, Alg::RMP2a) where {T<:AbstractFloat,E<:AbstractERI,O<:AbstractRestrictedOrbitals}
+function RMP2(Alg::RMP2a)
+    aoints = IntegralHelper{Float64}()
+    rhf = RHF(aoints)
+    moints = IntegralHelper(orbitals=rhf.orbitals)
+    RMP2(moints, aoints, Alg)
+end
+
+function RMP2(O::AbstractRestrictedOrbitals, Alg::RMP2a)
+    aoints = IntegralHelper()
+    moints = IntegralHelper(orbitals=O)
+    RMP2(moints, aoints, Alg)
+end
+
+function RMP2(rhf::RHF, Alg::RMP2a)
+    aoints = IntegralHelper()
+    moints = IntegralHelper(orbitals=rhf.orbitals)
+    RMP2(moints, aoints, Alg)
+end
+
+function RMP2(M::Molecule, Alg::RMP2a)
+    aoints = IntegralHelper{Float64}(molecule=M)
+    rhf = RHF(M,aoints)
+    moints = IntegralHelper(molecule = M, orbitals=rhf.orbitals)
+    RMP2(moints, aoints, Alg)
+end
+
+function RMP2(moints::IntegralHelper{T1,Chonky,O}, aoints::IntegralHelper{T2,Chonky,AtomicOrbitals}, Alg::RMP2a) where {T1<:AbstractFloat,
+                                                                                        T2<:AbstractFloat,O<:AbstractOrbitals}
     mp_header()
+    mo_from_ao!(moints, aoints, "Fia","OVOV")
+    RMP2(moints, Alg)
+end
+
+function RMP2(moints::IntegralHelper{T1,E1,O}, aoints::IntegralHelper{T2,E2,AtomicOrbitals}, Alg::RMP2a) where {T1<:AbstractFloat,T2<:AbstractFloat,
+                                                                                E1<:AbstractDFERI,E2<:AbstractDFERI,O<:AbstractOrbitals}
+    mp_header()
+    mo_from_ao!(moints, aoints, "Fia","BOV")
+    RMP2(moints, Alg)
+end
+
+function RMP2(ints::IntegralHelper{<:AbstractFloat,<:AbstractERI,<:AbstractRestrictedOrbitals}, Alg::RMP2a)
 
     # Check frozen core and inactive virtual
     ndocc = ints.molecule.Nα
