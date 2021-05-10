@@ -79,7 +79,6 @@ function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::
 
     # Compute Guess Energy
     Ecc = cc_update_energy(newT1, newT2, moints, alg)
-    println(typeof(Ecc))
     Eguess = Ecc + Eref
     
     output("\tGuess Correlation Energy:   {:15.10f}", Ecc)
