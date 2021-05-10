@@ -1,10 +1,22 @@
-using Fermi.HartreeFock: RHF, RHFOrbitals
+using Fermi.HartreeFock
+
+import Base: show
 
 export RMP2
 
+"""
+    Fermi.HartreeFock.RHFAlgorithm
+
+Abstract type for RMP2 implementations.
+"""
 abstract type RMP2Algorithm end
 
-function get_mp2_alg()
+"""
+    Fermi.MollerPlesset.get_rmp2_alg()
+
+Returns a singleton type corresponding to a RMP2 implementation based on the options.
+"""
+function get_rmp2_alg()
     implemented = [RMP2a()]
     N = Options.get("mp2_alg")
     try 
@@ -21,51 +33,31 @@ end
 """
 struct RMP2{T} <: AbstractMPWavefunction
     correlation::T
-    energy::T
-end
-
-function RMP2()
-    aoints = IntegralHelper{Float64}()
-    rhf = RHF(aoints)
-    moints = IntegralHelper(orbitals=rhf.orbitals)
-    RMP2(moints, aoints)
-end
-
-function RMP2(O::AbstractRestrictedOrbitals)
-    aoints = IntegralHelper()
-    moints = IntegralHelper(orbitals=O)
-    RMP2(moints, aoints)
-end
-
-function RMP2(rhf::RHF)
-    aoints = IntegralHelper()
-    moints = IntegralHelper(orbitals=rhf.orbitals)
-    RMP2(moints, aoints)
-end
-
-function RMP2(M::Molecule)
-    aoints = IntegralHelper{Float64}(molecule=M)
-    rhf = RHF(M,aoints)
-    moints = IntegralHelper(molecule = M, orbitals=rhf.orbitals)
-    RMP2(moints, aoints)
-end
-
-function RMP2(moints::IntegralHelper{T1,Chonky,O}, aoints::IntegralHelper{T2,Chonky,AtomicOrbitals}) where {T1<:AbstractFloat,
-                                                                                        T2<:AbstractFloat,O<:AbstractOrbitals}
-    mo_from_ao!(moints, aoints, "Fia","OVOV")
-    RMP2(moints)
-end
-
-function RMP2(moints::IntegralHelper{T1,E1,O}, aoints::IntegralHelper{T2,E2,AtomicOrbitals}) where {T1<:AbstractFloat,T2<:AbstractFloat,
-                                                                                E1<:AbstractDFERI,E2<:AbstractDFERI,O<:AbstractOrbitals}
-    mo_from_ao!(moints, aoints, "Fia","BOV")
-    RMP2(moints)
-end
-
-function RMP2(ints::IntegralHelper{T,E,O}) where {T<:AbstractFloat,E<:AbstractERI,O<:AbstractRestrictedOrbitals}
-    RMP2(ints, get_mp2_alg())
+    energy::AbstractFloat
 end
 
 # For each implementation a singleton type must be create
 struct RMP2a <: RMP2Algorithm end
 include("RMP2a.jl")
+
+function RMP2(x...)
+    if !any(i-> i isa RMP2Algorithm, x)
+        RMP2(x..., get_rmp2_alg())
+    else
+        throw(MethodArgument("invalid arguments for RMP2 method: $(x[1:end-1])"))
+    end
+end
+
+## MISCELLANEOUS
+# Pretty printing
+function string_repr(X::RMP2)
+    out = ""
+    out = out*" ⇒ Fermi Restricted MP2 Wave function\n"
+    out = out*" ⋅ Correlation Energy:     $(X.correlation)\n"
+    out = out*" ⋅ Total Energy:           $(X.energy)"
+    return out
+end
+
+function show(io::IO, ::MIME"text/plain", X::RMP2)
+    print(string_repr(X))
+end

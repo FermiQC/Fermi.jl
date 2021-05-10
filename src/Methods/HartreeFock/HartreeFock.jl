@@ -25,7 +25,7 @@ end
 
 Abstract type common to all Hartree-Fock wave functions.
 
-_struct tree:_
+Struct tree
 
 **AbstractHFWavefunction** <: AbstractWavefunction
 """

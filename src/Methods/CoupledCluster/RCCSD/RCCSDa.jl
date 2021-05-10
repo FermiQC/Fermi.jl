@@ -52,14 +52,14 @@ function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::
     output("\t\tcc_e_conv   →  {:2.0e}", cc_e_conv)
     output("\t\tcc_max_rms  →  {:2.0e}", cc_max_rms)
     if (cc_e_conv < eps(T)) && !(precision_override)
-        output("\t⚠ WARNING⚠   cc_e_conv set to less than ϵ ({}) for precision {}", eps(T), Ta)
+        output("\t⚠ WARNING⚠   cc_e_conv set to less than ϵ ({}) for precision {}", eps(T), T)
         output("\t             CCSD is unlikely to converge to your standards.")
         output("\t             OVERRIDING set convergence criterion.")
         output("\t             Use @set `precision_override` true to perform the computation as entered.")
         cc_e_conv = eps(T)
     end
     if (cc_max_rms < eps(T)) && !(precision_override)
-        output("\t⚠ WARNING⚠   cc_max_rms set to less than ϵ ({}) for precision {}", eps(T), Ta)
+        output("\t⚠ WARNING⚠   cc_max_rms set to less than ϵ ({}) for precision {}", eps(T), T)
         output("\t             CCSD is unlikely to converge to your standards.")
         output("\t             OVERRIDING set convergence criterion.")
         output("\t             Use @set `precision_override` true to perform the computation as entered.")
@@ -79,6 +79,7 @@ function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::
 
     # Compute Guess Energy
     Ecc = cc_update_energy(newT1, newT2, moints, alg)
+    println(typeof(Ecc))
     Eguess = Ecc + Eref
     
     output("\tGuess Correlation Energy:   {:15.10f}", Ecc)

@@ -15,25 +15,25 @@ end
 
 function compute_S!(I::IntegralHelper{T, E, AtomicOrbitals}) where {T<:AbstractFloat, E<:AbstractERI}
     bs = I.orbitals.basisset
-    I.cache["S"] = FermiMDArray(ao_1e(bs, "overlap"))
+    I.cache["S"] = FermiMDArray(ao_1e(bs, "overlap", T))
 end
 
 function compute_T!(I::IntegralHelper{T, E, AtomicOrbitals}) where {T<:AbstractFloat, E<:AbstractERI}
     bs = I.orbitals.basisset
-    I.cache["T"] = FermiMDArray(ao_1e(bs, "kinetic"))
+    I.cache["T"] = FermiMDArray(ao_1e(bs, "kinetic", T))
 end
 
 function compute_V!(I::IntegralHelper{T, E, AtomicOrbitals}) where {T<:AbstractFloat, E<:AbstractERI}
     bs = I.orbitals.basisset
-    I.cache["V"] = FermiMDArray(ao_1e(bs, "nuclear"))
+    I.cache["V"] = FermiMDArray(ao_1e(bs, "nuclear", T))
 end
 
 function compute_ERI!(I::IntegralHelper{T, E, AtomicOrbitals}) where {T<:AbstractFloat, E<:AbstractDFERI}
 
     bs = I.orbitals.basisset
     auxbs = I.eri_type.basisset
-    J = FermiMDArray(ao_2e2c(auxbs))
-    Pqp = FermiMDArray(ao_2e3c(bs, auxbs))
+    J = FermiMDArray(ao_2e2c(auxbs, T))
+    Pqp = FermiMDArray(ao_2e3c(bs, auxbs, T))
     Jh = Array(real(J^(-1/2)))
     @tensor b[Q,p,q] := Pqp[p,q,P]*Jh[P,Q]
     I.cache["ERI"] = b
@@ -41,10 +41,10 @@ end
 
 function compute_ERI!(I::IntegralHelper{T, Chonky, AtomicOrbitals}) where T<:AbstractFloat
     bs = I.orbitals.basisset
-    I.cache["ERI"] = FermiMDArray(ao_2e4c(bs))
+    I.cache["ERI"] = FermiMDArray(ao_2e4c(bs, T))
 end
 
-function ao_1e(BS::BasisSet, compute::String)
+function ao_1e(BS::BasisSet, compute::String, T::DataType = Float64)
 
     if compute == "overlap"
         libcint_1e! =  cint1e_ovlp_sph!
@@ -66,7 +66,7 @@ function ao_1e(BS::BasisSet, compute::String)
     end
 
     # Allocate output array
-    out = zeros(Cdouble, BS.nbas, BS.nbas)
+    out = zeros(T, BS.nbas, BS.nbas)
     @sync for i in 1:BS.nshells
         Threads.@spawn begin
             @inbounds begin
@@ -136,7 +136,7 @@ function find_indices(nbf::Int)
     return out
 end
 
-function ao_2e4c(BS::BasisSet)
+function ao_2e4c(BS::BasisSet, T::DataType = Float64)
 
     # Save a list containing the number of primitives for each shell
     num_prim = [Libcint.CINTcgtos_spheric(i-1, BS.lc_bas) for i = 1:BS.nshells]
@@ -150,7 +150,7 @@ function ao_2e4c(BS::BasisSet)
     end
 
     # Allocate output array
-    out = zeros(Cdouble, BS.nbas, BS.nbas, BS.nbas, BS.nbas)
+    out = zeros(T, BS.nbas, BS.nbas, BS.nbas, BS.nbas)
     unique_idx = find_indices(BS.nshells)
 
     @sync for (i,j,k,l) in unique_idx
@@ -224,7 +224,7 @@ function ao_2e4c(BS::BasisSet)
     return out
 end
 
-function ao_2e2c(BS::BasisSet)
+function ao_2e2c(BS::BasisSet, T::DataType = Float64)
 
     # Save a list containing the number of primitives for each shell
     num_prim = [Libcint.CINTcgtos_spheric(i-1, BS.lc_bas) for i = 1:BS.nshells]
@@ -238,7 +238,7 @@ function ao_2e2c(BS::BasisSet)
     end
 
     # Allocate output array
-    out = zeros(Cdouble, BS.nbas, BS.nbas)
+    out = zeros(T, BS.nbas, BS.nbas)
     @sync for i in 1:BS.nshells
         Threads.@spawn begin
             @inbounds begin
@@ -274,7 +274,7 @@ function ao_2e2c(BS::BasisSet)
     return out
 end
 
-function ao_2e3c(BS::BasisSet, auxBS::BasisSet)
+function ao_2e3c(BS::BasisSet, auxBS::BasisSet, T::DataType = Float64)
 
     ATM_SLOTS = 6
     BAS_SLOTS = 8
@@ -365,7 +365,7 @@ function ao_2e3c(BS::BasisSet, auxBS::BasisSet)
     end
 
     # Allocate output array
-    out = zeros(Cdouble, BS.nbas, BS.nbas, auxBS.nbas)
+    out = zeros(T, BS.nbas, BS.nbas, auxBS.nbas)
 
     # Save a list containing the number of primitives for each shell
     num_prim = [Libcint.CINTcgtos_spheric(i-1, BS.lc_bas) for i = 1:BS.nshells]
@@ -428,7 +428,7 @@ function ao_2e3c(BS::BasisSet, auxBS::BasisSet)
     return out
 end
 
-function ao_1e(BS1::BasisSet, BS2::BasisSet, compute::String)
+function ao_1e(BS1::BasisSet, BS2::BasisSet, compute::String, T::DataType = Float64)
 
     if compute == "overlap"
         libcint_1e! =  cint1e_ovlp_sph!
@@ -527,7 +527,7 @@ function ao_1e(BS1::BasisSet, BS2::BasisSet, compute::String)
     end
 
     # Allocate output array
-    out = zeros(Cdouble, BS1.nbas, BS2.nbas)
+    out = zeros(T, BS1.nbas, BS2.nbas)
 
     # Save a list containing the number of primitives for each shell
     num_prim1 = [Libcint.CINTcgtos_spheric(i-1, BS1.lc_bas) for i = 1:BS1.nshells]

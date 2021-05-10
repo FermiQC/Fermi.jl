@@ -54,7 +54,7 @@ function RHF(wfn::RHF, Alg::RHFa)
     RHF(intsB, FermiMDArray(Cb), FermiMDArray(Λ), Alg)
 end
 
-function RHF(ints::IntegralHelper{Float64}, C::FermiMDArray{Float64,2}, Λ::FermiMDArray{Float64,2}, Alg::RHFa)
+function RHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, C::FermiMDArray{Float64,2}, Λ::FermiMDArray{Float64,2}, Alg::RHFa)
 
     molecule = ints.molecule
     output(Fermi.Geometry.string_repr(molecule))

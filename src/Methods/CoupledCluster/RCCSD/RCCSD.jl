@@ -31,8 +31,8 @@ _struct tree:_
 **RCCSD** <: AbstractCCWavefunction <: AbstractCorrelatedWavefunction <: AbstractWavefunction
 """
 struct RCCSD{T} <: AbstractCCWavefunction 
-    guessenergy::T
-    energy::T
+    guessenergy::Float64
+    energy::Float64
     correlation::T
     T1::AbstractArray{T,2}
     T2::AbstractArray{T,4}

@@ -14,6 +14,11 @@ Abstract type for RHF implementations.
 """
 abstract type RHFAlgorithm end
 
+"""
+    Fermi.HartreeFock.get_scf_alg()
+
+Returns a singleton type corresponding to a RHF implementation based on the options.
+"""
 function get_scf_alg()
     implemented = [RHFa()]
     N = Options.get("scf_alg")
@@ -85,6 +90,21 @@ struct RHF <: AbstractHFWavefunction
     d_conv::Float64
 end
 
+function RHF(x...)
+    if !any(i-> i isa RHFAlgorithm, x)
+        RHF(x..., get_scf_alg())
+    else
+        throw(MethodArgument("invalid arguments for RHF method: $(x[1:end-1])"))
+    end
+end
+
+# Actual RHF routine is in here
+# For each implementation a singleton type must be create
+struct RHFa <: RHFAlgorithm end
+include("RHFa.jl")
+include("RHFHelper.jl")
+
+### MISCELLANEOUS
 # Pretty printing
 function string_repr(X::RHF)
     out = ""
@@ -103,16 +123,3 @@ function show(io::IO, ::MIME"text/plain", X::RHF)
     print(string_repr(X))
 end
 
-function RHF(x...)
-    if !any(i-> i isa RHFAlgorithm, x)
-        RHF(x..., get_scf_alg())
-    else
-        throw(MethodArgument("invalid arguments for RHF method: $(x[1:end-1])"))
-    end
-end
-
-# Actual RHF routine is in here
-# For each implementation a singleton type must be create
-struct RHFa <: RHFAlgorithm end
-include("RHFa.jl")
-include("RHFHelper.jl")

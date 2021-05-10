@@ -1,5 +1,5 @@
 using LinearAlgebra
-import Base: size, permutedims, getindex, setindex!, ndims, show
+import Base: size, permutedims, getindex, setindex!, ndims, show, convert
 import Base: iterate, length, similar, adjoint, eltype, +, -, *, /, ^, BroadcastStyle
 import Strided: UnsafeStridedView
 
@@ -191,6 +191,16 @@ end
 
 function Base.similar(bc::Broadcast.Broadcasted{Broadcast.ArrayStyle{FermiMDArray}}, ::Type{ElType}) where ElType
     FermiMDArray(similar(Array{ElType}, axes(bc)))
+end
+
+function Base.convert(::Type{T}, A::FermiMDArray) where T<:FermiMDArray{Float32}
+    newdata = Base.convert(Array{Float32}, A.data)
+    return FermiMDArray(newdata)
+end
+
+function Base.convert(::Type{T}, A::FermiMDArray) where T<:FermiMDArray{Float64}
+    newdata = Base.convert(Array{Float64}, A.data)
+    return FermiMDArray(newdata)
 end
 
 function show(io::IO, ::MIME"text/plain", A::FermiMDArray{T}) where T <: Number

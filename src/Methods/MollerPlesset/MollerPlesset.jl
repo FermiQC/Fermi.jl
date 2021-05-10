@@ -26,7 +26,7 @@ end
 
 Abstract type common to all Møller-Plesset wave functions.
 
-_struct tree:_
+# Struct tree
 
 **AbstractMPWavefunction** <: AbstractWavefunction
 """
