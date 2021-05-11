@@ -246,8 +246,16 @@ macro get()
                 k = Keys[i]
                 data[i,1] = k
                 val = Fermi.Options.get(k) 
-                if val isa Bool || val isa Int || val isa String
+                if val isa Bool || val isa Int
                     data[i,2] = "$val"
+                elseif val isa String
+                    # If multiple lines (e.g. molstring) display only the first line
+                    if occursin("\n", val)
+                        lines = split(val, "\n")
+                        data[i,2] = lines[1] * " [+$(length(lines)-1) lines]"
+                    else 
+                        data[i,2] = "$val"
+                    end
                 else
                     data[i,2] = format("{:5.5e}", val)
                 end
@@ -474,6 +482,13 @@ macro lookup(A::Symbol)
                 k = Keys[i]
                 data[i,1] = k
                 val = Fermi.Options.get(k) 
+
+                # If multiple lines (e.g. molstring) display only the first line
+                if occursin("\n", val)
+                    lines = split(val, "\n")
+                    val = lines[1] * " [+$(length(lines)-1) lines]"
+                end
+
                 if val isa Bool || val isa Int || val isa String
                     data[i,2] = "$val"
                 else
