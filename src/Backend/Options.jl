@@ -337,15 +337,9 @@ macro set(block::Expr)
 
         # Now the case where B is a Symbol. 
         elseif valtype === Symbol
-            # We check if it is defined in the global scope
-            if isdefined(Main, val)
-                # If it is, return an expression calling it. Noticed we need to escape it
-                push!(out.args, quote Fermi.Options.set($key,$val) end |> esc)
-            else
-                # If not, turn it into a String
-                val = symbol_to_string(val)
-                push!(out.args, quote Fermi.Options.set($key,$val) end)
-            end
+            # Turn it into a String
+            val = symbol_to_string(val)
+            push!(out.args, quote Fermi.Options.set($key,$val) end)
 
         # Finally, if the value is an Expression
         elseif valtype === Expr
