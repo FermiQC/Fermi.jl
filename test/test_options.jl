@@ -79,13 +79,12 @@
         scf_max_iter 50
     }
 
-    x = @capture_out @lookup scf_max
+    x = @capture_out @lookup scf_max_r
     @test x == """
             ┌──────────────┬───────────────┐
             │      Keyword │ Current Value │
             ├──────────────┼───────────────┤
             │  scf_max_rms │   1.00000e-09 │
-            │ scf_max_iter │            50 │
             └──────────────┴───────────────┘\n"""
 
 end
