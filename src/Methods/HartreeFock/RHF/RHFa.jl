@@ -45,7 +45,7 @@ function RHF(wfn::RHF, Alg::RHFa)
     Ca = wfn.orbitals.C
     bsA = Fermi.GaussianBasis.BasisSet(wfn.molecule, wfn.orbitals.basis)
     bsB = Fermi.GaussianBasis.BasisSet(intsB.molecule, intsB.basis)
-    Sab = Fermi.GaussianBasis.ao_1e(bsA, bsB, "overlap")
+    Sab = Fermi.Integrals.ao_1e(bsA, bsB, "overlap")
 
     T = transpose(Ca)*Sab*(Sbb^-1.0)*transpose(Sab)*Ca
     Cb = (Sbb^-1.0)*transpose(Sab)*Ca*T^(-1/2)
