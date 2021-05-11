@@ -1,5 +1,6 @@
 @reset
 @set printstyle none
+@set tblis true
 
 Econv = [
 -76.343819598166903
@@ -57,7 +58,8 @@ CCSDdf = [
     @testset "Conventional" begin
         Fermi.Options.set("df", false)
 
-        for i = eachindex(molecules)
+        mols = rand(eachindex(molecules), 3)
+        for i = mols
             # Read molecule
             path = joinpath(@__DIR__, "xyz/"*molecules[i]*".xyz")
             mol = open(f->read(f,String), path)
@@ -76,7 +78,8 @@ CCSDdf = [
         Fermi.Options.set("jkfit", "cc-pvqz-jkfit")
         Fermi.Options.set("rifit", "cc-pvqz-rifit")
 
-        for i = eachindex(molecules)
+        mols = rand(eachindex(molecules), 3)
+        for i = mols
             # Read molecule
             path = joinpath(@__DIR__, "xyz/"*molecules[i]*".xyz")
             mol = open(f->read(f,String), path)

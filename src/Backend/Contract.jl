@@ -7,6 +7,10 @@ import TensorOperations: similarstructure_from_indices
 import TensorOperations: scalar
 import TBLIS
 
+function tblis_set_num_threads(N)
+    TBLIS.set_num_threads(N)
+end
+
 function oind2eins(oindA::NTuple{NAo}, cindA::NTuple{NAc},
           oindB::NTuple{NBo}, cindB::NTuple{NBc},
           tindC::NTuple{NCt}) where {NAo, NAc, NBo, NBc, NCt}

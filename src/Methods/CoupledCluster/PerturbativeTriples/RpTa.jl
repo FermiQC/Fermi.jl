@@ -1,4 +1,12 @@
 using LinearAlgebra
+
+function RCCSDpT(rhf::RHF, Alg::RpTa)
+    aoints = IntegralHelper()
+    moints = IntegralHelper(orbitals=rhf.orbitals)
+    ccsd = RCCSD(moints, aoints)
+    return RCCSDpT(ccsd, moints, Alg)
+end
+
 function RCCSDpT(Alg::RpTa)
     aoints = IntegralHelper()
     rhf = RHF(aoints)
