@@ -10,4 +10,5 @@ Manifest.toml
 output*
 *.log
 deps/libcint*
+*.cov
 

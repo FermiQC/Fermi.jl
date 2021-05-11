@@ -4,19 +4,21 @@ mkdir(joinpath(@__DIR__, "libcint/build"))
 cd(joinpath(@__DIR__, "libcint/build"))
 
 # Compile Libcint
-println("Running CMAKE...")
+@info " => Building Libcint"
+
+@info " => Running CMAKE..."
 run(`cmake ..`)
-println("Running MAKE...")
+@info " => Running MAKE..."
 run(`make`)
 
 # Fetch binary 
-println("Cleaning up...")
+@info " => Cleaning up..."
 if Sys.islinux()
-    run(`cp libcint.so ../../libcint.bin`)
+    run(`cp libcint.so ../../`)
 elseif Sys.isapple()
-    run(`cp libcint.dylib ../../libcint.bin`)
+    run(`cp libcint.dylib ../../`)
 else
-    error("Could not resolve OS")
+    @error "Could not resolve OS"
 end
 
 # Untar basis set library and Clean up
