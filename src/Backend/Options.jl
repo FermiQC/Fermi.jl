@@ -4,6 +4,9 @@ export @reset
 export @molecule
 export @lookup
 
+using Formatting
+using PrettyTables
+
 """
     Fermi.Options
 
@@ -207,22 +210,51 @@ julia> @set basis cc-pVDZ
 julia> @get basis
 "cc-pVDZ"
 ```
+Without arguments, it returns all user defined keywords
+```    
+julia> @set {
+    basis cc-pVDZ
+    scf_max_rms 10^-8
+    diis true
+}
+julia> @get
+┌─────────────┬───────────────┐
+│     Keyword │ Current Value │
+├─────────────┼───────────────┤
+│ scf_max_rms │   1.00000e-08 │
+│        diis │          true │
+│       basis │       cc-pvdz │
+└─────────────┴───────────────┘
+```
 """
-macro get(opt="all")
-
-    if opt == "all"
-        out = ""
-        for k in keys(Fermi.Options.Current)
-            out = out*"$k  =>  $(Fermi.Options.Current[k])\n"
-        end
-        print(out) 
-        return nothing
-    end
-
+macro get(opt)
     A = symbol_to_string(opt)
     quote
         Fermi.Options.get($A)
     end |> esc
+end
+
+macro get()
+    quote
+        Keys = collect(keys(Fermi.Options.Current))
+        l = length(Keys)
+        if l == 0
+            println("No user defined keywords found.")
+        else
+            data = Array{Union{Nothing,String},2}(nothing,l,2)
+            for i in eachindex(Keys)
+                k = Keys[i]
+                data[i,1] = k
+                val = Fermi.Options.get(k) 
+                if val isa Bool || val isa Int || val isa String
+                    data[i,2] = "$val"
+                else
+                    data[i,2] = format("{:5.5e}", val)
+                end
+            end
+            pretty_table(data; header=["Keyword", "Current Value"])
+        end
+    end
 end
 
 """
@@ -241,15 +273,6 @@ A is set to B. By default A is taken as a string.
 @set cc_max_iter 100
 @set e_conv 10^-9
 ```
-B is evaluated at runtime. If the evaluation is not possible, B is converted to a string.
-# Examples
-```
-mybasis = "6-31g"
-julia> @set basis mybasis
-"6-31g"
-julia> @set basis yourbasis
-"yourbasis"
-```
 One can also use the block syntax
 ```
 @set {
@@ -267,16 +290,10 @@ you should use quotes
 macro set(A::Symbol, B::Symbol)
     clean_up(s) = String(filter(c->!occursin(c," ():"),s))
     key = clean_up(repr(A))
-    if isdefined(Main,B)
-        return quote
-            Fermi.Options.set($key,$B)
-        end |> esc
-    else
-        val = clean_up(repr(B))
-        return quote
-            Fermi.Options.set($key,$val)
-        end |> esc
-    end
+    val = clean_up(repr(B))
+    return quote
+        Fermi.Options.set($key,$val)
+    end |> esc
 end
 
 macro set(A::Symbol, B::Union{Number, Bool, String})
@@ -432,24 +449,38 @@ Look up valid keywords for Fermi.
 # Example
 ```
 julia> @lookup conv
-cc_max_rms
-Currently set to: 1.0000000000000006e-10
-
-scf_max_rms
-Currently set to: 1.0000000000000005e-9
+┌────────────┬───────────────┐
+│    Keyword │ Current Value │
+├────────────┼───────────────┤
+│  cc_e_conv │   1.00000e-10 │
+│     d_conv │             8 │
+│ preconv_t1 │          true │
+│ scf_e_conv │   1.00000e-01 │
+└────────────┴───────────────┘
 ```
 """
 macro lookup(A::Symbol)
     clean_up(s) = strip(filter(c->!occursin(c,"{}():"),s))
     A = clean_up(repr(A))
-    Keys = collect(keys(Fermi.Options.Default))
-    filter!(s->occursin(A, s), Keys)
-
-    if length(Keys) == 0
-        println("No keywords found containing: $A")
-    end
-
-    for k in Keys
-        println("$k\nCurrently set to: $(Fermi.Options.get(k))\n")
+    quote
+        Keys = collect(keys(Fermi.Options.Default))
+        filter!(s->occursin($A, s), Keys)
+        l = length(Keys)
+        if l == 0
+            println("No keywords found containing: $($A)")
+        else
+            data = Array{Union{Nothing,String},2}(nothing,l,2)
+            for i in eachindex(Keys)
+                k = Keys[i]
+                data[i,1] = k
+                val = Fermi.Options.get(k) 
+                if val isa Bool || val isa Int || val isa String
+                    data[i,2] = "$val"
+                else
+                    data[i,2] = format("{:5.5e}", val)
+                end
+            end
+            pretty_table(data; header=["Keyword", "Current Value"])
+        end
     end
 end
