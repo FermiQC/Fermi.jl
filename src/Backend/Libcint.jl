@@ -2,8 +2,7 @@ module Libcint
 
 export cint1e_kin_sph!, cint1e_nuc_sph!, cint1e_ovlp_sph!, cint2c2e_sph!, cint2e_sph!, cint3c2e_sph!, cint1e_ovlp_sph32!
 
-const LIBCINT = joinpath(@__DIR__, "../../deps/libcint.bin")
-const LIBCINT32 = joinpath(@__DIR__, "../../deps/libcint32.bin")
+const LIBCINT = joinpath(@__DIR__, "../../deps/libcint")
 
 function CINTcgtos_spheric(bas_id, bas)
     @ccall LIBCINT.CINTcgtos_spheric(bas_id::Cint, bas::Ptr{Cint})::Cint
@@ -18,18 +17,6 @@ function cint1e_ovlp_sph!(buf, shls, atm, natm, bas, nbas, env)
                                     bas  :: Ptr{Cint},
                                     nbas :: Cint,
                                     env  :: Ptr{Cdouble}
-                                   )::Cvoid
-end
-
-function cint1e_ovlp_sph32!(buf, shls, atm, natm, bas, nbas, env)
-    @ccall LIBCINT32.cint1e_ovlp_sph(
-                                    buf  :: Ptr{Cfloat},
-                                    shls :: Ptr{Cint},
-                                    atm  :: Ptr{Cint},
-                                    natm :: Cint,
-                                    bas  :: Ptr{Cint},
-                                    nbas :: Cint,
-                                    env  :: Ptr{Cfloat}
                                    )::Cvoid
 end
 
