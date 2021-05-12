@@ -50,13 +50,13 @@ function push!(M::DIISManager{T1,T2}, V::AbstractArray, E::AbstractArray) where 
 end
 
 """
-    Fermi.DIIS.diis_extrapolate(M::DIISManager{T1,T2}; add_res=false) where { T1 <: AbstractFloat,
+    Fermi.DIIS.extrapolate(M::DIISManager{T1,T2}; add_res=false) where { T1 <: AbstractFloat,
                                                               T2 <: AbstractFloat }
 
 Produces a new guess vector using *direct inversion in the iterative subspace* given 
 the information in `M` which is a `DIISManager`.
 """
-function diis_extrapolate(M::DIISManager{T1,T2}; add_res=false) where {T1 <: AbstractFloat, T2 <: AbstractFloat}
+function extrapolate(M::DIISManager{T1,T2}; add_res=false) where {T1 <: AbstractFloat, T2 <: AbstractFloat}
 
     if length(M) == 1
         throw(DIISError(" cannot extrapolate from one vector"))
