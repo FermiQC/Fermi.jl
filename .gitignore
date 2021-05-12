@@ -11,4 +11,5 @@ output*
 *.log
 deps/libcint*
 *.cov
+*.out
 
