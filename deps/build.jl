@@ -1,15 +1,27 @@
 # Fetch Libcint
-run(`git clone https://github.com/sunqm/libcint.git`)
-mkdir(joinpath(@__DIR__, "libcint/build"))
-cd(joinpath(@__DIR__, "libcint/build"))
 
-# Compile Libcint
-@info " => Building Libcint"
+try
+    run(`git clone https://github.com/sunqm/libcint.git`)
+    mkdir(joinpath(@__DIR__, "libcint/build"))
+    cd(joinpath(@__DIR__, "libcint/build"))
+catch 
+    @error("Failed to clone libcint")
+    throw(SystemError)
+end
 
-@info " => Running CMAKE..."
-run(`cmake ..`)
-@info " => Running MAKE..."
-run(`make`)
+try
+    # Compile Libcint
+    @info "Building Libcint"
+    
+    @info " => Running CMAKE..."
+    run(`cmake ..`)
+    @info " => Running MAKE..."
+    run(`make`)
+catch
+    rm(joinpath(@__DIR__, "libcint"), recursive=true, force=true)
+    @error("Libcint compilation failed!!")
+    throw(SystemError)
+end
 
 # Fetch binary 
 @info " => Cleaning up..."
