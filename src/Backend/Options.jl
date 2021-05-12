@@ -85,6 +85,7 @@ const Default = Dict{String,Union{Float64,Int,String,Bool}}(
                                   "cc_diis" => true,
                                   "ndiis" => 8,
                                   "cc_ndiis" => 3,
+                                  "cc_diis_relax"=>3,
                                   "bcc_tol" => 1.0e-6,
                                   "diis_prec" => "single",
                                   "diis_start" => 3,
@@ -460,7 +461,6 @@ julia> @lookup conv
 ├────────────┼───────────────┤
 │  cc_e_conv │   1.00000e-10 │
 │     d_conv │             8 │
-│ preconv_t1 │          true │
 │ scf_e_conv │   1.00000e-01 │
 └────────────┴───────────────┘
 ```

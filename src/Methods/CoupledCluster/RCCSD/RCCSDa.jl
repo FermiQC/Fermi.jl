@@ -30,6 +30,7 @@ function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::
     do_diis = Options.get("cc_diis")
     ndiis = Options.get("cc_ndiis")
     diis_start = Options.get("diis_start")
+    diis_relax = Options.get("cc_diis_relax")
 
     diis_prec = Options.get("diis_prec")
     diis_prec = diis_prec == "double" ? Float64 : diis_prec == "single" ? Float32 : Float16
@@ -92,7 +93,7 @@ function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::
     end
 
     main_time = 0
-    output("{:10s}    {: 15s}    {: 12s}    {:12s}    {:10s}","Iteration","CC Energy","ΔE","Max RMS","Time (s)")
+    output("{:10s}    {: 15s}    {: 12s}    {:12s}    {:10s}    {:s5}","Iteration","CC Energy","ΔE","Max RMS","time (s)", "diis")
     while (abs(dE) > cc_e_conv || rms > cc_max_rms)
         if ite > cc_max_iter
             output("\n⚠️  CC Equations did not converge in {:1.0d} iterations.", cc_max_iter)
@@ -110,16 +111,19 @@ function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::
             r1 = sqrt(sum((newT1 .- T1).^2)/length(T1))
             r2 = sqrt(sum((newT2 .- T2).^2)/length(T2))
 
+            diis = false
             if do_diis
                 # Update DIIS vector
                 e1 = (newT1 - T1)
                 e2 = (newT2 - T2)
                 push!(DM_T1,newT1,e1) 
                 push!(DM_T2,newT2,e2) 
-                if ite ≥ diis_start
+                # Using DIIS at every iteration is BAD! So do it every three steps
+                if ite ≥ diis_start && ite % diis_relax == 0
                     # Get new extrapolated amplitudes from DIIS
                     newT2 = Fermi.DIIS.extrapolate(DM_T2;add_res=true)
                     newT1 = Fermi.DIIS.extrapolate(DM_T1;add_res=true)
+                    diis = true
                 end
             end
 
@@ -134,7 +138,7 @@ function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::
         rms = max(r1,r2)
         dE = Ecc - oldE
         main_time += t
-        output("    {:<5.0d}    {:<15.10f}    {:>+12.10f}    {:<12.10f}    {:<10.5f}", ite, Ecc, dE, rms, t)
+        output("    {:<5.0d}    {:<15.10f}    {:>+12.10f}    {:<12.10f}    {:<10.5f}    {:s5}", ite, Ecc, dE, rms, t, diis)
         ite += 1
     end
     output("\nMain CCSD iterations done in {:5.5f} s", main_time)
