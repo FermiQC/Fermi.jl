@@ -78,14 +78,16 @@ function RHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, C::Fe
     converged = false
     
     # Build a diis_manager, if needed
-    do_diis ? DM = Fermi.DIIS.DIISManager{Float64,Float64}(size=Options.get("ndiis")) : nothing 
-    do_diis ? diis_start = Options.get("diis_start") : nothing
+    if do_diis
+        DM = Fermi.DIIS.DIISManager{Float64,Float64}(size=Options.get("ndiis"))
+        diis_start = Options.get("diis_start")
+    end
 
     # Grab ndocc,nvir
     ndocc = try
         Int((molecule.Nα + molecule.Nβ)/2)
     catch InexactError
-        throw(Fermi.InvalidFermiOption("Invalid number of electrons $(molecule.Nα + molecule.Nβ) for RHF method."))
+        throw(Fermi.InvalidMolecule("Invalid number of electrons $(molecule.Nα + molecule.Nβ) for RHF method."))
     end
     nvir = size(C,2) - ndocc
     nao = size(C,1)
@@ -119,11 +121,7 @@ function RHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, C::Fe
     t = @elapsed while ite ≤ maxit
         t_iter = @elapsed begin
             # Produce Ft
-            if !oda || Drms < oda_cutoff
-                Ft = Λ'*F*Λ
-            else
-                Ft = Λ'*F̃*Λ
-            end
+            Ft = Λ'*F*Λ
 
             # Get orbital energies and transformed coefficients
             eps,Ct = diagonalize(Ft, hermitian=true)
@@ -142,14 +140,22 @@ function RHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, C::Fe
             # Compute Energy
             Enew = Eelec + molecule.Vnuc
 
+            # Store vectors for DIIS
+            if do_diis
+                err = transpose(Λ)*(F*D*ints["S"] - ints["S"]*D*F)*Λ
+                push!(DM, F, err)
+            end
 
             # Branch for ODA vs DIIS convergence aids
+            diis = false
+            damp = 0.0
+            # Use ODA damping?
             if oda && Drms > oda_cutoff && ite < oda_shutoff
                 diis = false
                 dD = D - D̃
                 s = tr(F̃ * dD)
                 c = tr((F - F̃) * (dD))
-                if c <= -s/2
+                if c <= -s/(2*c)
                     λ = 1.0
                 else
                     λ = -s/(2*c)
@@ -157,18 +163,12 @@ function RHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, C::Fe
                 F̃ .= (1-λ)*F̃ + λ*F
                 D̃ .= (1-λ)*D̃ + λ*D
                 damp = 1-λ
-                do_diis ? err = transpose(Λ)*(F*D*ints["S"] - ints["S"]*D*F)*Λ : nothing
-                do_diis ? push!(DM, F, err) : nothing
-            elseif (!oda || ite > oda_shutoff || Drms < oda_cutoff) && do_diis
-                damp = 0.0
+                F .= F̃
+            
+            # Or Use DIIS?
+            elseif do_diis && ite > diis_start
                 diis = true
-                D̃ = D
-                do_diis ? err = transpose(Λ)*(F*D*ints["S"] - ints["S"]*D*F)*Λ : nothing
-                do_diis ? push!(DM, F, err) : nothing
-
-                if do_diis && ite > diis_start
-                    F = Fermi.DIIS.extrapolate(DM)
-                end
+                F = Fermi.DIIS.extrapolate(DM)
             end
 
             # Compute the Density RMS
@@ -180,7 +180,7 @@ function RHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, C::Fe
             E = Enew
             D_old .= D
         end
-        output("    {:<3} {:>15.10f} {:>11.3e} {:>11.3e} {:>8.2f} {:>8}    {:5.4f}", ite, E, ΔE, Drms, t_iter, diis, damp)
+        output("    {:<3} {:>15.10f} {:>11.3e} {:>11.3e} {:>8.2f} {:>8}    {:5.2f}", ite, E, ΔE, Drms, t_iter, diis, damp)
         ite += 1
 
         if (abs(ΔE) < Etol) & (Drms < Dtol) & (ite > 5)
