@@ -1,6 +1,6 @@
 module Error
 
-export InvalidFermiOption, MethodArgument, InvalidMolecule, BasisSetError
+export InvalidFermiOption, MethodArgument, InvalidMolecule, BasisSetError, DIISError
 
 """
     Fermi.Error.InvalidFermiOption
@@ -37,5 +37,10 @@ struct BasisSetError <: Exception
     msg::String
 end
 Base.showerror(io::IO, e::BasisSetError) = print(io, "BasisSet ERROR: ", e.msg)
+
+struct DIISError <: Exception
+    msg::String
+end
+Base.showerror(io::IO, e::DIISError) = print(io, "DIIS ERROR: ", e.msg)
 
 end # module
