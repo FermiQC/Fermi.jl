@@ -26,7 +26,6 @@ function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::
     cc_max_rms = Options.get("cc_max_rms")
     precision_override = Options.get("precision_override")
 
-    preconv_T1 = Options.get("preconv_T1")
     dp = Options.get("cc_damp_ratio")
     do_diis = Options.get("cc_diis")
     ndiis = Options.get("cc_ndiis")
@@ -45,7 +44,6 @@ function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::
     output("\tDIIS? {}", do_diis)
     output("\tDIIS Vectors? {}", (do_diis ? ndiis : 0))
     output("\tDIIS Precision? {}", diis_prec)
-    output("\tPreconverge T1 amplitudes? {}", preconv_T1)
     output("\tDamping percentage ? {}", dp)
     output("\t\tcc_max_iter →  {:3.0d}", cc_max_iter)
     output("\t\tcc_e_conv   →  {:2.0e}", cc_e_conv)
