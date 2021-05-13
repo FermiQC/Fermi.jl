@@ -62,7 +62,28 @@
     @set {
         basis cc-pvdz
     }
+
     # @get (no input)
     x = @capture_out @get
-    @test x == "basis  =>  cc-pvdz\n"
+    @test begin
+        occursin("Keyword", x) &&
+        occursin("Current Value", x) &&
+        occursin("basis", x) &&
+        occursin("cc-pvdz", x)
+    end
+
+    # Check lookup
+    @reset
+    @set {
+        scf_max_rms 1e-9
+        scf_max_iter 50
+    }
+
+    x = @capture_out @lookup scf_max_r
+    @test begin
+        occursin("Keyword", x) &&
+        occursin("Current Value", x) &&
+        occursin("scf_max_rms", x) &&
+        occursin("1.00000e-09", x)
+    end
 end
