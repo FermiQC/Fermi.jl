@@ -9,7 +9,7 @@ function compute!(I::IntegralHelper, entry::String)
     elseif entry == "ERI" 
         compute_ERI!(I)
     else
-        throw(Fermi.InvalidFermiOption("Invalid key for IntegralHelper: $(entry)."))
+        throw(FermiException("Invalid key for IntegralHelper: $(entry)."))
     end
 end
 

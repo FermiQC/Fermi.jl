@@ -69,7 +69,7 @@ macro energy(comm)
     try
          out = replace(energy_dict[method], "()" => "("*arg*")")
     catch KeyError
-        throw(Fermi.InvalidFermiOption("Invalid method for energy computation: \"$A\""))
+        throw(FermiException("Invalid method for energy computation: \"$A\""))
     end
 
     expr_out = Meta.parse(out)

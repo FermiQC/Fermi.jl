@@ -10,7 +10,7 @@ function get_rccsd_alg()
     try 
         return implemented[N]
     catch BoundsError
-        throw(InvalidFermiOption("implementation number $N not available for RCCSD."))
+        throw(FermiException("implementation number $N not available for RCCSD."))
     end
 end
 

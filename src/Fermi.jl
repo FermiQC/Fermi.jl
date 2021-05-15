@@ -18,7 +18,6 @@ _struct tree:_
 """
 abstract type AbstractWavefunction end
 
-include("Backend/Error.jl")
 include("Backend/Options.jl")                             
 include("Backend/Arrays.jl")
 include("Backend/Contract.jl")

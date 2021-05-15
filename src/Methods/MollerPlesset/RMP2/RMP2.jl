@@ -22,7 +22,7 @@ function get_rmp2_alg()
     try 
         return implemented[N]
     catch BoundsError
-        throw(InvalidFermiOption("implementation number $N not available for RMP2."))
+        throw(FermiException("implementation number $N not available for RMP2."))
     end
 end
 
@@ -44,7 +44,7 @@ function RMP2(x...)
     if !any(i-> i isa RMP2Algorithm, x)
         RMP2(x..., get_rmp2_alg())
     else
-        throw(MethodArgument("invalid arguments for RMP2 method: $(x[1:end-1])"))
+        throw(FermiException("invalid arguments for RMP2 method: $(x[1:end-1])"))
     end
 end
 

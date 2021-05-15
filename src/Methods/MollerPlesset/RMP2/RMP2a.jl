@@ -50,10 +50,10 @@ function RMP2(ints::IntegralHelper{<:AbstractFloat,<:AbstractERI,<:AbstractRestr
     inac = Options.get("drop_vir")
 
     if core ≥ ndocc
-        throw(InvalidFermiOption("invalid number of frozen orbitals ($core) for $ndocc doubly occupied orbitals"))
+        throw(FermiException("invalid number of frozen orbitals ($core) for $ndocc doubly occupied orbitals"))
     end
     if inac ≥ nvir
-        throw(InvalidFermiOption("invalid number of inactive virtual orbitals ($inac) for $nvir total virtual orbitals"))
+        throw(FermiException("invalid number of inactive virtual orbitals ($inac) for $nvir total virtual orbitals"))
     end
 
     # Collect RHF information

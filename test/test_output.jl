@@ -1,4 +1,3 @@
-using Fermi.Error
 
 @testset "Output" begin
 
@@ -45,7 +44,7 @@ using Fermi.Error
 
     # Check invalid printstyle
     @set printstyle invalid_printstyle
-    @test_throws InvalidFermiOption output("This will never print")
+    @test_throws FermiException output("This will never print")
 
     @reset
 end
