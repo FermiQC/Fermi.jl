@@ -1,3 +1,5 @@
+using Fermi.Options
+
 @testset "Options" begin
     # Basic check
     @set scf_e_conv 10^-10
@@ -14,7 +16,7 @@
 
     # Check fetching default
     y = @get cc_max_iter
-    @test y == Fermi.Options.Default["cc_max_iter"]
+    @test y == Options.Default["cc_max_iter"]
 
     # Check error due to invalid key
     @test_throws FermiException @get invalid_options
@@ -39,7 +41,7 @@
 
     # Check if reset works
     @reset
-    @test Fermi.Options.Current == Dict()
+    @test Options.Current == Dict()
     @set {
         scf_e_conv 1/10
         cc_max_iter 1
@@ -51,7 +53,7 @@
     @reset cc_max_iter scf_e_conv
     x = @get scf_e_conv
     y = @get cc_max_iter
-    @test x == Fermi.Options.Default["scf_e_conv"] && y == Fermi.Options.Default["cc_max_iter"]
+    @test x == Options.Default["scf_e_conv"] && y == Options.Default["cc_max_iter"]
     @test_throws FermiException @reset invalid_keyword 
 
     @reset
@@ -112,8 +114,10 @@
     H 4.0 5.0 6.0
     }
     @test begin
-        x = Fermi.Options.get("molstring")
+        x = Options.get("molstring")
         occursin(r"H\s+?1\.0*?\s+?2\.0*?\s+?3\.0*?", x) &&
         occursin(r"H\s+?4\.0*?\s+?5\.0*?\s+?6\.0*?", x)
     end
+    x = @capture_out showerror(IOContext(stdout, :short => true), Fermi.Options.FermiException("Testing the error!"))
+    @test occursin("Testing the error!", x)
 end

@@ -1,5 +1,4 @@
 export @get, @set, @reset, @molecule, @lookup
-export FermiException
 
 using Formatting
 using PrettyTables
@@ -29,6 +28,7 @@ for the commands above
     @molecule               Read in a String for the `molstring` option
 """
 module Options
+export FermiException
 
 """
     Fermi.Options.Default
@@ -182,6 +182,16 @@ function reset(key::String="all")
         throw(FermiException(key*" is not a valid option."))
     end
 end
+
+"""
+    Fermi.Options.FermiException
+
+Error flag used when Fermi encounters an error. Use to give constructive feedback.
+"""
+struct FermiException <: Exception
+    msg::String
+end
+Base.showerror(io::IO, e::FermiException) = print(io, "Fermi found an Error: ", e.msg)
 end #module
 
 # Aux function to convert Symbols to Strings
@@ -493,13 +503,3 @@ macro lookup(A::Symbol)
         end
     end
 end
-
-"""
-    Fermi.Options.FermiException
-
-Error flag used when Fermi encounters an error. Use to give constructive feedback.
-"""
-struct FermiException <: Exception
-    msg::String
-end
-Base.showerror(io::IO, e::FermiException) = print(io, "Fermi encountered an Error: ", e.msg)
