@@ -20,7 +20,7 @@ const AMDict = Dict(
     output("\nLooking for atom $AtomSymbol in basisset file at: $file_path")
 
     if !(isfile(file_path))
-        throw(InvalidFermiOption("Basis set file for $bname was not found."))
+        throw(FermiException("Basis set file for $bname was not found."))
     end
 
     info = extract_atom_from_bs(file_path, AtomSymbol)
@@ -79,7 +79,7 @@ function extract_atom_from_bs(file_path::String, AtomSymbol::String)
         return out
     else
         output("")
-        throw(InvalidFermiOption("Atom $AtomSymbol not found in $file_path."))
+        throw(FermiException("Atom $AtomSymbol not found in $file_path."))
     end
 end
 
@@ -89,7 +89,7 @@ function basis_from_string(bstring::String)
     m = match(AM_pat, head)
 
     if m === nothing
-        throw(BasisSetError("cannot parse basis set file line: $head"))
+        throw(FermiException("cannot parse basis set file line: $head"))
     end
 
     AMsymbol = String(m.captures[1])
@@ -102,7 +102,7 @@ function basis_from_string(bstring::String)
         m = match(prim_pat, lines[i+1])
 
         if m === nothing
-            throw(BasisSetError("cannot parse basis set file line: $(lines[i+1])"))
+            throw(FermiException("cannot parse basis set file line: $(lines[i+1])"))
         end
 
         e = replace(m.captures[1], "D"=>"E")
@@ -120,11 +120,11 @@ function two_basis_from_string(bstring::String)
     head = lines[1]
     m = match(AM_pat, head)
     if m === nothing
-        throw(BasisSetError("cannot parse basis set file line: $head"))
+        throw(FermiException("cannot parse basis set file line: $head"))
     end
     AMsymbol = String(m.captures[1])
 
-    length(AMsymbol) == 2 || throw(MethodArgument("cannot extract two basis from $AMsymbol function"))
+    length(AMsymbol) == 2 || throw(FermiException("cannot extract two basis from $AMsymbol function"))
 
     l1 = AMDict[AMsymbol[1]*""]
     l2 = AMDict[AMsymbol[2]*""]
@@ -138,7 +138,7 @@ function two_basis_from_string(bstring::String)
         m = match(prim_pat3, lines[i+1])
 
         if m === nothing
-            throw(BasisSetError("cannot parse basis set file line: $(lines[i+1])"))
+            throw(FermiException("cannot parse basis set file line: $(lines[i+1])"))
         end
 
         e = replace(m.captures[1], "D"=>"E")

@@ -87,7 +87,7 @@ function RHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, C::Fe
     ndocc = try
         Int((molecule.Nα + molecule.Nβ)/2)
     catch InexactError
-        throw(Fermi.InvalidMolecule("Invalid number of electrons $(molecule.Nα + molecule.Nβ) for RHF method."))
+        throw(FermiException("Invalid number of electrons $(molecule.Nα + molecule.Nβ) for RHF method."))
     end
     nvir = size(C,2) - ndocc
     nao = size(C,1)

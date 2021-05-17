@@ -1,7 +1,6 @@
 module GaussianBasis
 
 using Fermi
-using Fermi.Error
 using Fermi.Geometry
 using Fermi.Options
 using Fermi.Libcint

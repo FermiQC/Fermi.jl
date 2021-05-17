@@ -7,7 +7,6 @@ module Integrals
 
 using Fermi
 using Fermi.Libcint
-using Fermi.Error
 using Fermi.Options
 using Fermi.Geometry
 using Fermi.GaussianBasis
@@ -128,7 +127,7 @@ function IntegralHelper(x...;k...)
     elseif precision == "double"
         IntegralHelper{Float64}(x...; k...)
     else
-        throw(InvalidFermiOption("precision can only be `single` or `double`. Got $precision"))
+        throw(FermiException("precision can only be `single` or `double`. Got $precision"))
     end
 end
 

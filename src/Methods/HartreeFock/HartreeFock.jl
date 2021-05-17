@@ -7,7 +7,6 @@ module HartreeFock
 # Import Fermi basics
 using Fermi
 using Fermi.Options
-using Fermi.Error
 using Fermi.Geometry
 using Fermi.Integrals
 using Fermi.Orbitals

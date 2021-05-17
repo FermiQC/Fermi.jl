@@ -1,8 +1,4 @@
-export @get
-export @set
-export @reset
-export @molecule
-export @lookup
+export @get, @set, @reset, @molecule, @lookup
 
 using Formatting
 using PrettyTables
@@ -32,7 +28,7 @@ for the commands above
     @molecule               Read in a String for the `molstring` option
 """
 module Options
-using Fermi.Error
+export FermiException
 
 """
     Fermi.Options.Default
@@ -124,7 +120,7 @@ function get(key::String)
     elseif haskey(Default, key)
         return Default[key]
     else
-        throw(InvalidFermiOption(key*" is not a valid option."))
+        throw(FermiException(key*" is not a valid option."))
     end
 end
 
@@ -142,7 +138,7 @@ function set(key::String, val::Union{String, Bool, Float64, Int})
         val = lowercase(val)
     end
     if !(haskey(Default, key))
-        throw(InvalidFermiOption(key*" is not a valid option."))
+        throw(FermiException(key*" is not a valid option."))
     end
 
     # Check if the type of the variable passed matches the type
@@ -158,11 +154,11 @@ function set(key::String, val::Union{String, Bool, Float64, Int})
                 return set(key, newval)
             catch InexactError
                 # If the conversion is not possible
-                throw(InvalidFermiOption("Impossible to convert data type for $key. Expected: $dtype, Got: $(typeof(val))"))
+                throw(FermiException("Impossible to convert data type for $key. Expected: $dtype, Got: $(typeof(val))"))
             end
         end
         # Otherwise, throw an error
-        throw(InvalidFermiOption("Invalid data type for $key. Expected: $dtype, Got: $(typeof(val))"))
+        throw(FermiException("Invalid data type for $key. Expected: $dtype, Got: $(typeof(val))"))
     else
         Current[key] = val
     end
@@ -183,9 +179,19 @@ function reset(key::String="all")
     elseif haskey(Current,key)
         delete!(Current, key)
     elseif !haskey(Default, key)
-        throw(InvalidFermiOption(key*" is not a valid option."))
+        throw(FermiException(key*" is not a valid option."))
     end
 end
+
+"""
+    Fermi.Options.FermiException
+
+Error flag used when Fermi encounters an error. Use to give constructive feedback.
+"""
+struct FermiException <: Exception
+    msg::String
+end
+Base.showerror(io::IO, e::FermiException) = print(io, "Fermi found an Error: ", e.msg)
 end #module
 
 # Aux function to convert Symbols to Strings
@@ -346,7 +352,7 @@ macro set(block::Expr)
         args = line.args
 
         # We must assert there are only two arguments
-        length(args) == 2 || throw(InvalidFermiOption("Too many arguments for @set: $line"))
+        length(args) == 2 || throw(FermiException("Too many arguments for @set: $line"))
 
         # A is the dictionary key, which is always taken as a String
         key = symbol_to_string(args[1])
@@ -379,7 +385,7 @@ macro set(block::Expr)
             end
         else
             # Outside those cases the user did something sketchy
-            throw(InvalidFermiOption("Invalid input for $key: $val"))
+            throw(FermiException("Invalid input for $key: $val"))
         end
     end
 
@@ -439,10 +445,10 @@ O                 -0.00000000    -0.00000000     2.19732722
 ```
 """
 macro molecule(block)
-    clean_up(s) = strip(filter(c->!occursin(c,"{}():"),s))
     mol = repr(block)
     mol = replace(mol, ";"=>"\n")
-    mol = String(clean_up(mol))
+    mol = strip(filter(c->!occursin(c,"{}():"), mol))
+    mol = String(mol)
     quote
         Fermi.Options.set("molstring", $mol)
     end
@@ -466,8 +472,7 @@ julia> @lookup conv
 ```
 """
 macro lookup(A::Symbol)
-    clean_up(s) = strip(filter(c->!occursin(c,"{}():"),s))
-    A = clean_up(repr(A))
+    A = strip(filter(c->!occursin(c,"{}():"), repr(A)))
     quote
         Keys = collect(keys(Fermi.Options.Default))
         filter!(s->occursin($A, s), Keys)

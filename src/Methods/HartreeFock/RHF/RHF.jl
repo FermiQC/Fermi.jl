@@ -25,7 +25,7 @@ function get_scf_alg()
     try 
         return implemented[N]
     catch BoundsError
-        throw(InvalidFermiOption("implementation number $N not available for RHF."))
+        throw(FermiException("implementation number $N not available for RHF."))
     end
 end
 
@@ -94,7 +94,7 @@ function RHF(x...)
     if !any(i-> i isa RHFAlgorithm, x)
         RHF(x..., get_scf_alg())
     else
-        throw(MethodArgument("invalid arguments for RHF method: $(x[1:end-1])"))
+        throw(FermiException("invalid arguments for RHF method: $(x[1:end-1])"))
     end
 end
 

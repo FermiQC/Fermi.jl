@@ -1,5 +1,4 @@
 module DIIS
-using Fermi.Error
 using LinearAlgebra
 import Base.push!
 import Base.length

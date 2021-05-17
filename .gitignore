@@ -12,4 +12,6 @@ output*
 deps/libcint*
 *.cov
 *.out
+coverage.jl
+*.info
 

@@ -1,5 +1,4 @@
 using Fermi.Options
-using Fermi.Error
 using Formatting
 
 export output
@@ -56,6 +55,6 @@ function output(str, x...; ending="\n")
         end
         print(f)
     else
-        throw(InvalidFermiOption("printing style not recognized: $style. Accepted `printstyle` values: repl, file, both, and none"))
+        throw(FermiException("printing style not recognized: $style. Accepted `printstyle` values: repl, file, both, and none"))
     end
 end

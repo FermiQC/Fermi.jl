@@ -14,7 +14,6 @@ export Molecule
 export Atom
 
 using Fermi
-using Fermi.Error
 using Fermi.Options
 using Fermi.PhysicalConstants: atomic_number, bohr_to_angstrom
 
@@ -98,7 +97,7 @@ function Molecule(atoms::Array{Atom,1}, charge::Int, multiplicity::Int)
 
     # If the number of electrons turns out negative returns an error
     if nelec ≤ 0
-        throw(InvalidMolecule("Invalid charge ($charge) for given molecule"))
+        throw(FermiException("Invalid charge ($charge) for given molecule"))
     end
 
     # Mult = 2Ms + 1 thus the number of unpaired electrons (taken as α) is Mult-1 = 2Ms
@@ -107,7 +106,7 @@ function Molecule(atoms::Array{Atom,1}, charge::Int, multiplicity::Int)
     # The number of β electrons must be equal the number of doubly occupied orbitals (Ndo)
     # Ndo = (nelec - n_of_unpaired_elec)/2 this must be an integer
     if isodd(nelec) != isodd(αexcess)
-        throw(InvalidMolecule("Incompatible charge $(charge) and multiplicity $(multiplicity)"))
+        throw(FermiException("Incompatible charge $(charge) and multiplicity $(multiplicity)"))
     end
 
     Nβ = (nelec - αexcess)/2
@@ -129,14 +128,14 @@ function get_atoms(molstring::String; unit::String="angstrom")
     elseif unit == "angstrom"
         conv = 1.0
     else
-        throw(InvalidFermiOptions("unknown unit in molecule construction: $unit"))
+        throw(FermiException("unknown unit in molecule construction: $unit"))
     end
 
     atoms = Atom[]
     for line in split(strip(molstring), "\n")
         m = split(line)
         if length(m) != 4
-            throw(InvalidMolecule("4 columns expected on XYZ string. Got $(length(m))"))
+            throw(FermiException("4 columns expected on XYZ string. Got $(length(m))"))
         end
 
         if m !== nothing
@@ -149,7 +148,7 @@ function get_atoms(molstring::String; unit::String="angstrom")
             try
                 xyz .= parse.(Float64, m[2:4]).*conv
             catch ArgumentError
-                throw(InvalidMolecule("Failed to process XYZ string"))
+                throw(FermiException("Failed to process XYZ string"))
             end
 
             push!(atoms, Atom(AtomicSymbol, Z, Tuple(xyz)))

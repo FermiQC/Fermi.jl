@@ -7,7 +7,6 @@ module MollerPlesset
 # Import Fermi basics
 using Fermi
 using Fermi.Options
-using Fermi.Error
 using Fermi: AbstractWavefunction
 using Fermi.Geometry
 using Fermi.Integrals

@@ -47,7 +47,7 @@ function compute!(I::IntegralHelper{T,Chonky,O}, entry::String, x...) where {T<:
     elseif occursin(r"F[dijab]{0,2}", entry)
         compute_F(I, x...)
     else
-        throw(Fermi.InvalidFermiOption("Invalid key for IntegralHelper: $(entry)."))
+        throw(FermiException("Invalid key for IntegralHelper: $(entry)."))
     end
 end
 
@@ -81,7 +81,7 @@ function compute!(I::IntegralHelper{T,E,O}, entry::String, x...) where {T<: Abst
     elseif occursin(r"F[dijab]{0,2}", entry)
         compute_F(I, x...)
     else
-        throw(Fermi.InvalidFermiOption("Invalid key for IntegralHelper: $(entry)."))
+        throw(FermiException("Invalid key for IntegralHelper: $(entry)."))
     end
 end
 

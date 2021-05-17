@@ -14,10 +14,10 @@ function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::
     inac = Options.get("drop_vir")
 
     if core ≥ ndocc
-        throw(InvalidFermiOption("invalid number of frozen orbitals ($core) for $ndocc doubly occupied orbitals"))
+        throw(FermiException("invalid number of frozen orbitals ($core) for $ndocc doubly occupied orbitals"))
     end
     if inac ≥ nvir
-        throw(InvalidFermiOption("invalid number of inactive virtual orbitals ($inac) for $nvir total virtual orbitals"))
+        throw(FermiException("invalid number of inactive virtual orbitals ($inac) for $nvir total virtual orbitals"))
     end
     
     # Get relevant Options
