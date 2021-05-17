@@ -9,9 +9,8 @@ tol = 1E-8
 @testset "Fermi" begin
     include("test_options.jl")
     include("test_output.jl")
-    #include("test_RHF.jl")
+    include("test_arrays.jl")
     include("test_MP.jl")
-    #include("test_CCSD.jl")
     include("test_pT.jl")
     @reset
 end
