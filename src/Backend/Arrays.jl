@@ -1,5 +1,5 @@
 using LinearAlgebra
-import Base: size, permutedims, getindex, setindex!, ndims, show, convert
+import Base: size, permutedims, permutedims!, getindex, setindex!, ndims, show, convert
 import Base: iterate, length, similar, adjoint, eltype, +, -, *, /, ^, BroadcastStyle
 import Strided: UnsafeStridedView
 
@@ -11,7 +11,7 @@ export FermiMDArray, FermiMDrand, FermiMDzeros, diagonalize
 
 Fermi array object held entirely in memory. Thin wrap around a standard Julia array, representing a dense array of type T and rank N.
 
-_struct tree:_
+# Struct tree
 
 **FermiMDArray** <: AbstractArray
 """
@@ -131,6 +131,10 @@ function LinearAlgebra.diag(A::FermiMDArray)
     return FermiMDArray(LinearAlgebra.diag(A.data))
 end
 
+function LinearAlgebra.factorize(A::FermiMDArray)
+    return factorize(A.data)
+end
+
 function adjoint(A::FermiMDArray)
     return FermiMDArray(adjoint(A.data))
 end
@@ -191,11 +195,6 @@ end
 
 function Base.similar(bc::Broadcast.Broadcasted{Broadcast.ArrayStyle{FermiMDArray}}, ::Type{ElType}) where ElType
     FermiMDArray(similar(Array{ElType}, axes(bc)))
-end
-
-function Base.convert(::Type{T}, A::FermiMDArray) where T<:FermiMDArray{Float32}
-    newdata = Base.convert(Array{Float32}, A.data)
-    return FermiMDArray(newdata)
 end
 
 function Base.convert(::Type{T}, A::FermiMDArray) where T<:FermiMDArray{Float64}
