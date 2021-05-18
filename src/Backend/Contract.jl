@@ -70,11 +70,8 @@ function contract!(α,
 
         # Complex conjugate is not supported by TBLIS yet.
         # Here we do a intermediate copying-conversion.
-        if conjA == :C || conjA == :A
-            A = conj(A)
-        end
-        if conjB == :C || conjB == :A
-            B = conj(B)
+        if conjA == :C || conjA == :A || conjB == :C || conjB == :A
+            throw(Fermi.Options.FermiException("conj operations not suported for TBLIS"))
         end
         einA, einB, einC = oind2eins(oindA, cindA, 
                                      oindB, cindB, 
