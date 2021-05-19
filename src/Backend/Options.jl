@@ -10,11 +10,11 @@ Module to manage options in Fermi.
 
 # Functions
 
-    Fermi.set(option, value)     Set an <option> to a given <value>
-    Fermi.get(option)            Return the current value of an <option>
-    Fermi.reset()                Reset all options to default values
-    Fermi.reset(option)          Reset a specific <option> to its default value
-    Fermi.molecule(molstring)    Read in a String for the `molstring` option
+    Fermi.Options.set(option, value)     Set an <option> to a given <value>
+    Fermi.Options.get(option)            Return the current value of an <option>
+    Fermi.Options.reset()                Reset all options to default values
+    Fermi.Options.reset(option)          Reset a specific <option> to its default value
+    Fermi.Options.molecule(molstring)    Read in a String for the `molstring` option
 
 Alternatively, at global scope, one can use the corresponding macros that create shortcuts
 for the commands above
@@ -26,6 +26,7 @@ for the commands above
     @reset                  Reset all options to default values
     @reset <option>         Reset a specific <option> to its default value
     @molecule               Read in a String for the `molstring` option
+    @lookup <string>        Search for keywords containing <string>
 """
 module Options
 export FermiException
