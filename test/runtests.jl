@@ -13,7 +13,7 @@ tol = 1E-8
     include("test_contract.jl")
     include("test_geometry.jl")
     include("test_basisset.jl")
-    #include("test_MP.jl")
-    #include("test_pT.jl")
+    include("test_MP.jl")
+    include("test_pT.jl")
     @reset
 end
