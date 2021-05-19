@@ -3,7 +3,7 @@
 
 Module handling molecule and atoms data
 
-# exports:
+# Objects
 
     Atom      Object storing information about an atom
     Molecule  Object storing information about a molecule (group of atoms)
@@ -46,12 +46,47 @@ Object storing information about a molecule (group of atoms).
 
 # Fields:
     
-    atoms        Array with Fermi.Atom objects
-    charge       Charge of the molecule
-    multiplicity Multiplicity ``(2Ms + 1)``
-    Nα           Number of Alpha electrons
-    Nβ           Number of Beta electrons
-    Vnuc         Nuclear repulsion energy
+    atoms         Array with Fermi.Atom objects
+    charge        Charge of the molecule
+    multiplicity  Multiplicity ``(2Mₛ + 1)``
+    Nα            Number of Alpha electrons
+    Nβ            Number of Beta electrons
+    Vnuc          Nuclear repulsion energy
+
+
+# Examples:
+
+A Molecule object can be created by providing the desired keyworded arguments: 
+
+    molstring:      A string representing the XYZ of the molecule
+    unit:           Unit used for the distance between atoms (Bohr or Angstrom)
+    charge:         Molecular charge
+    multiplicity    Molecular multiplicity
+
+Any argument not given explicitly will be read from the Options.
+```
+julia> Fermi.Geometry.Molecule()
+Molecule:
+
+O    1.209153654800    1.766411818900   -0.017161397200
+H    2.198480007500    1.797710062700    0.012116171900
+H    0.919788188200    2.458018557000    0.629793883200
+
+
+Charge: 0   Multiplicity: 1   
+Nuclear repulsion:    8.8880641737
+
+julia> Fermi.Geometry.Molecule(charge=2, multiplicity=3)
+Molecule:
+
+O    1.209153654800    1.766411818900   -0.017161397200
+H    2.198480007500    1.797710062700    0.012116171900
+H    0.919788188200    2.458018557000    0.629793883200
+
+
+Charge: 2   Multiplicity: 3   
+Nuclear repulsion:    8.8880641737
+```
 """
 struct Molecule
     atoms::Tuple
@@ -62,19 +97,13 @@ struct Molecule
     Vnuc::Float64
 end
 
-function Molecule()
-    molstring = Options.get("molstring")
-    unit = Options.get("unit")
-    Molecule(molstring, unit)
-end
-
-function Molecule(molstring::String, unit::String="angstrom")
-    charge = Options.get("charge")
+function Molecule(;
+    molstring = Options.get("molstring"),
+    unit = Options.get("unit"),
+    charge = Options.get("charge"),
     multiplicity = Options.get("multiplicity")
-    Molecule(molstring, charge, multiplicity, unit)
-end
+    )
 
-function Molecule(molstring::String, charge::Int, multiplicity::Int, unit::String="angstrom")
     atoms = get_atoms(molstring, unit=unit)
     Molecule(atoms, charge, multiplicity)
 end
@@ -148,7 +177,7 @@ function get_atoms(molstring::String; unit::String="angstrom")
             try
                 xyz .= parse.(Float64, m[2:4]).*conv
             catch ArgumentError
-                throw(FermiException("Failed to process XYZ string"))
+                throw(FermiException("Failed to process XYZ string: $(m[2:4])"))
             end
 
             push!(atoms, Atom(AtomicSymbol, Z, Tuple(xyz)))
