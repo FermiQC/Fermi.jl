@@ -4,12 +4,18 @@ A Julia module for *ab initio* quantum chemistry computations.
 # Installation
 
 Fermi.jl is a registred Julia package and, as such, it can be obtained using the standard Julia package manager. From the Julia terminal, use the `]` to move to the pkg manager
-<pre><code><b style="color: LimeGreen">julia></b> # This is the standard Julia terminal, hit ]
-<b style="color: DodgerBlue">(@v1.6) pkg> </b> # This is the package manager! Hit back space to leave this mode</code></pre>
+```julia
+julia> # This is the standard Julia terminal, hit ] to go into Pkg
+(@v1.6) pkg> # This is the package manager! Hit back space to leave this mode
+```
 Next add Fermi to the current enviroment.
-<pre><code><b style="color: DodgerBlue">(@1.6) pkg></b> Add Fermi</pre></code>
+```julia
+(@1.6) pkg> Add Fermi
+```
 All the dependencies are going to be downloaded and installed and the code should be ready to work. To test the package you can run
-<pre><code><b style="color: DodgerBlue">(@1.6) pkg></b> test Fermi</pre></code>
+```julia
+(@1.6) pkg> test Fermi
+```
 
 ## Trouble-shooting
 The code is built and tested for the latest Julia version on Ubuntu and MacOS. The most fragile step that can lead to problems while building Fermi is the integral library `libcint`. Namely, `libcint` must be able to find `BLAS` in your computer. For Linux, `BLAS` can be easily installed as
@@ -21,7 +27,7 @@ You might want to check the `build.jl` file that contains the instructions to fe
 # Usage
 
 Fermi.jl can be used interactively through the Julia terminal, or you can write a Julia script which will act as the traditional input file present in other quantum chemistry packages. For example, a minimal script to run a RHF computation on a water molecule can be written as
-```
+```julia
 using Fermi
 
 @molecule {
@@ -39,62 +45,39 @@ shell> julia --threads N input.jl
 ``` 
 where N is the desired number of threads. Alternatively, you can set `export JULIA_NUM_THREADS=N` in your path.
 
-Interactevely, the functions calls are all the same. First you load Fermi in
-<pre><code><b style="color: LimeGreen">julia></b> using Fermi</code></pre>
-Next you set the molecule and the options desired.
-<pre><code><b style="color: LimeGreen">julia></b> @molecule {
+Interactevely, the functions calls are all the same. First, you load Fermi in
+```
+julia> using Fermi
+```
+Next you set the desired molecule and the options
+```julia
+julia> @molecule {
   O        1.2091536548      1.7664118189     -0.0171613972
   H        2.1984800075      1.7977100627      0.0121161719
   H        0.9197881882      2.4580185570      0.6297938830
 }
-<b style="color: LimeGreen">julia></b> @set {
+julia> @set {
     basis cc-pvdz
     df true
-}</pre></code>
+}
+```
 Finally, run the desired energy computations
-<pre><code><b style="color: LimeGreen">julia></b> @energy mp2</code></pre>
+```julia
+julia> @energy mp2
+```
 
 # Available methods
 The following methods are currently implemented in Fermi
-<table align="center">
-  <tr>
-    <th>Method</th>
-    <th>Conventional</th>
-    <th>Density-Fitted</th>
-    <th>Single Precision</th>
-  </tr>
 
-  <tr align="center">
-    <td>RHF</td>
-    <td>&#10004</td>
-    <td>&#10004</td>
-    <td>&#10060</td>
-  </tr>
-
-  <tr align="center">
-    <td>RMP2</td>
-    <td>&#10004</td>
-    <td>&#10004</td>
-    <td>&#10004</td>
-  </tr>
-
-  <tr align="center">
-    <td>RCCSD</td>
-    <td>&#10004</td>
-    <td>&#10004</td>
-    <td>&#10004</td>
-  </tr>
-
-  <tr align="center">
-    <td>RCCSD(T)</td>
-    <td>&#10004</td>
-    <td>&#10004</td>
-    <td>&#10004</td>
-  </tr>
-</table>
+| Method    | Conventional | Density-Fitted | Single Precision |
+|-----------|:------------:|:--------------:|:----------------:|
+| RHF       |   ✔️          |    ✔️           |          ✖️       |
+| RMP2      |   ✔️          |    ✔️           |    ✔️             |
+| RCCSD     |   ✔️          |    ✔️           |    ✔️             |
+| RCCSD(T)  |   ✔️          |    ✔️           |    ✔️             |
 
 Only restricted reference methods are currently supported. However, all methods can be run using density fitting by setting `@set df true`. Moreover, JKFIT and RIFIT basis can be specified as
-```
+```julia
 @set {
     jkfit cc-pvqz-jkfit
     rifit cc-pvqz-rifit
