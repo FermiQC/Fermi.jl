@@ -1,7 +1,7 @@
 """
     Fermi.Integrals
 
-Module to compute integrals using Libcints
+Module to compute and manage molecular integrals.
 """
 module Integrals
 
