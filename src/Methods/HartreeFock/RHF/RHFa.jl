@@ -11,6 +11,15 @@ function RHF(ints::IntegralHelper{Float64}, Alg::RHFa)
 
     Fermi.HartreeFock.hf_header()
 
+    output("Collecting necessary integrals...")
+    t = @elapsed begin
+        ints["S"]
+        ints["T"]
+        ints["V"]
+        ints["ERI"]
+    end
+    output("Done in {:10.5f} s", t)
+
     guess = Options.get("scf_guess")
     if guess == "core"
         C, Λ = RHF_core_guess(ints)
