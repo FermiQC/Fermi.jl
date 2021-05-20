@@ -18,13 +18,60 @@ import Base: getindex, setindex!, delete!, show
 
 export IntegralHelper, delete!, mo_from_ao!, JKFIT, RIFIT, Chonky, AbstractDFERI, AbstractERI
 
+"""
+    Fermi.Integrals.AbstractERI
+
+Abstract type common to all ERI types
+"""
 abstract type AbstractERI end
+
+"""
+    Fermi.Integrals.AbstractDFERI
+
+Abstract type common to all density-fitted ERI types
+
+# Struct tree
+
+**AbstractDFERI** <: AbstractERI
+"""
 abstract type AbstractDFERI <: AbstractERI end
 
+"""
+    Fermi.Integrals.JKFIT
+
+Concrete type representing a density-fitted ERI using a JKFIT auxiliar basis set.
+
+# Fields
+| | |
+|:------|:-----------------------------------------------------------|
+|basisset  | BasisSet object associated with the auxiliar JK basis |
+
+# Examples
+
+The JKFIT structure is used to build the IntegralHelper
+
+# Struct tree
+
+JKFIT <: AbstractDFERI <: AbstractERI
+"""
 struct JKFIT <: AbstractDFERI
     basisset::BasisSet
 end
 
+"""
+    Fermi.Integrals.RIFIT
+
+Concrete type representing a density-fitted ERI using a RIFIT auxiliar basis set.
+
+# Fields
+| | |
+|:------|:-----------------------------------------------------------|
+|basisset  | BasisSet object associated with the auxiliar RI basis |
+
+# Struct tree
+
+RIFIT <: AbstractDFERI <: AbstractERI
+"""
 function JKFIT(mol::Molecule = Molecule())
 
     auxjk = Options.get("jkfit")
