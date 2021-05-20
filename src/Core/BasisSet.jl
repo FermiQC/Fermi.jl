@@ -21,8 +21,9 @@ include("BasisParser.jl")
 Object representing a single Gaussian basis function composed of ``N`` primitives: 
 
 ```math
-\chi_{n,l,m} = \sum_i^N C_i r^{n-1}e^{-\zeta_i r^2} Y_m^l
+\chi_{n,l,m} = \sum_i^N C_i r^{2n-2-l}e^{-\zeta_i r^2} Y_{l,m}(\theta,\phi)
 ```
+**Ask the nerds!!**
 
 # Fields
 | | |
