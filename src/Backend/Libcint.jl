@@ -1,3 +1,9 @@
+"""
+    Fermi.Libcint
+
+Interface between Fermi and the integral library libcint. This module exposes
+libcint functions to the Julia interface. 
+"""
 module Libcint
 
 export cint1e_kin_sph!, cint1e_nuc_sph!, cint1e_ovlp_sph!, cint2c2e_sph!, cint2e_sph!, cint3c2e_sph!, cint1e_ovlp_sph32!

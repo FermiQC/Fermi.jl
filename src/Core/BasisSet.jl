@@ -1,3 +1,8 @@
+"""
+    Fermi.GaussianBasis
+
+Module handling basis functions and basis set.
+"""
 module GaussianBasis
 
 using Fermi
@@ -10,12 +15,46 @@ export BasisSet, BasisFunction
 
 include("BasisParser.jl")
 
+@doc raw"""
+    Fermi.GaussianBasis.BasisFunction
+
+Object representing a single Gaussian basis function composed of ``N`` primitives: 
+
+```math
+\chi_{n,l,m} = \sum_i^N C_i r^{n-1}e^{-\zeta_i r^2} Y_m^l
+```
+
+# Fields
+| | |
+|:------|:-----------------------------------------------------------|
+|l      | Angular momentum number (e.g 0 for S, 1 for P, 2 for D...) |
+|coef   | Array with coefficients (``C_i``) for each primitive       |
+|exp    | Array with exponents (``\zeta_i``) for each primitive      |
+"""
 struct BasisFunction
     l::Cint
     coef::Array{Cdouble,1}
     exp::Array{Cdouble,1}
 end
 
+"""
+    Fermi.GaussianBasis.BasisSet
+
+Object holding a set of BasisFunction objects associated with each atom in a molecule.
+
+# Fields
+| | |
+|:------|:-----------------------------------------------------------|
+|molecule        | Molecule object  |
+|basis_name      | String holding the basis set name  |
+|basis           | A dictionary that maps Atom objects to an Array of BasisFunction  |
+|natoms          | Number of atoms in the BasisSet |
+|nbas            | Number of basis functions (Note, not equal the number of BasisFunction objects) |
+|nshells         | Number of shells, i.e. BasisFunction objects |
+|lc_atoms        | Integer array maping data to libcint |
+|lc_bas          | Integer array maping data to libcint |
+|lc_env          | Float64 array maping data to libcint |
+"""
 struct BasisSet
     molecule::Molecule
     basis_name::String
