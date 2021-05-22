@@ -72,7 +72,8 @@ end
 
 Build a Fock matrix into `F` using the Core Hamiltonian `H`, density matrix `D` and two-electron repulsion integral `ERI`.
 """
-function build_fock!(F::FermiMDArray{Float64}, H::FermiMDArray{Float64}, D::FermiMDArray{Float64}, ERI::FermiMDArray{Float64,4})
+function build_fock!(F::FermiMDArray{Float64}, H::FermiMDArray{Float64}, D::FermiMDArray{Float64}, ints::IntegralHelper{Float64,Chonky,AtomicOrbitals})
+    ERI = ints["ERI"]
     F .= H
     @tensor F[m,n] += 2*D[r,s]*ERI[m,n,r,s]
     @tensor F[m,n] -= D[r,s]*ERI[m,r,n,s]
@@ -84,7 +85,8 @@ end
 Build a Fock matrix into `F` using the Core Hamiltonian `H`, density matrix `D` and two-electron repulsion integral `ERI`
 approximated by density fitting.
 """
-function build_fock!(F::FermiMDArray{Float64,2}, H::FermiMDArray{Float64,2}, D::FermiMDArray{Float64,2}, b::FermiMDArray{Float64,3})
+function build_fock!(F::FermiMDArray{Float64,2}, H::FermiMDArray{Float64,2}, D::FermiMDArray{Float64,2}, ints::IntegralHelper{Float64,<:AbstractDFERI,AtomicOrbitals})
+    b = ints["ERI"]
     F .= H
     @tensoropt F[m,n] += 2*D[r,s]*b[Q,m,n]*b[Q,r,s]
     @tensoropt F[m,n] -= D[r,s]*b[Q,m,r]*b[Q,n,s]

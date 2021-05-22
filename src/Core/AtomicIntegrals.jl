@@ -102,7 +102,7 @@ function ao_1e(BS::BasisSet, compute::String, T::DataType = Float64)
     return out
 end
 
-function index2(i::Int16, j::Int16)::Int16
+function index2(i::Signed, j::Signed)::Signed
     if i < j
         return j * (j + 1) / 2 + i
     else
@@ -110,11 +110,14 @@ function index2(i::Int16, j::Int16)::Int16
     end
 end
 
-function index4(i::Int16 , j::Int16, k::Int16, l::Int16)::Int16
-    return index2(index2(i,j), index2(k,l))
-end
+# This function is not useful currently, but it will be for direct computations
+#function index4(i::Signed , j::Signed, k::Signed, l::Signed)::Signed
+#    return index2(index2(i,j), index2(k,l))
+#end
 
-function find_indices(nbf::Int)
+# Produces all unique indices ijkl for the two-electron integral
+# Note, these indexes start from zero, because we use it in a ccall
+function find_indices(nbf::Signed)
 
     out = NTuple{4,Int16}[]
     N = Int16(nbf - 1)
