@@ -46,4 +46,28 @@
           0000000000000000       0.3995128261D+00       0.6076837186D+00
           0.3803889600D+00       0.7001154689D+00       0.3919573931D+00"""
     @test_throws Fermi.Options.FermiException Fermi.GaussianBasis.two_basis_from_string(x)
+
+    @set basis sto-3g
+
+    bs = Fermi.GaussianBasis.BasisSet()
+    x = @capture_out display(bs)
+    @test begin
+          occursin("sto-3g Basis Set", x) &&
+          occursin(r"Number of shells:\s+?5", x) &&
+          occursin(r"Number of basis:\s+?7", x) &&
+          occursin("O: 1s 2s 1p", x) &&
+          occursin("H: 1s", x)
+    end
+    x = @capture_out display(bs[1,1])
+    @test begin
+          occursin("S shell with 1 basis built from 3 primitive gaussians", x) &&
+          occursin(r"χ₀₀\s+?=\s+?\d+?\.\d+?⋅Y₀₀⋅exp\(-\d+?\.\d+?⋅r²\)", x) &&
+          occursin(r"[+-]\s+?\d+?\.\d+?⋅Y₀₀⋅exp\(-\d+?\.\d+?⋅r²\)", x)
+    end
+    x = @capture_out display(bs[1][3])
+    @test begin
+          occursin("P shell with 3 basis built from 3 primitive gaussians", x) &&
+          occursin(r"χ.{2,3}\s+?=\s+?\d+?\.\d+?⋅Y.{2,3}⋅r¹⋅exp\(-\d+?\.\d+?⋅r²\)", x) &&
+          occursin(r"[+-]\s+?\d+?\.\d+?⋅Y.{2,3}⋅r¹⋅exp\(-\d+?\.\d+?⋅r²\)", x)
+    end
 end

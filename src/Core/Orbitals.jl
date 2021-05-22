@@ -50,7 +50,7 @@ Alternatively, one can pass these informations explicitly:
 
 `name` and `basis` are Strings, whereas `mol` is a `Fermi.Geometry.Molecule` object.
 
-# Fields:
+# Fields
 
     name      String with a label for the orbital
     basis     String indicating the basis set used to construct the orbitals

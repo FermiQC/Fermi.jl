@@ -47,15 +47,15 @@ Computes RHF using information from Fermi.CurrentOptions.
 
 # Fields
 
-| Name   |   What it holds     |
+| Name   |   Description     |
 |--------|---------------------|
-| molecule |   Molecule object |
-| energy   |   RHF Energy      |
-| ndocc    | Number of doubly occupied spatial orbitals |
-|    nvir  | Number of virtual spatial orbitals |
-| orbitals |    RHF Orbitals object      |
-| e_conv   | ΔE from the last iteration  |
-| d_conv   |  RMS from the last iteration|
+| `molecule` |   Molecule object |
+| `energy`   |   RHF Energy      |
+| `ndocc`    | Number of doubly occupied spatial orbitals |
+| `nvir`  | Number of virtual spatial orbitals |
+| `orbitals` |    RHF Orbitals object      |
+| `e_conv`   | ΔE from the last iteration  |
+| `d_conv`   |  RMS from the last iteration|
 
 # Relevant options 
 
