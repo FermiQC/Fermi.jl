@@ -44,7 +44,7 @@ const Default = Dict{String,Union{Float64,Int,String,Bool}}(
                                   H        0.9197881882      2.4580185570      0.6297938832
                                   """,
                                   "printstyle" => "repl",
-                                  "output" => "output.jl",
+                                  "output" => "fermi.out",
                                   "basis" => "sto-3g",
                                   "jkfit" => "auto",
                                   "rifit" => "auto",

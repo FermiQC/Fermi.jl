@@ -58,8 +58,8 @@ the information in `M` which is a `DIISManager`.
 """
 function extrapolate(M::DIISManager{T1,T2}; add_res=false) where {T1 <: AbstractFloat, T2 <: AbstractFloat}
 
-    if length(M) == 1
-        throw(DIISError(" cannot extrapolate from one vector"))
+    if length(M) < 2
+        throw(BoundsError("DIIS cannot extrapolate from one vector"))
     end
 
     # Solves the equation for the new vector

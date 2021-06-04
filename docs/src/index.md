@@ -10,7 +10,7 @@ julia> # This is the standard Julia terminal, hit ] to go into Pkg
 ```
 Next add Fermi to the current enviroment.
 ```julia
-(@1.6) pkg> Add Fermi
+(@1.6) pkg> add Fermi
 ```
 All the dependencies are going to be downloaded and installed and the code should be ready to work. To test the package you can run
 ```julia

@@ -117,6 +117,7 @@ function RIFIT(mol::Molecule, basis::String)
 end
 
 struct Chonky <:AbstractERI end
+struct Unique <:AbstractERI end
 
 """
     IntegralHelper{T}

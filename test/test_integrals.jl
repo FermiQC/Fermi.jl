@@ -21,14 +21,6 @@
     @test occursin(r"RIFIT:\s+?cc-pvtz-rifit",x)
 
     ints = Fermi.Integrals.IntegralHelper()
-    x = @capture_out display(ints)
-    @test begin
-        occursin(r"Fermi\s+?IntegralHelper",x) &&
-        occursin(r"Data\s+?Type:\s+?Float64",x) &&
-        occursin(r"Basis:\s+?cc-pvtz",x) &&
-        occursin(r"ERI:\s+?Chonky",x) &&
-        occursin(r"Orbitals:\s+?AtomicOrbitals",x)
-    end
 
     # Try invalid precision
     @set precision invalid
@@ -42,6 +34,16 @@
     @test isapprox(ints["T"], ints32["T"])
     @test isapprox(ints["V"], ints32["V"])
     @test isapprox(ints["ERI"], ints32["ERI"])
+
+    # Test string_repr
+    x = @capture_out display(ints)
+    @test begin
+        occursin(r"Fermi\s+?IntegralHelper",x) &&
+        occursin(r"Data\s+?Type:\s+?Float64",x) &&
+        occursin(r"Basis:\s+?cc-pvtz",x) &&
+        occursin(r"ERI:\s+?Chonky",x) &&
+        occursin(r"Orbitals:\s+?AtomicOrbitals",x)
+    end
 
     # Test cache
     @test begin
