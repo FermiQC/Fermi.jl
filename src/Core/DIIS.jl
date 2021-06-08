@@ -12,10 +12,11 @@ export DIISManager
 Structure holding arrays necessary for extrapolation with the `DIIS` method.
 
 # Fields
-
-    vecs                    Vectors to extrapolate from
-    errs                    Error vectors to build B matrix from
-    max_vec::Int64          Max number of vectors to hold
+| Name | Description |
+|:-----|:------------|
+|`vecs`    |  Vectors to extrapolate from |
+|`errs`    |  Error vectors to build B matrix from |
+|`max_vec` |  Max number of vectors to hold |
 """
 struct DIISManager{T1<:AbstractFloat,T2 <: AbstractFloat}
     vecs::Array{AbstractArray{T1},1}
@@ -57,8 +58,8 @@ the information in `M` which is a `DIISManager`.
 """
 function extrapolate(M::DIISManager{T1,T2}; add_res=false) where {T1 <: AbstractFloat, T2 <: AbstractFloat}
 
-    if length(M) == 1
-        throw(DIISError(" cannot extrapolate from one vector"))
+    if length(M) < 2
+        throw(BoundsError("DIIS cannot extrapolate from one vector"))
     end
 
     # Solves the equation for the new vector

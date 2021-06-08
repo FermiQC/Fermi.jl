@@ -79,7 +79,7 @@ function atomic_number(atom::String)
     if haskey(atom_num, atom)
         return atom_num[atom]
     else
-        throw(FermiException("atomic symbol $atom not defined."))
+        throw(KeyError("atomic symbol $atom not defined."))
     end
 end
 

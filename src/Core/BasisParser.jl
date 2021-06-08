@@ -12,6 +12,11 @@ const AMDict = Dict(
         "I" => 6, 
     )
 
+"""
+    Fermi.GaussinBasis.read_basisset(bname::String, AtomSymbol::String)
+
+Returns an array of BasisFunction objects given an atom (AtomicSymbol) and basis set name (bname).
+"""
 @memoize function read_basisset(bname::String, AtomSymbol::String)
 
     clean_bname = replace(bname, "*"=>"_st_")

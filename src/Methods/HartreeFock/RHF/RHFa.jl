@@ -119,7 +119,7 @@ function RHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, C::Fe
 
     # Build the inital Fock Matrix and diagonalize
     F = FermiMDzeros(Float64,nao,nao)
-    build_fock!(F, T + V, D, ERI)
+    build_fock!(F, T + V, D, ints)
     F̃ = deepcopy(F)
     D̃ = deepcopy(D)
     N = length(D) # Number of elements in D (For RMS computation)
@@ -143,7 +143,7 @@ function RHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, C::Fe
             @tensor D[u,v] = Co[u,m]*Co[v,m]
 
             # Build the Fock Matrix
-            build_fock!(F, T + V, D, ERI)
+            build_fock!(F, T + V, D, ints)
             Eelec = RHFEnergy(D, T + V, F)
 
             # Compute Energy

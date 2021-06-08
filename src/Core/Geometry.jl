@@ -27,11 +27,13 @@ import Base: show
 
 Object storing information about an atom.
 
-# Fields:
-    
-    AtomicSymbol    Atomic symbol
-    Z               Atomic number
-    xyz             xyz array in Angstrom
+# Fields
+
+| Name  | Description |
+|:------|:-----------------------------------------------------------|
+|`AtomicSymbol` |  Atomic symbol          |
+|`Z`            |  Atomic number          |
+|`xyz`          |  xyz array in Angstrom  |
 """
 struct Atom
     AtomicSymbol::String
@@ -44,7 +46,7 @@ end
 
 Object storing information about a molecule (group of atoms).
 
-# Fields:
+# Fields
     
     atoms         Array with Fermi.Atom objects
     charge        Charge of the molecule

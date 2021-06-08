@@ -42,13 +42,18 @@ abstract type AbstractDFERI <: AbstractERI end
 Concrete type representing a density-fitted ERI using a JKFIT auxiliar basis set.
 
 # Fields
-| | |
-|:------|:-----------------------------------------------------------|
-|basisset  | BasisSet object associated with the auxiliar JK basis |
+
+| Name       | Type       | Description |
+|:-----------|:-----------|:----------------------------------------------------|
+|`basisset`  | `BasisSet` | Fermi.GaussianBasis.BasisSet object for the auxiliar JK basis |
 
 # Examples
 
-The JKFIT structure is used to build the IntegralHelper
+The JKFIT structure is used to build a IntegralHelper
+```julia
+julia> jk = Fermi.Integrals.JKFIT()
+julia> ints = 
+```
 
 # Struct tree
 
@@ -58,20 +63,6 @@ struct JKFIT <: AbstractDFERI
     basisset::BasisSet
 end
 
-"""
-    Fermi.Integrals.RIFIT
-
-Concrete type representing a density-fitted ERI using a RIFIT auxiliar basis set.
-
-# Fields
-| | |
-|:------|:-----------------------------------------------------------|
-|basisset  | BasisSet object associated with the auxiliar RI basis |
-
-# Struct tree
-
-RIFIT <: AbstractDFERI <: AbstractERI
-"""
 function JKFIT(mol::Molecule = Molecule())
 
     auxjk = Options.get("jkfit")
@@ -89,6 +80,21 @@ function JKFIT(mol::Molecule, basis::String)
     return JKFIT(BasisSet(mol, basis))
 end
 
+"""
+    Fermi.Integrals.RIFIT
+
+Concrete type representing a density-fitted ERI using a RIFIT auxiliar basis set.
+
+# Fields
+
+| Name       | Type       | Description |
+|:-----------|:-----------|:----------------------------------------------------|
+|`basisset`  | `BasisSet` | Fermi.GaussianBasis.BasisSet object for the auxiliar RI basis |
+
+# Struct tree
+
+RIFIT <: AbstractDFERI <: AbstractERI
+"""
 struct RIFIT <: AbstractDFERI 
     basisset::BasisSet
 end
@@ -111,6 +117,7 @@ function RIFIT(mol::Molecule, basis::String)
 end
 
 struct Chonky <:AbstractERI end
+struct Unique <:AbstractERI end
 
 """
     IntegralHelper{T}
@@ -143,28 +150,6 @@ struct IntegralHelper{T<:AbstractFloat,E<:AbstractERI,O<:AbstractOrbitals}
     eri_type::E
 end
 
-# Pretty printing
-function string_repr(X::IntegralHelper{T,E,O}) where {T,E,O}
-    eri_string = replace("$E", "Fermi.Integrals."=>"")
-    orb_string = replace("$O", "Fermi.Orbitals."=>"")
-    out = ""
-    out = out*" ⇒ Fermi IntegralHelper\n"
-    out = out*" ⋅ Data Type:                 $(T)\n"
-    out = out*" ⋅ Basis:                     $(X.basis)\n"
-    out = out*" ⋅ ERI:                       $(eri_string)\n"
-    out = out*" ⋅ Orbitals:                  $(orb_string)\n"
-    cache_str = ""
-    for k in keys(X.cache)
-        cache_str *= k*" "
-    end
-    out = out*" ⋅ Stored Integrals:          $(cache_str)"
-    return out
-end
-
-function show(io::IO, ::MIME"text/plain", X::IntegralHelper)
-    print(string_repr(X))
-end
-
 
 function IntegralHelper(x...;k...)
 
@@ -186,7 +171,7 @@ function IntegralHelper{T}(;molecule = Molecule(), orbitals = AtomicOrbitals(),
         eri_type = JKFIT(molecule)
 
     # If df is requested, but the orbitals are not AtomicOrbitals then RIFIT is set by default
-    elseif Options.get("df") && eri_type == nothing
+    elseif Options.get("df") && eri_type === nothing
 
         eri_type = RIFIT(molecule)
 
@@ -232,5 +217,32 @@ end
 # Integrals specific to orbital types
 include("AtomicIntegrals.jl")
 include("ROIntegrals.jl")
+
+# Pretty printing
+function string_repr(X::IntegralHelper{T,E,O}) where {T,E,O}
+    eri_string = replace("$E", "Fermi.Integrals."=>"")
+    orb_string = replace("$O", "Fermi.Orbitals."=>"")
+    out = ""
+    out = out*" ⇒ Fermi IntegralHelper\n"
+    out = out*" ⋅ Data Type:                 $(T)\n"
+    out = out*" ⋅ Basis:                     $(X.basis)\n"
+    out = out*" ⋅ ERI:                       $(eri_string)\n"
+    out = out*" ⋅ Orbitals:                  $(orb_string)\n"
+    cache_str = ""
+    for k in keys(X.cache)
+        cache_str *= k*" "
+    end
+    out = out*" ⋅ Stored Integrals:          $(cache_str)"
+    return out
+end
+
+function string_repr(X::AbstractDFERI)
+    eri_string = replace("$(typeof(X))", "Fermi.Integrals."=>"")
+    return "$(eri_string): $(X.basisset.basis_name)"
+end
+
+function show(io::IO, ::MIME"text/plain", X::T) where T<:Union{IntegralHelper,JKFIT,RIFIT}
+    print(string_repr(X))
+end
 
 end # Module
