@@ -7,6 +7,7 @@ GitHub: [Fermi.jl](https://github.com/FermiQC/Fermi.jl)
 """
 module Fermi
 
+using LinearAlgebra: Threads
 """
     Fermi.AbstractWavefunction
 
