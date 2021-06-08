@@ -29,7 +29,7 @@ function get_hc(N)
     Fermi.Options.set("molstring", molstring)
 end
 
-MAX_CHAIN_LENGTH = 15
+MAX_CHAIN_LENGTH = 10
 
 # Cold run
 @set printstyle none
@@ -44,7 +44,8 @@ MAX_CHAIN_LENGTH = 15
 for N = 1:MAX_CHAIN_LENGTH
 
     get_hc(N)
-    Fermi.Options.set("drop_occ", N)
+    fc = 2*N
+    Fermi.Options.set("drop_occ", fc)
 
     run(`echo TBLIS N = $N Threads = $Nt`)
     @set tblis true
