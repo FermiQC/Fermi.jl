@@ -117,7 +117,7 @@ function RIFIT(mol::Molecule, basis::String)
 end
 
 struct Chonky <:AbstractERI end
-struct Unique <:AbstractERI end
+struct UniqueQt <:AbstractERI end
 
 """
     IntegralHelper{T}
@@ -146,7 +146,7 @@ struct IntegralHelper{T<:AbstractFloat,E<:AbstractERI,O<:AbstractOrbitals}
     molecule::Molecule
     orbitals::O
     basis::String
-    cache::Dict{String,FermiMDArray{T}} 
+    cache::Dict{String,AbstractArray{T}} 
     eri_type::E
 end
 

@@ -19,6 +19,41 @@ struct FermiMDArray{T,N} <: AbstractArray{T,N}
     data::Array{T,N}
 end
 
+struct UniqueERI{T} <: AbstractArray{T,1}
+    data::Array{T,1}
+    indexes::Array{NTuple{4, Int16}}
+end
+
+function index2(i::Signed, j::Signed)::Signed
+    if i < j
+        return j * (j + 1) / 2 + i
+    else
+        return i * (i + 1) / 2 + j
+    end
+end
+
+# This function is not useful currently, but it will be for direct computations
+function index4(i::Signed , j::Signed, k::Signed, l::Signed)::Signed
+    return index2(index2(i,j), index2(k,l))
+end
+
+function get_shell_block(U::UniqueERI, i,j,k,l)
+    idx = index4(i-1 ,j-1 , k-1, l-1) + 1
+    r = U.ranges[idx]
+    data = U.data[r]
+    shape = (U.lvals[i], U.lvals[j], U.lvals[k], U.lvals[l])
+    return reshape(data, shape)
+end
+
+function getindex(A::UniqueERI, I::Vararg{Signed,4})
+    idx = index4((I .- 1)...) + 1
+    return A.data[idx]
+end
+
+function getindex(A::UniqueERI, i::Signed)
+    return A.data[i]
+end
+
 # Creates a FermiMDArray from a native Julia Array
 function FermiMDArray(A::AbstractArray)
     return FermiMDArray(Array(A))
@@ -65,7 +100,7 @@ function similar(A::FermiMDArray, dims::Dims)
 end
 
 # Basic methods for AbstractArrays in Julia
-function size(A::FermiMDArray, i...)
+function size(A::T, i...) where T <: Union{FermiMDArray, UniqueERI}
     return size(A.data, i...)
 end
 

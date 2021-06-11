@@ -91,3 +91,8 @@ function build_fock!(F::FermiMDArray{Float64,2}, H::FermiMDArray{Float64,2}, D::
     @tensoropt F[m,n] += 2*D[r,s]*b[Q,m,n]*b[Q,r,s]
     @tensoropt F[m,n] -= D[r,s]*b[Q,m,r]*b[Q,n,s]
 end
+
+#function build_fock!(F::FermiMDArray{Float64}, H::FermiMDArray{Float64}, D::FermiMDArray{Float64}, ints::IntegralHelper{Float64,UniqueERI,AtomicOrbitals})
+#    ERI = ints["ERI"]
+#    F .= H
+#end

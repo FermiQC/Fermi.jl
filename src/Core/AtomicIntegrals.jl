@@ -44,6 +44,11 @@ function compute_ERI!(I::IntegralHelper{T, Chonky, AtomicOrbitals}) where T<:Abs
     I.cache["ERI"] = FermiMDArray(ao_2e4c(bs, T))
 end
 
+function compute_ERI!(I::IntegralHelper{T, UniqueQt, AtomicOrbitals}) where T<:AbstractFloat
+    bs = I.orbitals.basisset
+    I.cache["ERI"] = FermiMDArray(unique_quartets_ao_2e4c(bs, T))
+end
+
 function ao_1e(BS::BasisSet, compute::String, T::DataType = Float64)
 
     if compute == "overlap"
@@ -135,6 +140,162 @@ function find_indices(nbf::Signed)
             end
         end
     end
+
+    return out
+end
+
+function ordered_find_indices(nbf::Signed)
+
+    N = Int16(nbf - 1)
+    ZERO = zero(Int16)
+
+    num_ij = Int((nbf^2 - nbf)/2) + nbf
+    ij_vals = Array{NTuple{2,Int16}}(undef, num_ij)
+
+    for i = ZERO:N
+        for j = i:N
+            idx = index2(i,j) + 1
+            ij_vals[idx] = (i,j)
+        end
+    end
+
+    Nelem = Int((num_ij^2 - num_ij)/2) + num_ij 
+
+    out = Array{NTuple{4,Int16}}(undef, Nelem)
+    for ij in 1:num_ij
+        for kl in 1:ij
+            i,j = ij_vals[ij]
+            k,l = ij_vals[kl]
+            idx = index2(ij-1, kl-1) + 1
+            out[idx] = i,j,k,l
+        end
+    end
+
+    return out
+end
+
+function unique_quartets_ao_2e4c(BS::BasisSet, T::DataType = Float64)
+
+    # Save a list containing the number of primitives for each shell
+    num_prim = [Libcint.CINTcgtos_spheric(i-1, BS.lc_bas) for i = 1:BS.nshells]
+
+    # Allocate output array (array of arrays)
+    unique_idx = ordered_find_indices(BS.nshells)
+
+    # Get ranges 
+    r1 = 1
+    r2 = 0
+    ranges = Array{UnitRange{Int64}}(undef,length(unique_idx))
+    for z in eachindex(unique_idx)
+        id, jd, kd, ld = unique_idx[z] .+ 1
+        r2 += num_prim[id]*num_prim[jd]*num_prim[kd]*num_prim[ld]
+        ranges[z] = r1:r2
+        r1 = r2 + 1
+    end
+
+    out = Array{T}(undef, r2)
+    @sync for z in eachindex(unique_idx)
+        Threads.@spawn begin
+            @inbounds begin
+
+                # Shift indexes (C starts with 0, Julia 1)
+                id, jd, kd, ld = unique_idx[z] .+ 1
+
+                # Initialize array for results
+                buf = zeros(Cdouble, length(ranges[z]))
+
+                # Compute ERI
+                i,j,k,l = Cint.(unique_idx[z])
+                cint2e_sph!(buf, [i,j,k,l], BS.lc_atoms, BS.natoms, BS.lc_bas, BS.nbas, BS.lc_env)
+
+                # Move results to output array
+                out[ranges[z]] .= buf
+            end #inbounds
+        end #spawn
+    end #sync
+
+    return Fermi.UniqueERI(out, unique_idx, ranges, Int8.(num_prim))
+end
+
+function unique_ao_2e4c(BS::BasisSet, T::DataType = Float64)
+
+    # Number of unique integral elements
+    N = Int((BS.nbas^2 - BS.nbas)/2) + BS.nbas
+    N = Int((N^2 - N)/2) + N
+    out = Array{T}(undef, N)
+
+    # Save a list containing the number of primitives for each shell
+    lvals = [Libcint.CINTcgtos_spheric(i-1, BS.lc_bas) for i = 1:BS.nshells]
+
+    ao_offset = [sum(lvals[1:(i-1)]) - 1 for i = 1:BS.nshells]
+
+    # Unique shell indexes to loop 
+    num_ij = Int((BS.nshells^2 - BS.nshells)/2) + BS.nshells
+    ij_vals = Array{NTuple{2,Int16}}(undef, num_ij)
+
+    lim = Int16(BS.nshells - 1)
+    for i = UnitRange{Int16}(zero(Int16),lim)
+        for j = UnitRange{Int16}(i, lim)
+            idx = index2(i,j) + 1
+            ij_vals[idx] = (i,j)
+        end
+    end
+    
+    # i,j,k,l => Shell indexes starting at zero
+    # I, J, K, L => AO indexes starting at one
+    @sync for ij in eachindex(ij_vals)
+        Threads.@spawn begin
+        @inbounds begin
+            i,j = ij_vals[ij]
+            Li, Lj = lvals[i+1], lvals[j+1]
+            ioff = ao_offset[i+1]
+            joff = ao_offset[j+1]
+            for kl in 1:ij
+                k,l = ij_vals[kl]
+                Lk, Ll = lvals[k+1], lvals[l+1]
+                koff = ao_offset[k+1]
+                loff = ao_offset[l+1]
+
+                # Initialize array for results
+                buf = zeros(Cdouble, Li*Lj*Lk*Ll)
+
+                # Compute ERI
+                cint2e_sph!(buf, Cint.([i,j,k,l]), BS.lc_atoms, BS.natoms, BS.lc_bas, BS.nbas, BS.lc_env)
+
+                #if maximum(abs, buf) < 1e-10
+                #    continue
+                #end
+
+                buf = reshape(buf, (Li, Lj, Lk, Ll))
+
+                # is, js, ks, ls are indexes within the shell e.g. for a p shell is = (1, 2, 3)
+                for is = 1:Li
+                    I = ioff + is
+                    for js = 1:Lj
+                        J = joff + js
+                        J < I ? continue : nothing
+
+                        # J > I
+                        IJ = Int(J * (J + 1) / 2) + I
+
+                        for ks = 1:Lk
+                            K = koff + ks
+                            for ls = 1:Ll
+                                L = loff + ls
+                                L < K ? continue : nothing
+
+                                KL = Int(L * (L + 1) / 2) + K
+
+                                idx = index2(IJ,KL) + 1
+                                out[idx] = buf[is, js, ks, ls]
+                            end
+                        end
+                    end
+                end
+            end
+        end #inbounds
+        end #spawn
+    end #sync
 
     return out
 end
