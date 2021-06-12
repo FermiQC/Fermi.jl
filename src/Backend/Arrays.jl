@@ -3,7 +3,7 @@ import Base: size, permutedims, permutedims!, getindex, setindex!, ndims, show, 
 import Base: iterate, length, similar, adjoint, eltype, +, -, *, /, ^, BroadcastStyle
 import Strided: UnsafeStridedView
 
-export FermiMDArray, FermiMDrand, FermiMDzeros, diagonalize
+export FermiMDArray, FermiMDrand, FermiMDzeros, Fermi4SymArray, diagonalize
 
 """
 
@@ -19,9 +19,8 @@ struct FermiMDArray{T,N} <: AbstractArray{T,N}
     data::Array{T,N}
 end
 
-struct UniqueERI{T} <: AbstractArray{T,1}
+struct Fermi4SymArray{T} <: AbstractArray{T,1}
     data::Array{T,1}
-    indexes::Array{NTuple{4, Int16}}
 end
 
 function index2(i::Signed, j::Signed)::Signed
@@ -45,12 +44,12 @@ function get_shell_block(U::UniqueERI, i,j,k,l)
     return reshape(data, shape)
 end
 
-function getindex(A::UniqueERI, I::Vararg{Signed,4})
+function getindex(A::Fermi4SymArray, I::Vararg{Signed,4})
     idx = index4((I .- 1)...) + 1
     return A.data[idx]
 end
 
-function getindex(A::UniqueERI, i::Signed)
+function getindex(A::Fermi4SymArray, i::Signed)
     return A.data[i]
 end
 
@@ -100,7 +99,7 @@ function similar(A::FermiMDArray, dims::Dims)
 end
 
 # Basic methods for AbstractArrays in Julia
-function size(A::T, i...) where T <: Union{FermiMDArray, UniqueERI}
+function size(A::T, i...) where T <: Union{FermiMDArray, Fermi4SymArray}
     return size(A.data, i...)
 end
 

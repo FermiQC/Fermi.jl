@@ -44,9 +44,9 @@ function compute_ERI!(I::IntegralHelper{T, Chonky, AtomicOrbitals}) where T<:Abs
     I.cache["ERI"] = FermiMDArray(ao_2e4c(bs, T))
 end
 
-function compute_ERI!(I::IntegralHelper{T, UniqueQt, AtomicOrbitals}) where T<:AbstractFloat
+function compute_ERI!(I::IntegralHelper{T, UniqueERI, AtomicOrbitals}) where T<:AbstractFloat
     bs = I.orbitals.basisset
-    I.cache["ERI"] = FermiMDArray(unique_quartets_ao_2e4c(bs, T))
+    I.cache["ERI"] = Fermi.Fermi4SymArray(unique_ao_2e4c(bs, T))
 end
 
 function ao_1e(BS::BasisSet, compute::String, T::DataType = Float64)
@@ -222,7 +222,7 @@ function unique_ao_2e4c(BS::BasisSet, T::DataType = Float64)
     # Number of unique integral elements
     N = Int((BS.nbas^2 - BS.nbas)/2) + BS.nbas
     N = Int((N^2 - N)/2) + N
-    out = Array{T}(undef, N)
+    out = zeros(T, N)
 
     # Save a list containing the number of primitives for each shell
     lvals = [Libcint.CINTcgtos_spheric(i-1, BS.lc_bas) for i = 1:BS.nshells]
@@ -232,12 +232,20 @@ function unique_ao_2e4c(BS::BasisSet, T::DataType = Float64)
     # Unique shell indexes to loop 
     num_ij = Int((BS.nshells^2 - BS.nshells)/2) + BS.nshells
     ij_vals = Array{NTuple{2,Int16}}(undef, num_ij)
+    σvals = zeros(Float64, num_ij)
 
     lim = Int16(BS.nshells - 1)
     for i = UnitRange{Int16}(zero(Int16),lim)
-        for j = UnitRange{Int16}(i, lim)
-            idx = index2(i,j) + 1
-            ij_vals[idx] = (i,j)
+        @inbounds begin
+        Li2 = lvals[i+1]^2
+            for j = UnitRange{Int16}(i, lim)
+                Lj2 = lvals[j+1]^2
+                buf = zeros(Cdouble, Li2*Lj2)
+                idx = index2(i,j) + 1
+                ij_vals[idx] = (i,j)
+                cint2e_sph!(buf, Cint.([i,i,j,j]), BS.lc_atoms, BS.natoms, BS.lc_bas, BS.nbas, BS.lc_env)
+                σvals[idx] = √maximum(buf)
+            end
         end
     end
     
@@ -251,6 +259,10 @@ function unique_ao_2e4c(BS::BasisSet, T::DataType = Float64)
             ioff = ao_offset[i+1]
             joff = ao_offset[j+1]
             for kl in 1:ij
+                σ = σvals[ij]*σvals[kl]
+                if σ < 1e-12
+                    continue
+                end
                 k,l = ij_vals[kl]
                 Lk, Ll = lvals[k+1], lvals[l+1]
                 koff = ao_offset[k+1]
@@ -261,10 +273,6 @@ function unique_ao_2e4c(BS::BasisSet, T::DataType = Float64)
 
                 # Compute ERI
                 cint2e_sph!(buf, Cint.([i,j,k,l]), BS.lc_atoms, BS.natoms, BS.lc_bas, BS.nbas, BS.lc_env)
-
-                #if maximum(abs, buf) < 1e-10
-                #    continue
-                #end
 
                 buf = reshape(buf, (Li, Lj, Lk, Ll))
 

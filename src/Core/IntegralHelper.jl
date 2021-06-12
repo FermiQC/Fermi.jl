@@ -16,7 +16,7 @@ using TensorOperations
 
 import Base: getindex, setindex!, delete!, show
 
-export IntegralHelper, delete!, mo_from_ao!, JKFIT, RIFIT, Chonky, AbstractDFERI, AbstractERI
+export IntegralHelper, delete!, mo_from_ao!, JKFIT, RIFIT, Chonky, AbstractDFERI, AbstractERI, UniqueERI
 
 """
     Fermi.Integrals.AbstractERI
@@ -117,7 +117,7 @@ function RIFIT(mol::Molecule, basis::String)
 end
 
 struct Chonky <:AbstractERI end
-struct UniqueQt <:AbstractERI end
+struct UniqueERI <:AbstractERI end
 
 """
     IntegralHelper{T}
@@ -167,7 +167,7 @@ function IntegralHelper{T}(;molecule = Molecule(), orbitals = AtomicOrbitals(),
                            basis = Options.get("basis"), eri_type=nothing) where T<:AbstractFloat
 
     # If the associated orbitals are AtomicOrbitals and DF is requested, JKFIT is set by default
-    if Options.get("df") && orbitals isa AtomicOrbitals && eri_type == nothing
+    if Options.get("df") && orbitals isa AtomicOrbitals && eri_type === nothing
         eri_type = JKFIT(molecule)
 
     # If df is requested, but the orbitals are not AtomicOrbitals then RIFIT is set by default
@@ -180,7 +180,7 @@ function IntegralHelper{T}(;molecule = Molecule(), orbitals = AtomicOrbitals(),
         eri_type = Chonky()
     end
 
-    cache = Dict{String, FermiMDArray{T}}() 
+    cache = Dict{String, AbstractArray{T}}() 
     IntegralHelper(molecule, orbitals, basis, cache, eri_type)
 end
 
