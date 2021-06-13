@@ -100,9 +100,13 @@ function build_fock!(F::FermiMDArray{Float64}, H::FermiMDArray{Float64}, D::Ferm
         for j = i:nbas
             for k = 1:nbas
                 for l = k:nbas
-                    F[i,j] += 2*D[k,l]*(ERI[i,j,k,l] - ERI[i,k,j,l])
+                    F[i,j] += D[k,l]*(2*ERI[i,j,k,l] - ERI[i,k,j,l])
+                    if k != l
+                        F[i,j] -= D[k,l]*(2*ERI[i,j,k,l] - ERI[i,l,j,k])
+                    end
                 end
             end
         end
     end
+    F = Symmetric(F)
 end

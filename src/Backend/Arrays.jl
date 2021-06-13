@@ -36,14 +36,6 @@ function index4(i::Signed , j::Signed, k::Signed, l::Signed)::Signed
     return index2(index2(i,j), index2(k,l))
 end
 
-function get_shell_block(U::UniqueERI, i,j,k,l)
-    idx = index4(i-1 ,j-1 , k-1, l-1) + 1
-    r = U.ranges[idx]
-    data = U.data[r]
-    shape = (U.lvals[i], U.lvals[j], U.lvals[k], U.lvals[l])
-    return reshape(data, shape)
-end
-
 function getindex(A::Fermi4SymArray, I::Vararg{Signed,4})
     idx = index4((I .- 1)...) + 1
     return A.data[idx]
