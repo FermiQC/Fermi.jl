@@ -385,7 +385,6 @@ function ao_2e4c(BS::BasisSet, T::DataType = Float64)
                     # i,j + k,l permutatiom
                     out[rj, ri, rl, rk] .= permutedims(out[ri, rj, rk, rl], (2,1,4,3))
                 elseif index2(i,j) != index2(k,l) 
-                    # i,j permutation
                     # ij, kl permutation
                     out[rk, rl, ri, rj] .= permutedims(out[ri, rj, rk, rl], (3,4,1,2))
                 end
