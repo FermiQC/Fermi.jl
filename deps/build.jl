@@ -1,7 +1,11 @@
 # Fetch Libcint
 
 try
-    run(`git clone https://github.com/sunqm/libcint.git`)
+    if Sys.ARCH == :x86_64
+        run(`git clone https://github.com/sunqm/qcint.git`)
+    else
+        run(`git clone https://github.com/sunqm/libcint.git`)
+    end
     mkdir(joinpath(@__DIR__, "libcint/build"))
     cd(joinpath(@__DIR__, "libcint/build"))
 catch 
