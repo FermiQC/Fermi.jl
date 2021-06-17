@@ -16,7 +16,7 @@ using TensorOperations
 
 import Base: getindex, setindex!, delete!, show
 
-export IntegralHelper, delete!, mo_from_ao!, JKFIT, RIFIT, Chonky, AbstractDFERI, AbstractERI, UniqueERI
+export IntegralHelper, delete!, mo_from_ao!, JKFIT, RIFIT, Chonky, AbstractDFERI, AbstractERI, UniqueERI, SparseERI
 
 """
     Fermi.Integrals.AbstractERI
@@ -118,6 +118,7 @@ end
 
 struct Chonky <:AbstractERI end
 struct UniqueERI <:AbstractERI end
+struct SparseERI <: AbstractERI end
 
 """
     IntegralHelper{T}
