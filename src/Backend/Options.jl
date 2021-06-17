@@ -97,7 +97,7 @@ const Default = Dict{String,Union{Float64,Int,String,Bool}}(
                                   "min_matrix_elem" => 10^-9,
                                   "precision_override" => false,
                                   "tblis" => false,
-                                  "eri_cutoff" => 10^-10
+                                  "eri_cutoff" => 10^-12
                                  )
 """
     Fermi.Options.Current
