@@ -40,7 +40,7 @@ Edf = [
             Fermi.Options.set("molstring", mol)
             Fermi.Options.set("basis", basis[i])
 
-            Iu = Fermi.Integrals.IntegralHelper(eri_type=Fermi.Integrals.UniqueERI())
+            Iu = Fermi.Integrals.IntegralHelper(eri_type=Fermi.Integrals.SparseERI())
             println(Fermi.Integrals.string_repr(Iu))
 
             wf = @energy Iu => rhf
