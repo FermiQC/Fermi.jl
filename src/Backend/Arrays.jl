@@ -5,6 +5,7 @@ import Strided: UnsafeStridedView
 
 export FermiMDArray, FermiMDrand, FermiMDzeros, Fermi4SymArray, diagonalize
 
+abstract type AbstractFermiArray{T,N} <: AbstractArray{T,N} end
 """
 
     FermiMDArray{T,N}
@@ -15,19 +16,40 @@ Fermi array object held entirely in memory. Thin wrap around a standard Julia ar
 
 **FermiMDArray** <: AbstractArray
 """
-struct FermiMDArray{T,N} <: AbstractArray{T,N} 
+struct FermiMDArray{T,N} <: AbstractFermiArray{T,N} 
     data::Array{T,N}
 end
 
-struct Fermi4SymArray{T} <: AbstractArray{T,1}
+struct Fermi4SymArray{T} <: AbstractFermiArray{T,1}
     data::Array{T,1}
+end
+
+struct FermiSparse{Td,Ti,N} <: AbstractFermiArray{Td,N}
+    indexes::Vector{NTuple{N, Ti}}
+    data::Vector{Td}
+end
+
+function ndims(A::FermiSparse{Td,Ti,N}) where {Td, Ti, N}
+    return N
+end
+
+function show(io::IO, ::MIME"text/plain", A::FermiSparse{Td, Ti, N}) where {Td, Ti, N}
+    println("FermiSparse{$Td, $Ti, $N}:")
+    for (x,idx) in zip(A.data, A.indexes)
+        idx_str = "("
+        for i in idx
+            idx_str *= "$i,"
+        end
+        idx_str = idx_str[1:end-1]*") => $x"
+        println(idx_str)
+    end
 end
 
 function index2(i::Signed, j::Signed)::Signed
     if i < j
-        return j * (j + 1) / 2 + i
+        return (j * (j + 1)) >> 1 + i
     else
-        return i * (i + 1) / 2 + j
+        return (i * (i + 1)) >> 1 + j
     end
 end
 
@@ -91,15 +113,15 @@ function similar(A::FermiMDArray, dims::Dims)
 end
 
 # Basic methods for AbstractArrays in Julia
-function size(A::T, i...) where T <: Union{FermiMDArray, Fermi4SymArray}
+function size(A::T, i...) where T <: AbstractFermiArray
     return size(A.data, i...)
 end
 
-function getindex(A::FermiMDArray, I...)
+function getindex(A::AbstractFermiArray, I...)
     return FermiMDArray(A.data[I...])
 end
 
-function setindex!(A::FermiMDArray, val, I...)
+function setindex!(A::AbstractFermiArray, val, I...)
     A.data[I...] = val
 end
 
@@ -107,11 +129,11 @@ function ndims(A::FermiMDArray)
     return ndims(A.data)
 end
 
-function length(A::FermiMDArray)
+function length(A::AbstractFermiArray)
     return length(A.data)
 end
 
-function eltype(A::FermiMDArray)
+function eltype(A::AbstractFermiArray)
     return eltype(A.data)
 end
 
