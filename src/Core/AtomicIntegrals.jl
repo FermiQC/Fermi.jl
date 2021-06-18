@@ -59,47 +59,41 @@ function ao_1e(BS::BasisSet, compute::String, T::DataType = Float64)
         libcint_1e! =  cint1e_nuc_sph!
     end
 
-    # Save a list containing the number of primitives for each shell
-    num_prim = [Libcint.CINTcgtos_spheric(i-1, BS.lc_bas) for i = 1:BS.nshells]
-
-    # Get slice corresponding to the address in S where the compute chunk goes
-    ranges = UnitRange{Int64}[]
-    iaccum = 1
-    for i = 1:BS.nshells
-        push!(ranges, iaccum:(iaccum+ num_prim[i] -1))
-        iaccum += num_prim[i]
-    end
-
-    # Allocate output array
+    # Pre allocate output
     out = zeros(T, BS.nbas, BS.nbas)
+
+    # Pre compute a list of angular momentum numbers (l) for each shell
+    lvals = [Libcint.CINTcgtos_spheric(i-1, BS.lc_bas) for i = 1:BS.nshells]
+    Lmax = maximum(lvals)
+
+    # Offset list for each shell, used to map shell index to AO index
+    ao_offset = [sum(lvals[1:(i-1)]) for i = 1:BS.nshells]
+
+    buf_arrays = [zeros(Cdouble, Lmax^4) for _ = 1:Threads.nthreads()]
+
     @sync for i in 1:BS.nshells
         Threads.@spawn begin
             @inbounds begin
-                # Get number of primitive functions
-                i_num_prim = num_prim[i]
-
-                # Get slice 
-                ri = ranges[i]
-
+                Li = lvals[i]
+                buf = buf_arrays[Threads.threadid()]
+                ioff = ao_offset[i]
                 for j in i:BS.nshells
-
-                    # Get number of primitive functions
-                    j_num_prim = num_prim[j]
-
-                    # Get slice 
-                    rj = ranges[j]
-
-                    # Array where results are written 
-                    buf = zeros(Cdouble, i_num_prim*j_num_prim)
+                    Lj = lvals[j]
+                    joff = ao_offset[j]
 
                     # Call libcint
                     libcint_1e!(buf, Cint.([i-1,j-1]), BS.lc_atoms, BS.natoms, BS.lc_bas, BS.nbas, BS.lc_env)
 
-                    # Save results into out
-                    out[ri, rj] .= reshape(buf, (i_num_prim, j_num_prim))
-                    if j != i
-                        out[rj, ri] .= transpose(out[ri, rj])
-                    end    
+                    # Loop through shell block and save unique elements
+                    for js = 1:Lj
+                        J = joff + js
+                        for is = 1:Li
+                            I = ioff + is
+                            J < I ? break : nothing
+                            out[I,J] = buf[is + Li*(js-1)]
+                            out[J,I] = out[I,J]
+                        end
+                    end
                 end
             end #inbounds
         end #spawn
@@ -113,11 +107,6 @@ function index2(i::Signed, j::Signed)::Signed
     else
         return (i * (i + 1)) >> 1 + j
     end
-end
-
-# This function is not useful currently, but it will be for direct computations
-function index4(i::Signed , j::Signed, k::Signed, l::Signed)::Signed
-    return index2(index2(i,j), index2(k,l))
 end
 
 # Produces all unique indices ijkl for the two-electron integral
@@ -227,7 +216,7 @@ function sparse_ao_2e4c(BS::BasisSet, T::DataType = Float64)
                         L < K ? break : nothing
 
                         # L ≥ K
-                        KL = Int(L * (L + 1) / 2) + K                            
+                        KL = (L * (L + 1)) >> 1 + K                            
                         bkl = Lij*(ks-1) + bl
                         for js = 1:Lj
                             J = joff + js
@@ -236,7 +225,7 @@ function sparse_ao_2e4c(BS::BasisSet, T::DataType = Float64)
                                 I = ioff + is
                                 J < I ? break : nothing
 
-                                IJ = Int(J * (J + 1) / 2) + I
+                                IJ = (J * (J + 1)) >> 1 + I
 
                                 #KL < IJ ? continue : nothing # This restriction does not work... idk why 
 
@@ -345,50 +334,44 @@ end
 
 function ao_2e2c(BS::BasisSet, T::DataType = Float64)
 
-    # Save a list containing the number of primitives for each shell
-    num_prim = [Libcint.CINTcgtos_spheric(i-1, BS.lc_bas) for i = 1:BS.nshells]
-
-    # Get slice corresponding to the address in S where the compute chunk goes
-    ranges = UnitRange{Int64}[]
-    iaccum = 1
-    for i = 1:BS.nshells
-        push!(ranges, iaccum:(iaccum+ num_prim[i] -1))
-        iaccum += num_prim[i]
-    end
-
-    # Allocate output array
+    # Pre allocate output
     out = zeros(T, BS.nbas, BS.nbas)
+
+    # Pre compute a list of angular momentum numbers (l) for each shell
+    lvals = [Libcint.CINTcgtos_spheric(i-1, BS.lc_bas) for i = 1:BS.nshells]
+    Lmax = maximum(lvals)
+
+    # Offset list for each shell, used to map shell index to AO index
+    ao_offset = [sum(lvals[1:(i-1)]) for i = 1:BS.nshells]
+
+    buf_arrays = [zeros(Cdouble, Lmax^4) for _ = 1:Threads.nthreads()]
+
     @sync for i in 1:BS.nshells
         Threads.@spawn begin
             @inbounds begin
-                # Get number of primitive functions
-                i_num_prim = num_prim[i]
-
-                # Get slice 
-                ri = ranges[i]
-
+                Li = lvals[i]
+                buf = buf_arrays[Threads.threadid()]
+                ioff = ao_offset[i]
                 for j in i:BS.nshells
-
-                    # Get number of primitive functions
-                    j_num_prim = num_prim[j]
-
-                    # Get slice 
-                    rj = ranges[j]
-
-                    # Array where results are written 
-                    buf = zeros(Cdouble, i_num_prim*j_num_prim)
+                    Lj = lvals[j]
+                    joff = ao_offset[j]
 
                     # Call libcint
                     cint2c2e_sph!(buf, Cint.([i-1,j-1]), BS.lc_atoms, BS.natoms, BS.lc_bas, BS.nbas, BS.lc_env)
 
-                    # Save results into out
-                    out[ri, rj] .= reshape(buf, (i_num_prim, j_num_prim))
-                    if j != i
-                        out[rj, ri] .= transpose(out[ri, rj])
-                    end    
+                    # Loop through shell block and save unique elements
+                    for js = 1:Lj
+                        J = joff + js
+                        for is = 1:Li
+                            I = ioff + is
+                            J < I ? break : nothing
+                            out[I,J] = buf[is + Li*(js-1)]
+                            out[J,I] = out[I,J]
+                        end
+                    end
                 end
             end #inbounds
-        end #spwan
+        end #spawn
     end #sync
     return out
 end

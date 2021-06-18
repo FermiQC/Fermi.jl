@@ -8,7 +8,6 @@ module GaussianBasis
 using Fermi
 using Fermi.Geometry
 using Fermi.Options
-using Fermi.Libcint
 using Memoize
 using Formatting
 
