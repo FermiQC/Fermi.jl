@@ -44,11 +44,6 @@ function compute_ERI!(I::IntegralHelper{T, Chonky, AtomicOrbitals}) where T<:Abs
     I.cache["ERI"] = FermiMDArray(ao_2e4c(bs, T))
 end
 
-function compute_ERI!(I::IntegralHelper{T, UniqueERI, AtomicOrbitals}) where T<:AbstractFloat
-    bs = I.orbitals.basisset
-    I.cache["ERI"] = Fermi.Fermi4SymArray(unique_ao_2e4c(bs, T))
-end
-
 function compute_ERI!(I::IntegralHelper{T, SparseERI, AtomicOrbitals}) where T<:AbstractFloat
     bs = I.orbitals.basisset
     I.cache["ERI"] = Fermi.FermiSparse(sparse_ao_2e4c(bs, T)...)
@@ -143,36 +138,6 @@ function find_indices(nbf::Signed)
                     push!(out, (i,j,k,l))
                 end
             end
-        end
-    end
-
-    return out
-end
-
-function ordered_find_indices(nbf::Signed)
-
-    N = Int16(nbf - 1)
-    ZERO = zero(Int16)
-
-    num_ij = Int((nbf^2 - nbf)/2) + nbf
-    ij_vals = Array{NTuple{2,Int16}}(undef, num_ij)
-
-    for i = ZERO:N
-        for j = i:N
-            idx = index2(i,j) + 1
-            ij_vals[idx] = (i,j)
-        end
-    end
-
-    Nelem = Int((num_ij^2 - num_ij)/2) + num_ij 
-
-    out = Array{NTuple{4,Int16}}(undef, Nelem)
-    for ij in 1:num_ij
-        for kl in 1:ij
-            i,j = ij_vals[ij]
-            k,l = ij_vals[kl]
-            idx = index2(ij-1, kl-1) + 1
-            out[idx] = i,j,k,l
         end
     end
 
@@ -290,112 +255,7 @@ function sparse_ao_2e4c(BS::BasisSet, T::DataType = Float64)
     return indexes[mask], out[mask]
 end
 
-function unique_ao_2e4c(BS::BasisSet, T::DataType = Float64)
-
-    # Number of unique integral elements
-    N = Int((BS.nbas^2 - BS.nbas)/2) + BS.nbas
-    N = Int((N^2 - N)/2) + N
-
-    # Pre allocate output
-    out = zeros(T, N)
-
-    # Pre compute a list of angular momentum numbers (l) for each shell
-    lvals = [Libcint.CINTcgtos_spheric(i-1, BS.lc_bas) for i = 1:BS.nshells]
-    Lmax = maximum(lvals)
-
-    # Offset list for each shell, used to map shell index to AO index
-    ao_offset = [sum(lvals[1:(i-1)]) - 1 for i = 1:BS.nshells]
-
-    # Unique shell pairs with i < j
-    num_ij = Int((BS.nshells^2 - BS.nshells)/2) + BS.nshells
-
-    # Pre allocate array to save ij pairs
-    ij_vals = Array{NTuple{2,Int32}}(undef, num_ij)
-
-    # Pre allocate array to save σij, that is the screening parameter for Schwarz 
-    σvals = zeros(Float64, num_ij)
-
-    ### Loop thorugh i and j such that i ≤ j. Save each pair into ij_vals and compute √σij for integral screening
-    lim = Int32(BS.nshells - 1)
-    for i = UnitRange{Int32}(zero(Int32),lim)
-        @inbounds begin
-        Li2 = lvals[i+1]^2
-            for j = UnitRange{Int32}(i, lim)
-                Lj2 = lvals[j+1]^2
-                buf = zeros(Cdouble, Li2*Lj2)
-                idx = index2(i,j) + 1
-                ij_vals[idx] = (i,j)
-                cint2e_sph!(buf, [i,i,j,j], BS.lc_atoms, BS.natoms, BS.lc_bas, BS.nbas, BS.lc_env)
-                σvals[idx] = √maximum(buf)
-            end
-        end
-    end
-
-    buf_arrays = [zeros(Cdouble, Lmax^4) for _ = 1:Threads.nthreads()]
-    
-    # i,j,k,l => Shell indexes starting at zero
-    # I, J, K, L => AO indexes starting at one
-    @sync for ij in eachindex(ij_vals)
-        Threads.@spawn begin
-        @inbounds begin
-            buf = buf_arrays[Threads.threadid()]
-            i,j = ij_vals[ij]
-            Li, Lj = lvals[i+1], lvals[j+1]
-            Lij = Li*Lj
-            ioff = ao_offset[i+1]
-            joff = ao_offset[j+1]
-            for kl in ij:num_ij
-                σ = σvals[ij]*σvals[kl]
-                if σ < 1e-12
-                    continue
-                end
-                k,l = ij_vals[kl]
-                Lk, Ll = lvals[k+1], lvals[l+1]
-                Lijk = Lij*Lk
-                koff = ao_offset[k+1]
-                loff = ao_offset[l+1]
-
-                # Compute ERI
-                cint2e_sph!(buf, [i,j,k,l], BS.lc_atoms, BS.natoms, BS.lc_bas, BS.nbas, BS.lc_env)
-
-                ### This block aims to retrieve unique elements within buf and map them to AO indexes
-                # is, js, ks, ls are indexes within the shell e.g. for a p shell is = (1, 2, 3)
-                # bl, bkl, bjkl are used to map the (i,j,k,l) index into a one-dimensional index for buf
-                # That is, get the correct integrals for the AO quartet.
-                for ls = 1:Ll
-                    L = loff + ls
-                    bl = Lijk*(ls-1)
-                    for ks = 1:Lk
-                        K = koff + ks
-                        L < K ? break : nothing
-
-                        # L ≥ K
-                        KL = Int(L * (L + 1) / 2) + K                            
-                        bkl = Lij*(ks-1) + bl
-                        for js = 1:Lj
-                            J = joff + js
-                            bjkl = Li*(js-1) + bkl
-                            for is = 1:Li
-                                I = ioff + is
-                                J < I ? break : nothing
-
-                                IJ = Int(J * (J + 1) / 2) + I
-
-                                #KL < IJ ? continue : nothing # This restriction does not work... idk why 
-
-                                idx = index2(IJ,KL) + 1
-                                out[idx] = buf[is + bjkl]
-                            end
-                        end
-                    end
-                end
-            end
-        end #inbounds
-        end #spawn
-    end #sync
-    return out
-end
-
+# This function is expensive and not optimized. Prefer using the sparse version
 function ao_2e4c(BS::BasisSet, T::DataType = Float64)
 
     # Save a list containing the number of primitives for each shell

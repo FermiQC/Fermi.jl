@@ -16,7 +16,7 @@ using TensorOperations
 
 import Base: getindex, setindex!, delete!, show
 
-export IntegralHelper, delete!, mo_from_ao!, JKFIT, RIFIT, Chonky, AbstractDFERI, AbstractERI, UniqueERI, SparseERI
+export IntegralHelper, delete!, mo_from_ao!, JKFIT, RIFIT, Chonky, AbstractDFERI, AbstractERI, SparseERI
 
 """
     Fermi.Integrals.AbstractERI
@@ -117,7 +117,6 @@ function RIFIT(mol::Molecule, basis::String)
 end
 
 struct Chonky <:AbstractERI end
-struct UniqueERI <:AbstractERI end
 struct SparseERI <: AbstractERI end
 
 """
