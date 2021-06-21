@@ -139,7 +139,7 @@ A key is associated with each type of integral
     molecule                    Molecule object
     orbitals                    Orbitals used in the integral computation
     basis                       Basis set name
-    cache                       Holds integrals computed 
+    cache                       Holds computed integrals 
     eri_type                    Defines whether/how density-fitting is done
 """
 struct IntegralHelper{T<:AbstractFloat,E<:AbstractERI,O<:AbstractOrbitals}
