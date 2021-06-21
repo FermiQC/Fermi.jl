@@ -106,6 +106,7 @@ function build_fock!(F::FermiMDArray{Float64}, H::FermiMDArray{Float64}, D::Ferm
         ν = eri_vals[z]
         Ft = Farrays[Threads.threadid()]
         @inbounds begin
+            @fastmath begin
             ij = Fermi.index2(i-1,j-1)
             ik = Fermi.index2(i-1,k-1) + 1
             il = Fermi.index2(i-1,l-1) + 1
@@ -175,6 +176,7 @@ function build_fock!(F::FermiMDArray{Float64}, H::FermiMDArray{Float64}, D::Ferm
                 Ft[ij+1] += 2*D[k,l]*ν
                 Ft[ik] -= D[j,l]*ν
             end
+        end
         end
     end
 
