@@ -442,7 +442,6 @@ function compute_OVOV!(I::IntegralHelper{T,Chonky,O}, aoints::IntegralHelper{T,S
     Cv = I.orbitals.C[:,v]
     Co = I.orbitals.C[:,o]
 
-    println("here we are")
     # Create a partially-contracted dense array from SparseERI
     iνρσ = zeros(T, length(o), nbf, nbf, nbf)
     @sync for i = o

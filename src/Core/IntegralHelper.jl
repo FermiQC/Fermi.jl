@@ -177,7 +177,7 @@ function IntegralHelper{T}(;molecule = Molecule(), orbitals = AtomicOrbitals(),
 
     # Else, if eri_type is not an AbstractERI object, Chonky is used. This will overwrite invalid entries for eri_type
     elseif !(typeof(eri_type) <: AbstractERI)
-        eri_type = Chonky()
+        eri_type = orbitals isa AtomicOrbitals ? SparseERI() : Chonky()
     end
 
     cache = Dict{String, AbstractArray{T}}() 

@@ -273,7 +273,8 @@ function Base.convert(::Type{T}, A::FermiMDArray) where T<:FermiMDArray{Float64}
     return FermiMDArray(newdata)
 end
 
+# Can be better
 function show(io::IO, ::MIME"text/plain", A::FermiMDArray{T}) where T <: Number
-    print(io, "Fermi Memory-held Dense Array - ")
-    display(io, A.data)
+    print(io, "Fermi Memory-held Dense Array \n")
+    print(io, A.data)
 end

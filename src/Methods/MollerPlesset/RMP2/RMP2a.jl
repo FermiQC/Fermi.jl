@@ -2,7 +2,7 @@ using TensorOperations
 using LinearAlgebra
 
 function RMP2(Alg::RMP2a)
-    aoints = IntegralHelper{Float64}(eri_type=SparseERI())
+    aoints = IntegralHelper{Float64}()
     rhf = RHF(aoints)
     moints = IntegralHelper(orbitals=rhf.orbitals)
     RMP2(moints, aoints, Alg)
@@ -15,13 +15,13 @@ function RMP2(aoints::IntegralHelper{Float64,E,AtomicOrbitals}, Alg::RMP2a) wher
 end
 
 function RMP2(O::AbstractRestrictedOrbitals, Alg::RMP2a)
-    aoints = IntegralHelper(eri_type=SparseERI())
+    aoints = IntegralHelper()
     moints = IntegralHelper(orbitals=O)
     RMP2(moints, aoints, Alg)
 end
 
 function RMP2(rhf::RHF, Alg::RMP2a)
-    aoints = IntegralHelper(eri_type=SparseERI())
+    aoints = IntegralHelper()
     moints = IntegralHelper(orbitals=rhf.orbitals)
     RMP2(moints, aoints, Alg)
 end
