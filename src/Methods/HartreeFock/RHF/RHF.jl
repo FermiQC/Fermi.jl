@@ -120,6 +120,6 @@ function string_repr(X::RHF)
 end
 
 function show(io::IO, ::MIME"text/plain", X::RHF)
-    print(string_repr(X))
+    print(io, string_repr(X))
 end
 

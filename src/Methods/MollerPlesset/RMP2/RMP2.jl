@@ -59,5 +59,5 @@ function string_repr(X::RMP2)
 end
 
 function show(io::IO, ::MIME"text/plain", X::RMP2)
-    print(string_repr(X))
+    print(io, string_repr(X))
 end

@@ -339,7 +339,7 @@ end
 
 # Pretty printing
 function show(io::IO, ::MIME"text/plain", X::T) where T<:Union{BasisFunction, BasisSet}
-    print(string_repr(X))
+    print(io, string_repr(X))
 end
 
 end #module
