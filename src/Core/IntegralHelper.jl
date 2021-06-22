@@ -242,7 +242,7 @@ function string_repr(X::AbstractDFERI)
 end
 
 function show(io::IO, ::MIME"text/plain", X::T) where T<:Union{IntegralHelper,JKFIT,RIFIT}
-    print(string_repr(X))
+    print(io, string_repr(X))
 end
 
 end # Module

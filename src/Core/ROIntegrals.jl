@@ -23,6 +23,33 @@ function mo_from_ao!(I::IntegralHelper{T1,E1,O}, aoints::IntegralHelper{T2,E2,At
     output("Done in {:5.5f} seconds.", t)
 end
 
+function mo_from_ao!(I::IntegralHelper{T1,E1,O}, aoints::IntegralHelper{T2,SparseERI,AtomicOrbitals}, entries...) where {T1<:AbstractFloat,T2<:AbstractFloat,
+                                                            E1<:AbstractERI,O<:AbstractRestrictedOrbitals}
+    if T1 !== T2 || E1 <: AbstractDFERI
+        output("!! AO Integrals are not the same type as the MO. New integrals will be computed.")
+        for entry in entries
+            if occursin(r"F[dijab]{0,2}", entry)
+                output("Fock matrix will be computed using old ERI")
+                compute_F(I, aoints)
+            end
+            entries = [entries...]
+            filter!(i->i==entry, entries)
+        end
+        basis = I.orbitals.basis
+        aoorbs = AtomicOrbitals(I.molecule, basis)
+        aoints = IntegralHelper{T1}(molecule=I.molecule, orbitals=aoorbs, basis=basis, eri_type=I.eri_type)
+    end
+    t = @elapsed begin
+        output("Converting integrals:")
+        output(replace("($T2, SparseERI, AtomicOrbitals) ⇒ ($T1, $E1, $O)", "Fermi.Orbitals."=>""))
+        for entry in entries
+            compute!(I, entry, aoints)
+        end
+    end
+    output("Done in {:5.5f} seconds.\n", t)
+end
+
+
 function compute!(I::IntegralHelper{T,Chonky,O}, entry::String, x...) where {T<: AbstractFloat,O<:AbstractRestrictedOrbitals}
     if entry == "S"
         compute_S!(I, x...)
@@ -397,6 +424,83 @@ function compute_OVOV!(I::IntegralHelper{T,Chonky,O}, aoints::IntegralHelper{T,C
     Co = I.orbitals.C[:,o]
     @tensoropt (μ=>100x, ν=>100x, ρ=>100x, σ=>100x, i=>10x, j=>10x, k=>10x, l=>10x, a=>80x, b=>80x, c=>80x, d=>80) begin 
         OVOV[i,a,j,b] :=  AOERI[μ, ν, ρ, σ]*Co[μ, i]*Cv[ν, a]*Co[ρ, j]*Cv[σ, b]
+    end
+    I["OVOV"] = OVOV
+end
+
+function compute_OVOV!(I::IntegralHelper{T,Chonky,O}, aoints::IntegralHelper{T,SparseERI, AtomicOrbitals}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+
+    eri_vals = aoints["ERI"].data
+    idxs = aoints["ERI"].indexes
+
+    inac = Options.get("drop_vir")
+    core = Options.get("drop_occ")
+    ndocc = I.molecule.Nα
+    nbf = size(I.orbitals.C,1)
+    o = (1+core):ndocc
+    v = (ndocc+1):(nbf - inac)
+    Cv = I.orbitals.C[:,v]
+    Co = I.orbitals.C[:,o]
+
+    println("here we are")
+    # Create a partially-contracted dense array from SparseERI
+    iνρσ = zeros(T, length(o), nbf, nbf, nbf)
+    @sync for i = o
+        Threads.@spawn begin
+        @inbounds begin
+        @fastmath begin
+        for z = eachindex(eri_vals)
+            V = eri_vals[z]
+            μ,ν,ρ,σ = idxs[z] .+ 1
+            γμν = μ !== ν
+            γρσ = ρ !== σ
+            γab = Fermi.index2(μ,ν) !== Fermi.index2(ρ, σ)
+            Vμ = V*Co[μ,i] 
+            Vν = V*Co[ν,i] 
+            Vρ = V*Co[ρ,i] 
+            Vσ = V*Co[σ,i] 
+
+            if γab && γμν && γρσ
+                iνρσ[i,ν,ρ,σ] += Vμ 
+                iνρσ[i,ν,σ,ρ] += Vμ 
+                iνρσ[i,μ,ρ,σ] += Vν 
+                iνρσ[i,μ,σ,ρ] += Vν 
+                iνρσ[i,σ,μ,ν] += Vρ 
+                iνρσ[i,σ,ν,μ] += Vρ 
+                iνρσ[i,ρ,μ,ν] += Vσ 
+                iνρσ[i,ρ,ν,μ] += Vσ 
+
+            elseif γab && γμν
+                iνρσ[i,ν,ρ,σ] += Vμ 
+                iνρσ[i,μ,ρ,σ] += Vν 
+                iνρσ[i,σ,μ,ν] += Vρ 
+                iνρσ[i,σ,ν,μ] += Vρ 
+
+            elseif γab && γρσ
+                iνρσ[i,ν,ρ,σ] += Vμ 
+                iνρσ[i,ν,σ,ρ] += Vμ 
+                iνρσ[i,σ,μ,ν] += Vρ 
+                iνρσ[i,ρ,μ,ν] += Vσ 
+            
+            elseif γμν && γρσ
+                iνρσ[i,ν,ρ,σ] += Vμ 
+                iνρσ[i,ν,σ,ρ] += Vμ 
+                iνρσ[i,μ,ρ,σ] += Vν 
+                iνρσ[i,μ,σ,ρ] += Vν 
+            elseif γab
+                iνρσ[i,ν,ρ,σ] += Vμ 
+                iνρσ[i,σ,μ,ν] += Vρ 
+            else
+                iνρσ[i,ν,ρ,σ] += Vμ 
+            end
+        end
+    end
+end
+    end
+    end
+
+    @tensoropt (μ=>100x, ν=>100x, ρ=>100x, σ=>100x, i=>10x, j=>10x, k=>10x, l=>10x, a=>80x, b=>80x, c=>80x, d=>80) begin 
+        OVOV[i,a,j,b] :=  iνρσ[i, ν, ρ, σ]*Cv[ν, a]*Co[ρ, j]*Cv[σ, b]
     end
     I["OVOV"] = OVOV
 end

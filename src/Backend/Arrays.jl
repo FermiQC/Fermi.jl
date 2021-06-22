@@ -33,16 +33,39 @@ function ndims(A::FermiSparse{Td,Ti,N}) where {Td, Ti, N}
     return N
 end
 
-function show(io::IO, ::MIME"text/plain", A::FermiSparse{Td, Ti, N}) where {Td, Ti, N}
-    println("FermiSparse{$Td, $Ti, $N}:")
-    for (x,idx) in zip(A.data, A.indexes)
-        idx_str = "("
-        for i in idx
-            idx_str *= "$i,"
-        end
-        idx_str = idx_str[1:end-1]*") => $x"
-        println(idx_str)
-    end
+show(io::IO, ::MIME"text/plain", A::FermiSparse{Td, Ti, N}) where {Td, Ti, N} = show(io,A)
+
+function show(io::IO, A::FermiSparse{Td, Ti, N}) where {Td, Ti, N}
+    println(io, "FermiSparse{$Td, $Ti, $N}:")
+    print(io, A.data)
+    #if length(A.data) > 10
+    #    for (x,idx) in zip(A.data[1:5], A.indexes[1:5])
+    #        idx_str = "("
+    #        for i in idx
+    #            idx_str *= "$i,"
+    #        end
+    #        idx_str = idx_str[1:end-1]*") => $x"
+    #        println(io, idx_str)
+    #    end
+    #    println(io," ⋮")
+    #    for (x,idx) in zip(A.data[end-5:end], A.indexes[end-5:end])
+    #        idx_str = "("
+    #        for i in idx
+    #            idx_str *= "$i,"
+    #        end
+    #        idx_str = idx_str[1:end-1]*") => $x"
+    #        println(io, idx_str)
+    #    end
+    #else
+    #    for (x,idx) in zip(A.data, A.indexes)
+    #        idx_str = "("
+    #        for i in idx
+    #            idx_str *= "$i,"
+    #        end
+    #        idx_str = idx_str[1:end-1]*") => $x"
+    #        println(io, idx_str)
+    #    end
+    #end
 end
 
 function index2(i::Signed, j::Signed)::Signed
@@ -251,6 +274,6 @@ function Base.convert(::Type{T}, A::FermiMDArray) where T<:FermiMDArray{Float64}
 end
 
 function show(io::IO, ::MIME"text/plain", A::FermiMDArray{T}) where T <: Number
-    print("Fermi Memory-held Dense Array - ")
-    display(A.data)
+    print(io, "Fermi Memory-held Dense Array - ")
+    display(io, A.data)
 end

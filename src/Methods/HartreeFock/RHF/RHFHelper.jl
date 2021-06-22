@@ -101,7 +101,7 @@ function build_fock!(F::FermiMDArray{Float64}, H::FermiMDArray{Float64}, D::Ferm
     nbas = ints.orbitals.basisset.nbas
     Farrays = [zeros(Int((nbas^2 + nbas)/2)) for i = 1:Threads.nthreads()]
 
-    Threads.@threads for z = eachindex(ints["ERI"].data)
+    Threads.@threads for z = eachindex(eri_vals)
         i,j,k,l = idxs[z] .+ 1
         ν = eri_vals[z]
         Ft = Farrays[Threads.threadid()]

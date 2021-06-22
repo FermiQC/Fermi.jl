@@ -2,40 +2,60 @@ using TensorOperations
 using LinearAlgebra
 
 function RMP2(Alg::RMP2a)
-    aoints = IntegralHelper{Float64}()
+    aoints = IntegralHelper{Float64}(eri_type=SparseERI())
+    rhf = RHF(aoints)
+    moints = IntegralHelper(orbitals=rhf.orbitals)
+    RMP2(moints, aoints, Alg)
+end
+
+function RMP2(aoints::IntegralHelper{Float64,E,AtomicOrbitals}, Alg::RMP2a) where E <: AbstractERI
     rhf = RHF(aoints)
     moints = IntegralHelper(orbitals=rhf.orbitals)
     RMP2(moints, aoints, Alg)
 end
 
 function RMP2(O::AbstractRestrictedOrbitals, Alg::RMP2a)
-    aoints = IntegralHelper()
+    aoints = IntegralHelper(eri_type=SparseERI())
     moints = IntegralHelper(orbitals=O)
     RMP2(moints, aoints, Alg)
 end
 
 function RMP2(rhf::RHF, Alg::RMP2a)
-    aoints = IntegralHelper()
+    aoints = IntegralHelper(eri_type=SparseERI())
     moints = IntegralHelper(orbitals=rhf.orbitals)
     RMP2(moints, aoints, Alg)
 end
 
 function RMP2(M::Molecule, Alg::RMP2a)
-    aoints = IntegralHelper{Float64}(molecule=M)
+    aoints = IntegralHelper{Float64}(molecule=M, eri_type=SparseERI)
     rhf = RHF(M,aoints)
     moints = IntegralHelper(molecule = M, orbitals=rhf.orbitals)
     RMP2(moints, aoints, Alg)
 end
 
-function RMP2(moints::IntegralHelper{T1,Chonky,O}, aoints::IntegralHelper{T2,Chonky,AtomicOrbitals}, Alg::RMP2a) where {T1<:AbstractFloat,
-                                                                                        T2<:AbstractFloat,O<:AbstractOrbitals}
+function RMP2(moints::IntegralHelper{T1,Chonky,O}, aoints::IntegralHelper{T2,E,AtomicOrbitals}, Alg::RMP2a) where {T1<:AbstractFloat,
+                                                                                        T2<:AbstractFloat,O<:RHFOrbitals,E<:AbstractERI}
+    mp_header()
+    mo_from_ao!(moints, aoints, "OVOV")
+    RMP2(moints, Alg)
+end
+
+function RMP2(moints::IntegralHelper{T1,E1,O}, aoints::IntegralHelper{T2,E2,AtomicOrbitals}, Alg::RMP2a) where {T1<:AbstractFloat,T2<:AbstractFloat,
+                                                                                E1<:AbstractDFERI,E2<:AbstractDFERI,O<:RHFOrbitals}
+    mp_header()
+    mo_from_ao!(moints, aoints, "BOV")
+    RMP2(moints, Alg)
+end
+
+function RMP2(moints::IntegralHelper{T1,Chonky,O}, aoints::IntegralHelper{T2,E,AtomicOrbitals}, Alg::RMP2a) where {T1<:AbstractFloat,
+                                                                                        T2<:AbstractFloat,O<:AbstractRestrictedOrbitals,E<:AbstractERI}
     mp_header()
     mo_from_ao!(moints, aoints, "Fia","OVOV")
     RMP2(moints, Alg)
 end
 
 function RMP2(moints::IntegralHelper{T1,E1,O}, aoints::IntegralHelper{T2,E2,AtomicOrbitals}, Alg::RMP2a) where {T1<:AbstractFloat,T2<:AbstractFloat,
-                                                                                E1<:AbstractDFERI,E2<:AbstractDFERI,O<:AbstractOrbitals}
+                                                                                E1<:AbstractDFERI,E2<:AbstractDFERI,O<:AbstractRestrictedOrbitals}
     mp_header()
     mo_from_ao!(moints, aoints, "Fia","BOV")
     RMP2(moints, Alg)
