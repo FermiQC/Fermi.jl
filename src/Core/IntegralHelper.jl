@@ -184,6 +184,15 @@ function IntegralHelper{T}(;molecule = Molecule(), orbitals = AtomicOrbitals(),
     IntegralHelper(molecule, orbitals, basis, cache, eri_type)
 end
 
+function IntegralHelper{T}(bset::BasisSet, eri_type=nothing) where T<:AbstractFloat
+    IntegralHelper{T}(
+        molecule = bset.molecule,
+        orbitals = AtomicOrbitals(bset),
+        basis = bset.basis_name,
+        eri_type=eri_type
+    )
+end
+
 """
     getindex(I::IntegralHelper,entry::String)
 
@@ -199,7 +208,7 @@ function getindex(I::IntegralHelper,entry::String)
     end
 end
 
-function setindex!(I::IntegralHelper, A::FermiMDArray, key::String)
+function setindex!(I::IntegralHelper, A::AbstractArray, key::String)
     I.cache[key] = A
 end
 
