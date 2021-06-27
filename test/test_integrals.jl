@@ -42,7 +42,7 @@
         occursin(r"Fermi\s+?IntegralHelper",x) &&
         occursin(r"Data\s+?Type:\s+?Float64",x) &&
         occursin(r"Basis:\s+?cc-pvtz",x) &&
-        occursin(r"ERI:\s+?Chonky",x) &&
+        occursin(r"ERI:\s+?SparseERI",x) &&
         occursin(r"Orbitals:\s+?AtomicOrbitals",x)
     end
 
