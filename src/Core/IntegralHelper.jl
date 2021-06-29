@@ -120,7 +120,7 @@ struct Chonky <:AbstractERI end
 struct SparseERI <: AbstractERI end
 
 """
-    IntegralHelper{T}
+    IntegralHelper
 
 Manager for integrals computation and storage.
 Accesss like a dictionary e.g.,
@@ -140,7 +140,7 @@ A key is associated with each type of integral
     orbitals                    Orbitals used in the integral computation
     basis                       Basis set name
     cache                       Holds computed integrals 
-    eri_type                    Defines whether/how density-fitting is done
+    eri_type                    Defines how electron repulsion integrals are handled 
 """
 struct IntegralHelper{T<:AbstractFloat,E<:AbstractERI,O<:AbstractOrbitals}
     molecule::Molecule
