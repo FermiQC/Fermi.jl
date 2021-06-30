@@ -2,6 +2,10 @@
     Fermi.HartreeFock
 
 Module for running Hartree--Fock computations in Fermi.
+
+# Methods
+
+    > Fermi.HartreeFock.RHF
 """
 module HartreeFock
 # Import Fermi basics

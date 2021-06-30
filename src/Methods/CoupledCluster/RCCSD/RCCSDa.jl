@@ -38,7 +38,7 @@ function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::
     do_diis ? DM_T2 = Fermi.DIIS.DIISManager{T, diis_prec}(size=ndiis) : nothing
 
     output("\tDropped Occupied Orbitals →  {:3.0f}", core)
-    output("\tDropped Virtual Orbitals  →  {:3.0f}\n", inac)
+    output("\tDropped Virtual Orbitals  →  {:3.0f}", inac)
     output("\n"*repeat("-",80))
     output("\tOptions:")
     output("\tPrecision? {}", T)
@@ -49,18 +49,12 @@ function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::
     output("\t\tcc_max_iter →  {:3.0d}", cc_max_iter)
     output("\t\tcc_e_conv   →  {:2.0e}", cc_e_conv)
     output("\t\tcc_max_rms  →  {:2.0e}", cc_max_rms)
-    if (cc_e_conv < eps(T)) && !(precision_override)
-        output("\t⚠ WARNING⚠   cc_e_conv set to less than ϵ ({}) for precision {}", eps(T), T)
+    if (cc_e_conv < eps(T) || cc_max_rms < eps(T)) && !(precision_override)
+        output("\t⚠ WARNING ⚠  cc_e_conv set to less than ϵ ({}) for precision {}", eps(T), T)
         output("\t             CCSD is unlikely to converge to your standards.")
         output("\t             OVERRIDING set convergence criterion.")
         output("\t             Use @set `precision_override` true to perform the computation as entered.")
         cc_e_conv = eps(T)
-    end
-    if (cc_max_rms < eps(T)) && !(precision_override)
-        output("\t⚠ WARNING⚠   cc_max_rms set to less than ϵ ({}) for precision {}", eps(T), T)
-        output("\t             CCSD is unlikely to converge to your standards.")
-        output("\t             OVERRIDING set convergence criterion.")
-        output("\t             Use @set `precision_override` true to perform the computation as entered.")
         cc_max_rms = eps(T)
     end
 

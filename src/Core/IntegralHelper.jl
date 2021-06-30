@@ -16,7 +16,7 @@ using TensorOperations
 
 import Base: getindex, setindex!, delete!, show
 
-export IntegralHelper, delete!, mo_from_ao!, JKFIT, RIFIT, Chonky, AbstractDFERI, AbstractERI
+export IntegralHelper, delete!, mo_from_ao!, JKFIT, RIFIT, Chonky, AbstractDFERI, AbstractERI, SparseERI
 
 """
     Fermi.Integrals.AbstractERI
@@ -117,9 +117,10 @@ function RIFIT(mol::Molecule, basis::String)
 end
 
 struct Chonky <:AbstractERI end
+struct SparseERI <: AbstractERI end
 
 """
-    IntegralHelper{T}
+    IntegralHelper
 
 Manager for integrals computation and storage.
 Accesss like a dictionary e.g.,
@@ -138,14 +139,14 @@ A key is associated with each type of integral
     molecule                    Molecule object
     orbitals                    Orbitals used in the integral computation
     basis                       Basis set name
-    cache                       Holds integrals computed 
-    eri_type                    Defines whether/how density-fitting is done
+    cache                       Holds computed integrals 
+    eri_type                    Defines how electron repulsion integrals are handled 
 """
 struct IntegralHelper{T<:AbstractFloat,E<:AbstractERI,O<:AbstractOrbitals}
     molecule::Molecule
     orbitals::O
     basis::String
-    cache::Dict{String,FermiMDArray{T}} 
+    cache::Dict{String,AbstractArray{T}} 
     eri_type::E
 end
 
@@ -166,7 +167,7 @@ function IntegralHelper{T}(;molecule = Molecule(), orbitals = AtomicOrbitals(),
                            basis = Options.get("basis"), eri_type=nothing) where T<:AbstractFloat
 
     # If the associated orbitals are AtomicOrbitals and DF is requested, JKFIT is set by default
-    if Options.get("df") && orbitals isa AtomicOrbitals && eri_type == nothing
+    if Options.get("df") && orbitals isa AtomicOrbitals && eri_type === nothing
         eri_type = JKFIT(molecule)
 
     # If df is requested, but the orbitals are not AtomicOrbitals then RIFIT is set by default
@@ -176,11 +177,20 @@ function IntegralHelper{T}(;molecule = Molecule(), orbitals = AtomicOrbitals(),
 
     # Else, if eri_type is not an AbstractERI object, Chonky is used. This will overwrite invalid entries for eri_type
     elseif !(typeof(eri_type) <: AbstractERI)
-        eri_type = Chonky()
+        eri_type = orbitals isa AtomicOrbitals ? SparseERI() : Chonky()
     end
 
-    cache = Dict{String, FermiMDArray{T}}() 
+    cache = Dict{String, AbstractArray{T}}() 
     IntegralHelper(molecule, orbitals, basis, cache, eri_type)
+end
+
+function IntegralHelper{T}(bset::BasisSet, eri_type=nothing) where T<:AbstractFloat
+    IntegralHelper{T}(
+        molecule = bset.molecule,
+        orbitals = AtomicOrbitals(bset),
+        basis = bset.basis_name,
+        eri_type=eri_type
+    )
 end
 
 """
@@ -198,7 +208,7 @@ function getindex(I::IntegralHelper,entry::String)
     end
 end
 
-function setindex!(I::IntegralHelper, A::FermiMDArray, key::String)
+function setindex!(I::IntegralHelper, A::AbstractArray, key::String)
     I.cache[key] = A
 end
 
@@ -241,7 +251,7 @@ function string_repr(X::AbstractDFERI)
 end
 
 function show(io::IO, ::MIME"text/plain", X::T) where T<:Union{IntegralHelper,JKFIT,RIFIT}
-    print(string_repr(X))
+    print(io, string_repr(X))
 end
 
 end # Module

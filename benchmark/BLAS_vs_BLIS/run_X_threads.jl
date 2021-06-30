@@ -29,7 +29,7 @@ function get_hc(N)
     Fermi.Options.set("molstring", molstring)
 end
 
-MAX_CHAIN_LENGTH = 10
+MAX_CHAIN_LENGTH = 15
 
 # Cold run
 @set printstyle none
@@ -43,14 +43,18 @@ MAX_CHAIN_LENGTH = 10
 
 for N = 1:MAX_CHAIN_LENGTH
 
+    get_hc(N)
+    Fermi.Options.set("drop_occ", N)
+
+    run(`echo TBLIS N = $N Threads = $Nt`)
     @set tblis true
     Fermi.Options.set("output", "TBLIS_C"*"$N"*"_T"*"$Nt"*".out")
-    get_hc(N)
-    fc = 2*N
-    Fermi.Options.set("drop_occ", fc)
+    output("NUMBER OF THREADS: {}", Threads.nthreads())
     @energy ccsd
 
+    run(`echo BLAS N = $N Threads = $Nt`)
     @set tblis false
+    output("NUMBER OF THREADS: {}", Threads.nthreads())
     Fermi.Options.set("output", "BLAS_C"*"$N"*"_T"*"$Nt"*".out")
     @energy ccsd
 end

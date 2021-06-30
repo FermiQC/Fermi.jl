@@ -7,6 +7,7 @@ GitHub: [Fermi.jl](https://github.com/FermiQC/Fermi.jl)
 """
 module Fermi
 
+using LinearAlgebra: Threads
 """
     Fermi.AbstractWavefunction
 
@@ -23,8 +24,8 @@ include("Backend/Arrays.jl")
 include("Backend/Contract.jl")
 include("Backend/Output.jl")
 include("Backend/Libcint.jl")
+include("Backend/PhysicalConstants.jl")
 include("Core/DIIS.jl")
-include("Core/PhysicalConstants.jl")
 include("Core/Geometry.jl")                               
 include("Core/BasisSet.jl")
 include("Core/Orbitals.jl")

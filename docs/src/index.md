@@ -3,18 +3,18 @@ A Julia module for *ab initio* quantum chemistry computations.
 
 # Installation
 
-Fermi.jl is a registred Julia package and, as such, it can be obtained using the standard Julia package manager. From the Julia terminal, use the `]` to move to the pkg manager
+Fermi.jl is a registered Julia package and, as such, it can be obtained using the standard Julia package manager. From the Julia terminal, use the `]` to move to the pkg manager
 ```julia
 julia> # This is the standard Julia terminal, hit ] to go into Pkg
 (@v1.6) pkg> # This is the package manager! Hit back space to leave this mode
 ```
 Next add Fermi to the current enviroment.
 ```julia
-(@1.6) pkg> Add Fermi
+(@v1.6) pkg> add Fermi
 ```
 All the dependencies are going to be downloaded and installed and the code should be ready to work. To test the package you can run
 ```julia
-(@1.6) pkg> test Fermi
+(@v1.6) pkg> test Fermi
 ```
 
 ## Trouble-shooting
@@ -22,7 +22,7 @@ The code is built and tested for the latest Julia version on Ubuntu and MacOS. T
 ```
 sudo apt-get install libblas-dev liblapack-dev
 ```
-You might want to check the `build.jl` file that contains the instructions to fetch and install `libcint`. This file is in the source code of Fermi. Julia store source codes in the `.julia` folder. If you used `add Fermi` to install the package, the source code should be located at `.julia/packages/Fermi`. Please also refer to the `libcint` [github page](https://github.com/sunqm/libcint) for more details on the dependecies there. 
+You might want to check the `build.jl` file that contains the instructions to fetch and install `libcint`. This file is in the source code of Fermi. Julia store source codes in the `.julia` folder. If you used `add Fermi` to install the package, the source code should be located at `.julia/packages/Fermi`. Please also refer to the `libcint` [github page](https://github.com/sunqm/libcint) for more details on the dependencies there. 
 
 # Usage
 

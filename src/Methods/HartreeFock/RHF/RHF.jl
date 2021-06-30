@@ -94,7 +94,13 @@ function RHF(x...)
     if !any(i-> i isa RHFAlgorithm, x)
         RHF(x..., get_scf_alg())
     else
-        throw(FermiException("invalid arguments for RHF method: $(x[1:end-1])"))
+        # Print the type of arguments given for a better feedback
+        args = "("
+        for a in x[1:end-1]
+            args *= "$(typeof(a)), "
+        end
+        args = args[1:end-2]*")"
+        throw(FermiException("invalid arguments for RHF method: $args"))
     end
 end
 
@@ -120,6 +126,6 @@ function string_repr(X::RHF)
 end
 
 function show(io::IO, ::MIME"text/plain", X::RHF)
-    print(string_repr(X))
+    print(io, string_repr(X))
 end
 
