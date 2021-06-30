@@ -1,4 +1,4 @@
-export @get, @set, @reset, @molecule, @lookup
+export @get, @set, @reset, @molecule, @lookup, @freezecore
 
 using Formatting
 using PrettyTables
@@ -503,5 +503,23 @@ macro lookup(A::Symbol)
             end
             pretty_table(data; header=["Keyword", "Current Value"])
         end
+    end
+end
+
+macro freezecore()
+    quote 
+        mol = Fermi.Geometry.Molecule()
+        atoms = mol.atoms
+        # Dcore maps ranges of atomic numbers to number of core electrons
+        Dcore = Fermi.PhysicalConstants.core_elec_perrow
+        Ncore = 0
+        for a in atoms
+            for k in keys(Dcore)
+                a.Z in k ? Ncore += Dcore[k] : nothing
+            end
+        end
+        # Divide by two to get number of dropped occupied
+        Ncore = Ncore >> 1
+        Fermi.Options.set("drop_occ", Ncore)
     end
 end
