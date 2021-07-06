@@ -16,9 +16,11 @@ function UHF(ints::IntegralHelper{Float64}, Alg::UHFa)
 
     guess = Options.get("scf_guess")
     if guess == "core"
-        throw(FermiException("Not for UHF bub"))
+        Cα, Λ =  UHF_core_guess(ints)
+        Cβ = deepcopy(Cα)
     elseif guess == "gwh"
-        throw(FermiException("Not for UHF bub"))
+        Cα, Λ = UHF_gwh_guess(ints)
+        Cβ = deepcopy(Cα)
     elseif guess == "no"
         S = ints["S"]
         m = size(S)[1]
@@ -69,12 +71,23 @@ function UHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, Cα::
     ϵβ = FermiMDzeros(Float64, (m))
     Fα = FermiMDzeros(Float64, (m,m))
     Fβ = FermiMDzeros(Float64, (m,m))
-    Dα_old = deepcopy(Dα)
-    Dβ_old = deepcopy(Dβ)
     Dsα = deepcopy(Dα)
     Dsβ = deepcopy(Dβ)
     Fsα = deepcopy(Fα)
     Fsβ = deepcopy(Fβ)
+    
+    H = T + V
+    Dα = buildD!(Dα, Cα, Nα)
+    Dβ = buildD!(Dβ, Cβ, Nβ)
+    Dα_old = deepcopy(Dα)
+    Dβ_old = deepcopy(Dβ)
+    Dsα = deepcopy(Dα)
+    Dsβ = deepcopy(Dβ)
+
+
+    buildfock!(Fα, Fβ, Jα, Jβ, Kα, Kβ, H, Dα, Dβ, ERI)
+    output(" Guess Energy {:20.14f}", UHFEnergy(H, Dα, Dβ, Fα, Fβ, molecule.Vnuc, m))
+ 
     output("\n Iter.   {:>15} {:>10} {:>10} {:>8} {:>8} {:>8}", "E[UHF]", "ΔE", "Dᵣₘₛ", "t", "DIIS", "damp")
     output(repeat("-",80))
     if do_diis
@@ -85,7 +98,6 @@ function UHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, Cα::
     t = @elapsed while ite <= maxit
         t_iter = @elapsed begin
             E_old = E
-            H = T + V
             buildfock!(Fα, Fβ, Jα, Jβ, Kα, Kβ, H, Dα, Dβ, ERI)
             # Transform Fock matrices to MO basis
             F̃α = Λ*Fα*Λ
@@ -100,13 +112,14 @@ function UHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, Cα::
             buildD!(Dα, Cα, Nα)
             buildD!(Dβ, Cβ, Nβ)
             # Calculate energy
-            Ee = 0
-            for i in 1:m
-                for j in 1:m
-                    Ee += 0.5 * (H[i,j]*(Dα[j,i]+Dβ[j,i]) + Fα[i,j]*Dα[j,i] + Fβ[i,j]*Dβ[j,i])
-                end
-            end
-            E = Ee + molecule.Vnuc
+            #Ee = 0
+            #for i in 1:m
+            #    for j in 1:m
+            #        Ee += 0.5 * (H[i,j]*(Dα[j,i]+Dβ[j,i]) + Fα[i,j]*Dα[j,i] + Fβ[i,j]*Dβ[j,i])
+            #    end
+            #end
+            #E = Ee + molecule.Vnuc
+            E = UHFEnergy(H, Dα, Dβ, Fα, Fβ, molecule.Vnuc, m)
             # Store vectors for DIIS
             if do_diis
                 err_α = transpose(Λ)*(Fα*Dα*S - S*Dα*Fα)*Λ
@@ -147,7 +160,7 @@ function UHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, Cα::
     end
 
     nocc = Nα + Nβ  # TODO
-    nvir = m - nocc   #    output(repeat("-",80))
+    nvir = 2*m - nocc   #    output(repeat("-",80))
 
     output("    UHF done in {:>5.2f}s", t)
     output("    @Final UHF Energy     {:>20.12f} Eₕ", E)

@@ -1,7 +1,7 @@
 
 
 function UHF_core_guess(ints::IntegralHelper)
-    output("Using core guess")
+    output("Using Core Guess")
     S = ints["S"]
     Λ = S^(-1/2)
     F = ints["T"] + ints["V"]
@@ -12,7 +12,46 @@ function UHF_core_guess(ints::IntegralHelper)
 end
 
 function UHF_gwh_guess(ints::IntegralHelper)
-    return 0
+    # Form GWH guess
+    output("Using GWH Guess")
+    molecule = ints.molecule
+    S = ints["S"]
+    d, U = diagonalize(S, sortby = x->1/abs(x))
+    Λ = FermiMDArray(Hermitian(S.data)^(-1/2))
+    idxs = [abs(d[i]) > 1E-7 for i = eachindex(d)]
+
+    H = real.(ints["T"] + ints["V"])
+    nocc = molecule.Nα
+    nvir = size(S,1) - nocc
+    F = similar(S)
+
+    for i = 1:nocc+nvir
+        F[i,i] = H[i,i]
+        for j = i+1:nocc+nvir
+            F[i,j] = 0.875*S[i,j]*(H[i,i] + H[j,j])
+            F[j,i] = F[i,j]
+        end
+    end
+    Ft = Λ'*F*Λ
+
+    # Get orbital energies and transformed coefficients
+    _, Ct = diagonalize(Ft, hermitian=true)
+
+    # Reverse transformation to get MO coefficients
+    C = Λ*Ct
+
+    return C, Λ         
+end
+
+function UHFEnergy(H, Dα, Dβ, Fα, Fβ, Vnuc, m)
+    # Calculate energy
+    Ee = 0
+    for i in 1:m
+        for j in 1:m
+            Ee += 0.5 * (H[i,j]*(Dα[j,i]+Dβ[j,i]) + Fα[i,j]*Dα[j,i] + Fβ[i,j]*Dβ[j,i])
+        end
+    end
+    return (Ee + Vnuc)
 end
 
 function buildfock!(Fα, Fβ, Jα, Jβ, Kα, Kβ, H, Dα, Dβ, ERI)
