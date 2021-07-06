@@ -12,8 +12,7 @@ abstract type UHFAlgorithm end
 struct UHF <: AbstractHFWavefunction
     molecule::Molecule
     energy::Float64
-    ndocc::Int
-    nsocc::Int
+    nocc::Int
     nvir::Int
     orbitals::UHFOrbitals
     e_conv::Float64
@@ -30,13 +29,14 @@ end
 
 struct UHFa <: UHFAlgorithm end
 include("UHFa.jl")
+include("UHFHelper.jl")
 
 function string_repr(X::UHF)
     out = ""
     out = out*" ⇒ Fermi Unrestricted Hartree--Fock Wave function\n"
     out = out*" ⋅ Basis:                  $(X.orbitals.basis)\n"
     out = out*" ⋅ Energy:                 $(X.energy)\n"
-    out = out*" ⋅ Occ. Spatial Orbitals:  $(X.ndocc)\n"
+    out = out*" ⋅ Occ. Spatial Orbitals:  $(X.nocc)\n"
     out = out*" ⋅ Vir. Spatial Orbitals:  $(X.nvir)\n"
     out = out*"Convergence: " 
     out = out*"ΔE => $(format("{:1.2e}",abs(X.e_conv)))"

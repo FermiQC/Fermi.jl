@@ -75,7 +75,7 @@ function UHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, Cα::
     Dsβ = deepcopy(Dβ)
     Fsα = deepcopy(Fα)
     Fsβ = deepcopy(Fβ)
-    output("\n Iter.   {:>15} {:>10} {:>10} {:>8} {:>8} {:>8}", "E[RHF]", "ΔE", "Dᵣₘₛ", "t", "DIIS", "damp")
+    output("\n Iter.   {:>15} {:>10} {:>10} {:>8} {:>8} {:>8}", "E[UHF]", "ΔE", "Dᵣₘₛ", "t", "DIIS", "damp")
     output(repeat("-",80))
     if do_diis
         DMα = Fermi.DIIS.DIISManager{Float64,Float64}(size=Options.get("ndiis"))
@@ -145,53 +145,31 @@ function UHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, Cα::
             break
         end
     end
-    ndocc = 4  # TODO
-    nsocc = 1  #
-    nvir = 3   #
-    Orbitals = UHFOrbitals(molecule, ints.basis, ϵα, ϵβ, E, Cα, Cβ)
-    return UHF(molecule, E, ndocc, nsocc, nvir, Orbitals, ΔE, Drms)
-end
 
-function buildfock!(Fα, Fβ, Jα, Jβ, Kα, Kβ, H, Dα, Dβ, ERI)
-    # Calculate Fock matrix
-    Fα .= H
-    Fβ .= H
-    calcJ!(Jα, Dα, ERI)
-    calcJ!(Jβ, Dβ, ERI)
-    calcK!(Kα, Dα, ERI)
-    calcK!(Kβ, Dβ, ERI)
-    Fα .+= Jα - Kα + Jβ
-    Fβ .+= Jβ - Kβ + Jα
-end
+    nocc = Nα + Nβ  # TODO
+    nvir = m - nocc   #    output(repeat("-",80))
 
-function calcJ!(J, D, ERI)
-    # Calculate Coloumb integrals contracted with D
-    @tensoropt J[i,j] = ERI[i,j,k,l] * D[l,k]
-end
-
-function calcK!(K, D, ERI)
-    # Calculate Exchange integrals contracted with D
-    @tensoropt K[i,j] = ERI[i,l,k,j] * D[l,k]
-end
-
-function buildD!(D, C, N)
-    # Build density matrix
-    Co = C[:,1:N]
-    @tensoropt D[μ, ν] = Co[μ, i] * Co[ν, i]
-end
-
-function odadamping!(diis, damp, D, Ds, F, Fs)
-    diis = false
-    dD = D - Ds
-    s = tr(Fs * dD)
-    c = tr((F - Fs) * (dD))
-    if c <= -s/(2*c)
-        λ = 1.0
-    else
-        λ = -s/(2*c)
+    output("    UHF done in {:>5.2f}s", t)
+    output("    @Final UHF Energy     {:>20.12f} Eₕ", E)
+    output("\n   • Orbitals Summary",)
+    output("\n   ⬗ Alpha (α) orbitals")
+    output("\n {:>10}   {:>15}   {:>10}", "Orbital", "Energy", "Occupancy")
+    for i in eachindex(ϵα)
+        output(" {:>10}   {:> 15.10f}   {:>6}", i, ϵα[i], (i ≤ Nα ? "↿" : ""))
     end
-    Fs .= (1-λ)*Fs + λ*F
-    Ds .= (1-λ)*Ds + λ*D
-    damp = 1-λ
-    F .= Fs
+    output("\n   ⬗ Beta (β) orbitals")
+    output("\n {:>10}   {:>15}   {:>10}", "Orbital", "Energy", "Occupancy")
+    for i in eachindex(ϵβ)
+        output(" {:>10}   {:> 15.10f}   {:>6}", i, ϵβ[i], (i ≤ Nβ ? "⇂" : ""))
+    end
+    output("")
+    if converged
+        output("   ✔  SCF Equations converged 😄")
+    else
+        output("❗ SCF Equations did not converge in {:>5} iterations ❗", maxit)
+    end
+    output(repeat("-",80))
+
+    Orbitals = UHFOrbitals(molecule, ints.basis, ϵα, ϵβ, E, Cα, Cβ)
+    return UHF(molecule, E, nocc, nvir, Orbitals, ΔE, Drms)
 end
