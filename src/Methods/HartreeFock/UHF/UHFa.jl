@@ -4,7 +4,7 @@ function UHF(Alg::UHFa)
 end
 
 function UHF(ints::IntegralHelper{Float64}, Alg::UHFa)
-    Fermi.HartreeFock.hf_header()
+    Fermi.HartreeFock.uhf_header()
     output("Collecting necessary integrals...")
     t = @elapsed begin
         ints["S"]

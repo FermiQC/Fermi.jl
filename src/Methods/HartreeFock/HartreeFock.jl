@@ -9,6 +9,7 @@ Module for running Hartree--Fock computations in Fermi.
 """
 module HartreeFock
 # Import Fermi basics
+using LinearAlgebra: hermitian
 using Fermi
 using Fermi.Options
 using Fermi.Geometry
@@ -20,6 +21,14 @@ function hf_header()
     output("|{:33}{:^12}{:33}|", "", "Hartree-Fock", "")
     output("|{:34}{:^9}{:34}|", "", "Module  by","")
     output("|{:25}{:^28}{:25}|", "", "G.J.R Aroeira and M.M. Davis", "")
+    output(repeat("=",80))
+end
+
+function uhf_header()
+    output(repeat("=",80))
+    output("|{:33}{:^12}{:33}|", "", "Hartree-Fock", "")
+    output("|{:34}{:^9}{:34}|", "", "Module  by","")
+    output("|{:17}{:^44}{:17}|", "", "G.J.R Aroeira, M.M. Davis, and S.M. Goodlett", "")
     output(repeat("=",80))
 end
 
