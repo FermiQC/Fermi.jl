@@ -16,17 +16,11 @@ function UHF(ints::IntegralHelper{Float64}, Alg::UHFa)
 
     guess = Options.get("scf_guess")
     if guess == "core"
-        Cα, Λ =  UHF_core_guess(ints)
+        Cα, Λ =  RHF_core_guess(ints)
         Cβ = deepcopy(Cα)
     elseif guess == "gwh"
-        Cα, Λ = UHF_gwh_guess(ints)
+        Cα, Λ = RHF_gwh_guess(ints)
         Cβ = deepcopy(Cα)
-    elseif guess == "no"
-        S = ints["S"]
-        m = size(S)[1]
-        Cα = FermiMDzeros(Float64, (m,m))
-        Cβ = FermiMDzeros(Float64, (m,m))
-        Λ = S^(-1/2)
     end
     UHF(ints, Cα, Cβ, Λ, Alg)
 end
@@ -85,47 +79,48 @@ function UHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, Cα::
     Dsβ = deepcopy(Dβ)
 
 
-    buildfock!(Fα, Fβ, Jα, Jβ, Kα, Kβ, H, Dα, Dβ, ERI)
-    output(" Guess Energy {:20.14f}", UHFEnergy(H, Dα, Dβ, Fα, Fβ, molecule.Vnuc, m))
+    buildfock!(Fα, Fβ, Jα, Jβ, Kα, Kβ, H, Dα, Dβ, ints)
+    output(" Guess Energy {:20.14f}", UHFEnergy(H, Dα, Dβ, Fα, Fβ, molecule.Vnuc))
  
     output("\n Iter.   {:>15} {:>10} {:>10} {:>8} {:>8} {:>8}", "E[UHF]", "ΔE", "Dᵣₘₛ", "t", "DIIS", "damp")
     output(repeat("-",80))
     if do_diis
-        DMα = Fermi.DIIS.DIISManager{Float64,Float64}(size=Options.get("ndiis"))
-        DMβ = Fermi.DIIS.DIISManager{Float64,Float64}(size=Options.get("ndiis"))
+        DM = Fermi.DIIS.DIISManager{Float64,Float64}(size=Options.get("ndiis"))
         diis_start = Options.get("diis_start")
     end 
     t = @elapsed while ite <= maxit
         t_iter = @elapsed begin
             E_old = E
-            buildfock!(Fα, Fβ, Jα, Jβ, Kα, Kβ, H, Dα, Dβ, ERI)
+            
             # Transform Fock matrices to MO basis
             F̃α = Λ*Fα*Λ
             F̃β = Λ*Fβ*Λ
+            
             # Solve for eigenvalues and eigenvectors
             ϵα, C̃α = diagonalize(F̃α)
             ϵβ, C̃β = diagonalize(F̃β)
+            
             # Transform orbital coefficient matrices to AO basis
             Cα = Λ*C̃α
             Cβ = Λ*C̃β
+            
             # Build density matrices
             buildD!(Dα, Cα, Nα)
             buildD!(Dβ, Cβ, Nβ)
+            
+            # Build Fock matrix
+            buildfock!(Fα, Fβ, Jα, Jβ, Kα, Kβ, H, Dα, Dβ, ints)
+            
             # Calculate energy
-            #Ee = 0
-            #for i in 1:m
-            #    for j in 1:m
-            #        Ee += 0.5 * (H[i,j]*(Dα[j,i]+Dβ[j,i]) + Fα[i,j]*Dα[j,i] + Fβ[i,j]*Dβ[j,i])
-            #    end
-            #end
-            #E = Ee + molecule.Vnuc
-            E = UHFEnergy(H, Dα, Dβ, Fα, Fβ, molecule.Vnuc, m)
+            E = UHFEnergy(H, Dα, Dβ, Fα, Fβ, molecule.Vnuc)
+            
             # Store vectors for DIIS
             if do_diis
                 err_α = transpose(Λ)*(Fα*Dα*S - S*Dα*Fα)*Λ
                 err_β = transpose(Λ)*(Fβ*Dβ*S - S*Dβ*Fβ)*Λ
-                push!(DMα, Fα, err_α)
-                push!(DMβ, Fβ, err_β)
+                err_v = vcat(err_α, err_β)
+                F_v = vcat(Fα, Fβ)
+                push!(DM, F_v, err_v)
             end
 
             # Branch for ODA vs DIIS convergence aids
@@ -133,14 +128,14 @@ function UHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, Cα::
             damp = 0.0
             # Use ODA damping?
             if oda && Drms > oda_cutoff && ite < oda_shutoff
-                diis = false
-                odadamping!(diis, damp, Dα, Dsα, Fα, Fsα)
-                odadamping!(diis, damp, Dβ, Dsβ, Fβ, Fsβ)
+                damp = odadamping(Dα, Dsα, Fα, Fsα)
+                damp = odadamping(Dβ, Dsβ, Fβ, Fsβ)
             # Or Use DIIS?
             elseif do_diis && ite > diis_start
                 diis = true
-                Fα = Fermi.DIIS.extrapolate(DMα)
-                Fβ = Fermi.DIIS.extrapolate(DMβ)
+                F_v = Fermi.DIIS.extrapolate(DM)
+                Fα .= F_v[1:m, :]
+                Fβ .= F_v[m+1:2m, :]
             end
 
             # Calculate energy difference, Drms, and check for convergence

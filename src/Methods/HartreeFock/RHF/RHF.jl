@@ -77,6 +77,10 @@ struct RHF <: AbstractHFWavefunction
 end
 
 function RHF(x...)
+    ref = Fermi.Options.get("reference")
+    if ref != "rhf"
+        throw(FermiException("reference ($ref) is not appropriate for rhf"))
+    end
     if !any(i-> i isa RHFAlgorithm, x)
         RHF(x..., get_scf_alg())
     else

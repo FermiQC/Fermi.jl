@@ -20,6 +20,10 @@ struct UHF <: AbstractHFWavefunction
 end
 
 function UHF(x...)
+    ref = Fermi.Options.get("reference")
+    if ref != "uhf"
+        throw(FermiException("reference ($ref) is not appropriate for uhf"))
+    end
     if !any(i-> i isa UHFAlgorithm, x)
         UHF(x..., get_scf_alg())
     else
