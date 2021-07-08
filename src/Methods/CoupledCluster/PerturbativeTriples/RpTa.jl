@@ -38,6 +38,7 @@ function RCCSDpT(ccsd::RCCSD, moints::IntegralHelper{T,E,O}, Alg::RpTa) where {T
     Evals = zeros(T, o)
 
     output("Computing energy contribution from occupied orbitals:")
+    BLAS_THREADS = LinearAlgebra.BLAS.get_num_threads()
     LinearAlgebra.BLAS.set_num_threads(1)
     t = @elapsed begin
     Threads.@threads for i in 1:o
@@ -121,6 +122,7 @@ function RCCSDpT(ccsd::RCCSD, moints::IntegralHelper{T,E,O}, Alg::RpTa) where {T
     end
     end
 
+    LinearAlgebra.BLAS.set_num_threads(BLAS_THREADS)
     Et = sum(Evals)
     output("Finished in {:5.5f} s", t)
     output("Final (T) contribution: {:15.10f}", Et)
