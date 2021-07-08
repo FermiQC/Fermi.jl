@@ -96,7 +96,7 @@ const Default = Dict{String,Union{Float64,Int,String,Bool}}(
                                   "cas_nroot" => 1,
                                   "min_matrix_elem" => 10^-9,
                                   "precision_override" => false,
-                                  "tblis" => false,
+                                  "tblis" => true,
                                   "eri_cutoff" => 10^-12
                                  )
 """
