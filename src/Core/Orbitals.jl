@@ -8,6 +8,7 @@ using TensorOperations
 export AbstractOrbitals, AtomicOrbitals, AbstractRestrictedOrbitals, AbstractUnrestrictedOrbitals
 export GeneralRestrictedOrbitals
 export RHFOrbitals
+export UHFOrbitals
 
 """
     Fermi.AbstractOrbitals
@@ -95,5 +96,16 @@ struct RHFOrbitals <: AbstractRestrictedOrbitals
     sd_energy::Float64
     C::AbstractArray{Float64,2}
 end
+
+struct UHFOrbitals <: AbstractUnrestrictedOrbitals
+    molecule::Molecule
+    basis::String
+    epsα::AbstractArray{Float64,1}
+    epsβ::AbstractArray{Float64,1}
+    sd_energy::Float64
+    Cα::AbstractArray{Float64,2}
+    Cβ::AbstractArray{Float64,2}
+end
+
 
 end # Module
