@@ -1,0 +1,70 @@
+
+Host: n093
+
+Timers On : Mon Jun 28 15:19:40 2021
+Timers Off: Mon Jun 28 16:30:25 2021
+
+Wall Time:     4244.19 seconds
+
+                                                       Time (seconds)
+Module                                       User      System        Wall        Calls
+Total PK formation time             :   3907.833u     77.400s    295.331w     22 calls
+HF: Form core H                     :     27.450u      0.083s      1.384w     22 calls
+HF: Form S/X                        :      4.350u      0.217s      0.230w     22 calls
+HF: Guess                           :    155.800u      2.317s      7.905w     22 calls
+SAD Guess                           :    151.333u      2.250s      7.679w     22 calls
+HF: Form G                          :   1533.533u     51.917s    474.824w    287 calls
+JK: D                               :      0.633u      0.017s      0.040w    287 calls
+JK: USO2AO                          :      1.083u      0.000s      0.044w    287 calls
+JK: JK                              :   1529.550u     51.667s    474.571w    287 calls
+PK computes JK                      :   1529.550u     51.667s    474.570w    287 calls
+JK: AO2USO                          :      0.000u      0.000s      0.000w    287 calls
+HF: Form F                          :      1.367u      0.017s      0.071w    287 calls
+HF: Form D                          :      0.633u      0.017s      0.042w    287 calls
+HF: DIIS                            :     23.150u      1.550s      1.232w    265 calls
+DIISManager::add_entry              :      4.083u      0.167s      0.200w    265 calls
+DIISManager::extrapolate            :     12.233u      1.050s      0.660w    265 calls
+bMatrix setup                       :      7.050u      0.617s      0.395w    265 calls
+bMatrix pseudoinverse               :      0.483u      0.033s      0.017w    265 calls
+New vector                          :      4.650u      0.383s      0.246w    265 calls
+HF: Form C                          :     43.217u      0.617s      2.202w    265 calls
+trans_ints                          :   3121.483u    641.033s   1187.720w     22 calls
+Trans (OV|OV)                       :   3052.850u    598.583s   1155.470w     22 calls
+Sort chem -> phys                   :     16.683u     25.033s     18.978w     22 calls
+Sort (OV|OV) -> <OO|VV>             :     16.683u     25.033s     18.978w     22 calls
+Trans OEI                           :      0.250u      0.033s      0.018w     22 calls
+Build Denominators                  :     51.050u     17.367s     13.189w     22 calls
+T2(1)                               :    224.483u    205.250s    144.381w     22 calls
+MP2 Energy                          :     88.217u     42.283s     28.083w     22 calls
+
+--------------------------------------------------------------------------------------
+Total PK formation time             :   3907.833u     77.400s    295.331w     22 calls
+HF: Form core H                     :     27.450u      0.083s      1.384w     22 calls
+HF: Form S/X                        :      4.350u      0.217s      0.230w     22 calls
+HF: Guess                           :    155.800u      2.317s      7.905w     22 calls
+| SAD Guess                         :    151.333u      2.250s      7.679w     22 calls
+HF: Form G                          :   1533.533u     51.917s    474.824w    287 calls
+| JK: D                             :      0.633u      0.017s      0.040w    287 calls
+| JK: USO2AO                        :      1.083u      0.000s      0.044w    287 calls
+| JK: JK                            :   1529.550u     51.667s    474.571w    287 calls
+| | PK computes JK                  :   1529.550u     51.667s    474.570w    287 calls
+| JK: AO2USO                        :      0.000u      0.000s      0.000w    287 calls
+HF: Form F                          :      1.367u      0.017s      0.071w    287 calls
+HF: Form D                          :      0.633u      0.017s      0.042w    287 calls
+HF: DIIS                            :     23.150u      1.550s      1.232w    265 calls
+| DIISManager::add_entry            :      4.083u      0.167s      0.200w    265 calls
+| DIISManager::extrapolate          :     12.233u      1.050s      0.660w    265 calls
+| | bMatrix setup                   :      7.050u      0.617s      0.395w    265 calls
+| | bMatrix pseudoinverse           :      0.483u      0.033s      0.017w    265 calls
+| | New vector                      :      4.650u      0.383s      0.246w    265 calls
+HF: Form C                          :     43.217u      0.617s      2.202w    265 calls
+trans_ints                          :   3121.483u    641.033s   1187.720w     22 calls
+| Trans (OV|OV)                     :   3052.850u    598.583s   1155.470w     22 calls
+| Sort chem -> phys                 :     16.683u     25.033s     18.978w     22 calls
+| | Sort (OV|OV) -> <OO|VV>         :     16.683u     25.033s     18.978w     22 calls
+| Trans OEI                         :      0.250u      0.033s      0.018w     22 calls
+| Build Denominators                :     51.050u     17.367s     13.189w     22 calls
+T2(1)                               :    224.483u    205.250s    144.381w     22 calls
+MP2 Energy                          :     88.217u     42.283s     28.083w     22 calls
+
+**************************************************************************************

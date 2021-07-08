@@ -1,0 +1,88 @@
+
+Host: n093
+
+Timers On : Mon Jul  5 03:56:20 2021
+Timers Off: Mon Jul  5 14:22:28 2021
+
+Wall Time:    37567.92 seconds
+
+                                                       Time (seconds)
+Module                                       User      System        Wall        Calls
+Total PK formation time             :   3911.600u     64.167s    291.675w     22 calls
+HF: Form core H                     :     25.650u      0.117s      1.294w     22 calls
+HF: Form S/X                        :      4.333u      0.083s      0.222w     22 calls
+HF: Guess                           :    154.983u      2.433s      7.872w     22 calls
+SAD Guess                           :    150.550u      2.317s      7.647w     22 calls
+HF: Form G                          :   1509.000u     39.767s    449.095w    287 calls
+JK: D                               :      0.517u      0.050s      0.037w    287 calls
+JK: USO2AO                          :      0.650u      0.033s      0.032w    287 calls
+JK: JK                              :   1506.183u     39.433s    448.884w    287 calls
+PK computes JK                      :   1506.167u     39.433s    448.883w    287 calls
+JK: AO2USO                          :      0.000u      0.000s      0.001w    287 calls
+HF: Form F                          :      0.933u      0.150s      0.064w    287 calls
+HF: Form D                          :      0.617u      0.033s      0.034w    287 calls
+HF: DIIS                            :     20.200u      1.450s      1.063w    265 calls
+DIISManager::add_entry              :      3.967u      0.267s      0.189w    265 calls
+DIISManager::extrapolate            :     10.433u      0.950s      0.558w    265 calls
+bMatrix setup                       :      5.967u      0.567s      0.325w    265 calls
+bMatrix pseudoinverse               :      0.367u      0.017s      0.015w    265 calls
+New vector                          :      4.000u      0.367s      0.216w    265 calls
+HF: Form C                          :     40.917u      0.450s      2.079w    265 calls
+ccenergy                            : 181235.033u  18116.933s  31376.999w     22 calls
+F build                             :  24916.467u    552.900s   4958.585w    341 calls
+Wmbej build                         :  37719.267u   3513.683s   5211.061w    341 calls
+C->Wmbej                            :   1007.500u    307.150s    247.352w    341 calls
+F->Wmbej                            :  11511.300u   1671.633s   2054.186w    341 calls
+E->Wmbej                            :   4521.233u    945.583s   1230.528w    341 calls
+X->Wmbej                            :  20389.700u    396.500s   1429.682w    341 calls
+Z                                   :   6447.467u    563.900s    645.426w    341 calls
+T2 Build                            :  64012.450u   9867.317s  11491.199w    341 calls
+BT2                                 :  14111.300u   2129.817s   2410.002w    341 calls
+ABCD:new                            :  14110.983u   2129.783s   2409.999w    341 calls
+ABCD:S                              :   5295.683u    760.867s    722.361w    341 calls
+ABCD:A                              :   5802.733u    778.150s    725.126w    341 calls
+ABCD:axpy                           :   1146.983u    174.067s    448.058w    341 calls
+FT2                                 :   6173.433u    785.500s    573.482w    341 calls
+WmbejT2                             :  15421.000u   2210.400s   2070.792w    341 calls
+CT2                                 :  14240.100u   2985.083s   3327.245w    341 calls
+
+--------------------------------------------------------------------------------------
+Total PK formation time             :   3911.600u     64.167s    291.675w     22 calls
+HF: Form core H                     :     25.650u      0.117s      1.294w     22 calls
+HF: Form S/X                        :      4.333u      0.083s      0.222w     22 calls
+HF: Guess                           :    154.983u      2.433s      7.872w     22 calls
+| SAD Guess                         :    150.550u      2.317s      7.647w     22 calls
+HF: Form G                          :   1509.000u     39.767s    449.095w    287 calls
+| JK: D                             :      0.517u      0.050s      0.037w    287 calls
+| JK: USO2AO                        :      0.650u      0.033s      0.032w    287 calls
+| JK: JK                            :   1506.183u     39.433s    448.884w    287 calls
+| | PK computes JK                  :   1506.167u     39.433s    448.883w    287 calls
+| JK: AO2USO                        :      0.000u      0.000s      0.001w    287 calls
+HF: Form F                          :      0.933u      0.150s      0.064w    287 calls
+HF: Form D                          :      0.617u      0.033s      0.034w    287 calls
+HF: DIIS                            :     20.200u      1.450s      1.063w    265 calls
+| DIISManager::add_entry            :      3.967u      0.267s      0.189w    265 calls
+| DIISManager::extrapolate          :     10.433u      0.950s      0.558w    265 calls
+| | bMatrix setup                   :      5.967u      0.567s      0.325w    265 calls
+| | bMatrix pseudoinverse           :      0.367u      0.017s      0.015w    265 calls
+| | New vector                      :      4.000u      0.367s      0.216w    265 calls
+HF: Form C                          :     40.917u      0.450s      2.079w    265 calls
+ccenergy                            : 181235.033u  18116.933s  31376.999w     22 calls
+| F build                           :  24916.467u    552.900s   4958.585w    341 calls
+| Wmbej build                       :  37719.267u   3513.683s   5211.061w    341 calls
+| | C->Wmbej                        :   1007.500u    307.150s    247.352w    341 calls
+| | F->Wmbej                        :  11511.300u   1671.633s   2054.186w    341 calls
+| | E->Wmbej                        :   4521.233u    945.583s   1230.528w    341 calls
+| | X->Wmbej                        :  20389.700u    396.500s   1429.682w    341 calls
+| Z                                 :   6447.467u    563.900s    645.426w    341 calls
+| T2 Build                          :  64012.450u   9867.317s  11491.199w    341 calls
+| | BT2                             :  14111.300u   2129.817s   2410.002w    341 calls
+| | | ABCD:new                      :  14110.983u   2129.783s   2409.999w    341 calls
+| | | | ABCD:S                      :   5295.683u    760.867s    722.361w    341 calls
+| | | | ABCD:A                      :   5802.733u    778.150s    725.126w    341 calls
+| | | | ABCD:axpy                   :   1146.983u    174.067s    448.058w    341 calls
+| | FT2                             :   6173.433u    785.500s    573.482w    341 calls
+| | WmbejT2                         :  15421.000u   2210.400s   2070.792w    341 calls
+| | CT2                             :  14240.100u   2985.083s   3327.245w    341 calls
+
+**************************************************************************************
