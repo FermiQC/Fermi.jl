@@ -236,7 +236,7 @@ begin
 			H $d 0.0 0.0
 			""")
 		
-		Iao = IntegralHelper(eri_type=Chonky())
+		Iao = IntegralHelper()
 		ref = @energy Iao=>rhf
 		Imo = IntegralHelper(orbitals=ref.orbitals)
 		cc_wfn = @energy Imo,Iao=>ccsd
@@ -291,7 +291,7 @@ end
 # ╠═7388eaa1-011c-43df-9986-2f59ba259873
 # ╠═77186eea-5b85-40c9-91bf-f48707752bb7
 # ╠═ee4dbc82-6258-413c-aca5-1bd1e6ee02fc
-# ╠═f17bc090-cad6-427a-ace9-7ed921f8368d
+# ╟─f17bc090-cad6-427a-ace9-7ed921f8368d
 # ╠═aec67321-b943-478b-9765-8cb95c0f9d06
 # ╠═15cfa11b-78e1-456c-82f2-02bcd1f8c6c8
 # ╠═3685dd55-cb6a-4e0d-8a64-a76fd29d8e49

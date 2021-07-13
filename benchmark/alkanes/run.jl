@@ -32,9 +32,7 @@ MAX_CHAIN_LENGTH = 20
 
 # Cold run
 @set printstyle none
-let Iu = Fermi.Integrals.IntegralHelper(eri_type=Fermi.Integrals.SparseERI())
-    @energy Iu => rhf
-end
+@energy rhf
 
 @reset
 @set {
@@ -50,8 +48,7 @@ for N = 1:MAX_CHAIN_LENGTH
     get_hc(N)
     # Run energy compt
     t = @elapsed begin
-        Iu = Fermi.Integrals.IntegralHelper(eri_type=Fermi.Integrals.SparseERI())
-        @energy Iu => rhf
+        @energy rhf
     end
     GC.gc()
     # Print out time
