@@ -1,5 +1,5 @@
 function UHF(Alg::UHFa)
-    ints = IntegralHelper{Float64}(eri_type=Chonky())
+    ints = IntegralHelper{Float64}()
     UHF(ints, Alg)
 end
 
@@ -79,7 +79,7 @@ function UHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, Cα::
     Dsβ = deepcopy(Dβ)
 
 
-    buildfock!(Fα, Fβ, Jα, Jβ, Kα, Kβ, H, Dα, Dβ, ints)
+    build_fock!(Fα, Fβ, Jα, Jβ, Kα, Kβ, Dα, Dβ, ints)
     output(" Guess Energy {:20.14f}", UHFEnergy(H, Dα, Dβ, Fα, Fβ, molecule.Vnuc))
  
     output("\n Iter.   {:>15} {:>10} {:>10} {:>8} {:>8} {:>8}", "E[UHF]", "ΔE", "Dᵣₘₛ", "t", "DIIS", "damp")
@@ -109,7 +109,7 @@ function UHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, Cα::
             buildD!(Dβ, Cβ, Nβ)
             
             # Build Fock matrix
-            buildfock!(Fα, Fβ, Jα, Jβ, Kα, Kβ, H, Dα, Dβ, ints)
+            build_fock!(Fα, Fβ, Jα, Jβ, Kα, Kβ, Dα, Dβ, ints)
             
             # Calculate energy
             E = UHFEnergy(H, Dα, Dβ, Fα, Fβ, molecule.Vnuc)

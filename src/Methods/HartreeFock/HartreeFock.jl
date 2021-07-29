@@ -9,7 +9,7 @@ Module for running Hartree--Fock computations in Fermi.
 """
 module HartreeFock
 # Import Fermi basics
-using LinearAlgebra: hermitian
+using LinearAlgebra: hermitian, vcat
 using Fermi
 using Fermi.Options
 using Fermi.Geometry
