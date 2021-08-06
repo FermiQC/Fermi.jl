@@ -50,11 +50,6 @@ Currently, we have implementations of:
 | RCCSD     |  Y    |  Y |
 | RCCSD(T)  |  Y    |  Y |
 
-
-## Contribute
-PR's, issues, and suggestions are very welcome! You might consider reaching out before starting
-work so that we can avoid duplication of efforts.
-
 ## Install
 Install Fermi by running,
 ```
@@ -86,3 +81,28 @@ Finally run a computation
 ```
 @energy ccsd;
 ```
+
+
+## Contribute
+PR's, issues, and suggestions are very welcome! You might consider reaching out before starting
+work so that we can avoid duplication of efforts. Check the roadmap below for an idea of where this project is heading towards. Contact [Gustavo Aroeira](https://github.com/gustavojra) for any inquiries. 
+
+## Roadmap
+
+Fermi is a collection of *ab initio* methods. The long term goal is to provide production level implementations for daily applications.
+
+### New features
+1. Gradients for current methods. Three types of gradients are going to be considered: analytical, finite diferences, and automatic differentiation. 
+2. Implementations for unrestricted refences, e.g. UCCSD(T).
+3. High-order coupled cluster methods, such as CCSDT, and CCSDT(Q).
+4. CBS extrapolation schemes and focal-point analysis.
+5. Local correlation methods.
+6. Interface with external modules for geometry optimization, vibrational analysis and themodynamic properties.
+
+### Improvements
+1. In an effort to improve the composability within the Julia chemistry community, some modules are going to be factorized out and Fermi will act as a high-level interface. For example, we intend to create a HartreeFock.jl package with all the current code in `Fermi.HartreeFock`. This way, anyone interest in the bare Hartree-Fock code can have a cleaner access to it. 
+
+2. Performance boosts are always welcome! We need further testing and comparisons with well establish codes to find points to be improved. New backends for `BLAS` or `TBLIS` may also be considered.
+
+## Employee of the month
+   <img src="https://i.ibb.co/JQzmwTf/new.gif" alt="">
