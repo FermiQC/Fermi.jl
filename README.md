@@ -55,9 +55,17 @@ Install Fermi by running,
 ```
 pkg> add Fermi
 ```
+
+> To access the package manager (`pkg>`) start the Julia terminal and hit `]`. 
+> Alternatively, you can run
+> ```
+> julia> using Pkg
+> julia> Pkg.add("Fermi")
+> ```
+
 If you would like the latest updates, use instead
 ```
-pkg> add Fermi
+pkg> add Fermi#master
 ```
 Everything should work automatically, the most flagile part is building the integral library [libcint](https://github.com/sunqm/libcint). The file [`deps/build.jl`](https://github.com/gustavojra/Fermi.jl/blob/master/deps/build.jl) contains simple commands to clone and build this library, you might need to modify it to better suit your system. If you do, rerun the build step using `pkg> build Fermi`. Please reach out 
 if you encounter any problem.
@@ -77,11 +85,10 @@ Choose a basis set
 ```
 @set basis sto-3g
 ```
-Finally run a computation
+Finally, run a computation
 ```
 @energy ccsd;
 ```
-
 
 ## Contribute
 PR's, issues, and suggestions are very welcome! You might consider reaching out before starting
