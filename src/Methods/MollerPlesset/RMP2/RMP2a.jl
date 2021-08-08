@@ -27,8 +27,8 @@ function RMP2(rhf::RHF, Alg::RMP2a)
 end
 
 function RMP2(M::Molecule, Alg::RMP2a)
-    aoints = IntegralHelper{Float64}(molecule=M, eri_type=SparseERI)
-    rhf = RHF(M,aoints)
+    aoints = IntegralHelper{Float64}(molecule = M, eri_type=SparseERI)
+    rhf = RHF(aoints)
     moints = IntegralHelper(molecule = M, orbitals=rhf.orbitals)
     RMP2(moints, aoints, Alg)
 end

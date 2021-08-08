@@ -35,5 +35,6 @@ include("Methods/MollerPlesset/MollerPlesset.jl")
 include("Methods/CoupledCluster/CoupledCluster.jl")
 
 include("Tools/SinglePointEnergy.jl")
+include("Tools/FiniteDifferences.jl")
 
 end # module
