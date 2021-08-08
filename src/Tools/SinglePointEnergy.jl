@@ -2,6 +2,7 @@ export @energy
 
 energy_dict = Dict{String, String}(
     "rhf" => "Fermi.HartreeFock.RHF()",
+    "uhf" => "Fermi.HartreeFock.UHF()",
     "mp2" => "Fermi.MollerPlesset.RMP2()",
     "rmp2" => "Fermi.MollerPlesset.RMP2()",
     "ccsd" => "Fermi.CoupledCluster.RCCSD()",
@@ -32,6 +33,7 @@ or
 
 # Implemented methods:
     RHF            Restricted Hartree-Fock.
+    UHF            Unrestricted Hartree-Fock
     RMP2           Restricted Moller-Plesset PT order 2.
     RMP3           Restricted Moller-Plesset PT order 3.
     CASCI          Restricted configuration interaction within given active space.
