@@ -14,20 +14,6 @@ Abstract type for RHF implementations.
 """
 abstract type RHFAlgorithm end
 
-"""
-    Fermi.HartreeFock.get_scf_alg()
-
-Returns a singleton type corresponding to a RHF implementation based on the options.
-"""
-function get_scf_alg()
-    implemented = [RHFa()]
-    N = Options.get("scf_alg")
-    try 
-        return implemented[N]
-    catch BoundsError
-        throw(FermiException("implementation number $N not available for RHF."))
-    end
-end
 
 """
     Fermi.HartreeFock.RHF
@@ -91,6 +77,10 @@ struct RHF <: AbstractHFWavefunction
 end
 
 function RHF(x...)
+    ref = Fermi.Options.get("reference")
+    if ref != "rhf"
+        throw(FermiException("reference ($ref) is not appropriate for rhf"))
+    end
     if !any(i-> i isa RHFAlgorithm, x)
         RHF(x..., get_scf_alg())
     else
