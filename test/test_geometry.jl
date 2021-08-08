@@ -2,7 +2,7 @@
    
     # Test display
     A1 = Fermi.Geometry.Atom("H", 1, (0.0, 0.0, 0.0))
-    x = @capture_out display(A1)
+    x = Fermi.Geometry.string_repr(A1)
     rex = r"Symbol:\s+?H\nAtomic Number:\s+?1\nPosition:\s+?0.0+?\s+?0.0+?\s+?0.0+?"
     @test occursin(rex, x)
 
@@ -62,7 +62,7 @@
     # Test print molecule
     mol = Fermi.Geometry.Molecule(molstring=molstringB, unit="bohr", charge=0, multiplicity=3)
 
-    x = @capture_out display(mol)
+    x = Fermi.Geometry.string_repr(mol)
 
     @test begin
         occursin("Molecule:", x)          &&

@@ -42,19 +42,21 @@ end
 
 function RCCSD()
     aoints = IntegralHelper{Float64}()
+    #aoints = IntegralHelper{Float64}(eri_type=JKFIT())
     rhf = RHF(aoints)
     moints = IntegralHelper(orbitals=rhf.orbitals)
     RCCSD(moints, aoints)
 end
 
-function RCCSD(moints::IntegralHelper{T1,Chonky,O}, aoints::IntegralHelper{T2,Chonky,AtomicOrbitals}) where {T1<:AbstractFloat,
-                                                                                        T2<:AbstractFloat,O<:AbstractOrbitals}
+function RCCSD(moints::IntegralHelper{T1,E1,O}, aoints::IntegralHelper{T2,E2,AtomicOrbitals}) where {T1<:AbstractFloat,
+                                                                                        T2<:AbstractFloat,O<:AbstractRestrictedOrbitals,
+                                                                                        E1<:AbstractERI,E2<:AbstractERI}
     mo_from_ao!(moints, aoints, "Fd","OOOO", "OOOV", "OOVV", "OVOV", "OVVV", "VVVV")
     RCCSD(moints)
 end
 
 function RCCSD(moints::IntegralHelper{T1,E1,O}, aoints::IntegralHelper{T2,E2,AtomicOrbitals}) where {T1<:AbstractFloat,T2<:AbstractFloat,
-                                                                                E1<:AbstractDFERI,E2<:AbstractDFERI,O<:AbstractOrbitals}
+                                                                                E1<:AbstractDFERI,E2<:AbstractDFERI,O<:AbstractRestrictedOrbitals}
     mo_from_ao!(moints, aoints, "Fd","BOO", "BOV", "BVV")
     RCCSD(moints)
 end

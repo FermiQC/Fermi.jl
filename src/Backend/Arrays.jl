@@ -3,8 +3,9 @@ import Base: size, permutedims, permutedims!, getindex, setindex!, ndims, show, 
 import Base: iterate, length, similar, adjoint, eltype, +, -, *, /, ^, BroadcastStyle
 import Strided: UnsafeStridedView
 
-export FermiMDArray, FermiMDrand, FermiMDzeros, diagonalize
+export FermiMDArray, FermiMDrand, FermiMDzeros, Fermi4SymArray, diagonalize
 
+abstract type AbstractFermiArray{T,N} <: AbstractArray{T,N} end
 """
 
     FermiMDArray{T,N}
@@ -15,8 +16,78 @@ Fermi array object held entirely in memory. Thin wrap around a standard Julia ar
 
 **FermiMDArray** <: AbstractArray
 """
-struct FermiMDArray{T,N} <: AbstractArray{T,N} 
+struct FermiMDArray{T,N} <: AbstractFermiArray{T,N} 
     data::Array{T,N}
+end
+
+struct Fermi4SymArray{T} <: AbstractFermiArray{T,1}
+    data::Array{T,1}
+end
+
+struct FermiSparse{Td,Ti,N} <: AbstractFermiArray{Td,N}
+    indexes::Vector{NTuple{N, Ti}}
+    data::Vector{Td}
+end
+
+function ndims(A::FermiSparse{Td,Ti,N}) where {Td, Ti, N}
+    return N
+end
+
+show(io::IO, ::MIME"text/plain", A::FermiSparse{Td, Ti, N}) where {Td, Ti, N} = show(io,A)
+
+function show(io::IO, A::FermiSparse{Td, Ti, N}) where {Td, Ti, N}
+    println(io, "FermiSparse{$Td, $Ti, $N}:")
+    print(io, A.data)
+    #if length(A.data) > 10
+    #    for (x,idx) in zip(A.data[1:5], A.indexes[1:5])
+    #        idx_str = "("
+    #        for i in idx
+    #            idx_str *= "$i,"
+    #        end
+    #        idx_str = idx_str[1:end-1]*") => $x"
+    #        println(io, idx_str)
+    #    end
+    #    println(io," ⋮")
+    #    for (x,idx) in zip(A.data[end-5:end], A.indexes[end-5:end])
+    #        idx_str = "("
+    #        for i in idx
+    #            idx_str *= "$i,"
+    #        end
+    #        idx_str = idx_str[1:end-1]*") => $x"
+    #        println(io, idx_str)
+    #    end
+    #else
+    #    for (x,idx) in zip(A.data, A.indexes)
+    #        idx_str = "("
+    #        for i in idx
+    #            idx_str *= "$i,"
+    #        end
+    #        idx_str = idx_str[1:end-1]*") => $x"
+    #        println(io, idx_str)
+    #    end
+    #end
+end
+
+function index2(i::Signed, j::Signed)::Signed
+    if i < j
+        return (j * (j + 1)) >> 1 + i
+    else
+        return (i * (i + 1)) >> 1 + j
+    end
+end
+
+# This function is not useful currently, but it will be for direct computations
+function index4(i::Signed , j::Signed, k::Signed, l::Signed)::Signed
+    return index2(index2(i,j), index2(k,l))
+end
+
+function getindex(A::Fermi4SymArray, I::Vararg{Signed,4})
+    idx = index4((I .- 1)...) + 1
+    return A.data[idx]
+end
+
+function getindex(A::Fermi4SymArray, i::Signed)
+    return A.data[i]
 end
 
 # Creates a FermiMDArray from a native Julia Array
@@ -65,15 +136,15 @@ function similar(A::FermiMDArray, dims::Dims)
 end
 
 # Basic methods for AbstractArrays in Julia
-function size(A::FermiMDArray, i...)
+function size(A::T, i...) where T <: AbstractFermiArray
     return size(A.data, i...)
 end
 
-function getindex(A::FermiMDArray, I...)
+function getindex(A::AbstractFermiArray, I...)
     return FermiMDArray(A.data[I...])
 end
 
-function setindex!(A::FermiMDArray, val, I...)
+function setindex!(A::AbstractFermiArray, val, I...)
     A.data[I...] = val
 end
 
@@ -81,11 +152,11 @@ function ndims(A::FermiMDArray)
     return ndims(A.data)
 end
 
-function length(A::FermiMDArray)
+function length(A::AbstractFermiArray)
     return length(A.data)
 end
 
-function eltype(A::FermiMDArray)
+function eltype(A::AbstractFermiArray)
     return eltype(A.data)
 end
 
@@ -200,9 +271,4 @@ end
 function Base.convert(::Type{T}, A::FermiMDArray) where T<:FermiMDArray{Float64}
     newdata = Base.convert(Array{Float64}, A.data)
     return FermiMDArray(newdata)
-end
-
-function show(io::IO, ::MIME"text/plain", A::FermiMDArray{T}) where T <: Number
-    print("Fermi Memory-held Dense Array - ")
-    display(A.data)
 end
