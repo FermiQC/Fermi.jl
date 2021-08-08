@@ -1,7 +1,7 @@
 name = "Fermi"
 uuid = "9237668d-08c8-4784-b8dd-383aa52fcf74"
 authors = ["gustavojra <gustavo.aroeira@gmail.com>"]
-version = "0.2.0"
+version = "0.3.0"
 
 [deps]
 Formatting = "59287772-0a20-5a39-b81b-1366585eb4c0"
