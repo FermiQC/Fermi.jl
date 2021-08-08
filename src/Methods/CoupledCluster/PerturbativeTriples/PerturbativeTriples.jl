@@ -28,7 +28,13 @@ function RCCSDpT(x...)
     if !any(i-> i isa RpTAlgorithm, x)
         RCCSDpT(x..., get_rpt_alg())
     else
-        throw(FermiException("invalid arguments for RCCSD(T) method: $(x[1:end-1])"))
+        # Print the type of arguments given for a better feedback
+        args = "("
+        for a in x[1:end-1]
+            args *= "$(typeof(a)), "
+        end
+        args = args[1:end-2]*")"
+        throw(FermiException("invalid arguments for RCCSD(T) method: $args"))
     end
 end
 

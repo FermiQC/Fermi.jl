@@ -91,3 +91,106 @@ function build_fock!(F::FermiMDArray{Float64,2}, H::FermiMDArray{Float64,2}, D::
     @tensoropt F[m,n] += 2*D[r,s]*b[Q,m,n]*b[Q,r,s]
     @tensoropt F[m,n] -= D[r,s]*b[Q,m,r]*b[Q,n,s]
 end
+
+function build_fock!(F::FermiMDArray{Float64}, H::FermiMDArray{Float64}, D::FermiMDArray{Float64}, ints::IntegralHelper{Float64,SparseERI,AtomicOrbitals})
+    D = D.data
+    F .= H
+    eri_vals = ints["ERI"].data
+    idxs = ints["ERI"].indexes
+
+    nbas = ints.orbitals.basisset.nbas
+    Farrays = [zeros(Int((nbas^2 + nbas)/2)) for i = 1:Threads.nthreads()]
+
+    Threads.@threads for z = eachindex(eri_vals)
+        i,j,k,l = idxs[z] .+ 1
+        ν = eri_vals[z]
+        Ft = Farrays[Threads.threadid()]
+        @inbounds begin
+            @fastmath begin
+            ij = Fermi.index2(i-1,j-1)
+            ik = Fermi.index2(i-1,k-1) + 1
+            il = Fermi.index2(i-1,l-1) + 1
+
+            jk = Fermi.index2(j-1,k-1) + 1
+            jl = Fermi.index2(j-1,l-1) + 1
+
+            kl = Fermi.index2(k-1,l-1) 
+
+            γij = i !== j
+            Xik = i === k ? 2 : 1
+            Xjk = j === k ? 2 : 1
+
+            γkl = k !== l
+            γab = ij !== kl
+
+            Xil = i === l ? 2 : 1
+            Xjl = j === l ? 2 : 1
+
+            if γij && γkl && γab
+                # J
+                Ft[ij+1] += 4*D[k,l]*ν
+                Ft[kl+1] += 4*D[i,j]*ν
+
+                # K
+                Ft[ik] -= Xik*D[j,l]*ν
+                Ft[jk] -= Xjk*D[i,l]*ν
+                Ft[il] -= Xil*D[j,k]*ν
+                Ft[jl] -= Xjl*D[i,k]*ν
+
+            elseif γkl && γab
+                # J
+                Ft[ij+1] += 4*D[k,l]*ν
+                Ft[kl+1] += 2*D[i,j]*ν
+
+                # K
+                Ft[ik] -= Xik*D[j,l]*ν
+                Ft[il] -= Xil*D[j,k]*ν
+            elseif γij && γab
+                # J
+                Ft[ij+1] += 2*D[k,l]*ν
+                Ft[kl+1] += 4*D[i,j]*ν
+
+                # K
+                Ft[ik] -= Xik*D[j,l]*ν
+                Ft[jk] -= Xjk*D[i,l]*ν
+
+            elseif γij && γkl
+
+                # Only possible if i = k and j = l
+                # and i < j ⇒ i < l
+
+                # J
+                Ft[ij+1] += 4*D[k,l]*ν
+
+                # K
+                Ft[ik] -= D[j,l]*ν
+                Ft[il] -= D[j,k]*ν
+                Ft[jl] -= D[i,k]*ν
+            elseif γab
+                # J
+                Ft[ij+1] += 2*D[k,l]*ν
+                Ft[kl+1] += 2*D[i,j]*ν
+                # K
+                Ft[ik] -= Xik*D[j,l]*ν
+            else
+                Ft[ij+1] += 2*D[k,l]*ν
+                Ft[ik] -= D[j,l]*ν
+            end
+        end
+        end
+    end
+
+    # Reduce values produces by each thread
+    for i::Int16 = 1:nbas
+        for j::Int16 = i:nbas
+            @inbounds begin
+                ij = Fermi.index2(i-1,j-1)
+                for k = eachindex(Farrays)
+                    F[i,j] += Farrays[k][ij+1]
+                end
+                F[j,i] = F[i,j]
+            end
+        end
+    end
+    F
+end

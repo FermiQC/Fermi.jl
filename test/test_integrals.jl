@@ -2,6 +2,7 @@
     @reset
 
     @set {
+        printstyle none
         jkfit auto
         rifit auto
         basis cc-pvtz
@@ -15,20 +16,12 @@
     @test rifit.basisset.basis_name == "cc-pvtz-rifit"
 
     # Test displays
-    x = @capture_out display(jkfit)
+    x = Fermi.Integrals.string_repr(jkfit)
     @test occursin(r"JKFIT:\s+?cc-pvtz-jkfit",x)
-    x = @capture_out display(rifit)
+    x = Fermi.Integrals.string_repr(rifit)
     @test occursin(r"RIFIT:\s+?cc-pvtz-rifit",x)
 
     ints = Fermi.Integrals.IntegralHelper()
-    x = @capture_out display(ints)
-    @test begin
-        occursin(r"Fermi\s+?IntegralHelper",x) &&
-        occursin(r"Data\s+?Type:\s+?Float64",x) &&
-        occursin(r"Basis:\s+?cc-pvtz",x) &&
-        occursin(r"ERI:\s+?Chonky",x) &&
-        occursin(r"Orbitals:\s+?AtomicOrbitals",x)
-    end
 
     # Try invalid precision
     @set precision invalid
@@ -42,6 +35,16 @@
     @test isapprox(ints["T"], ints32["T"])
     @test isapprox(ints["V"], ints32["V"])
     @test isapprox(ints["ERI"], ints32["ERI"])
+
+    # Test string_repr
+    x = Fermi.Integrals.string_repr(ints)
+    @test begin
+        occursin(r"Fermi\s+?IntegralHelper",x) &&
+        occursin(r"Data\s+?Type:\s+?Float64",x) &&
+        occursin(r"Basis:\s+?cc-pvtz",x) &&
+        occursin(r"ERI:\s+?SparseERI",x) &&
+        occursin(r"Orbitals:\s+?AtomicOrbitals",x)
+    end
 
     # Test cache
     @test begin

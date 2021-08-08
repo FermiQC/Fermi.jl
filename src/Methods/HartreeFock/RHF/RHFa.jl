@@ -127,6 +127,7 @@ function RHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, C::Fe
 
     output("\n Iter.   {:>15} {:>10} {:>10} {:>8} {:>8} {:>8}", "E[RHF]", "ΔE", "Dᵣₘₛ", "t", "DIIS", "damp")
     output(repeat("-",80))
+    
     t = @elapsed while ite ≤ maxit
         t_iter = @elapsed begin
             # Produce Ft

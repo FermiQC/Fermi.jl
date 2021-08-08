@@ -8,6 +8,7 @@ makedocs(
     ),
     pages = [
         "Home" => "index.md",
+        "Modules" => "modules.md",
         "Core" => "core.md",
         "Backend" => "backend.md",
         "Methods" => "methods.md",

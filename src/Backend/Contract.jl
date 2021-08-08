@@ -11,6 +11,11 @@ function tblis_set_num_threads(N)
     TBLIS.set_num_threads(N)
 end
 
+function set_num_threads(N = Threads.nthreads())
+    tblis_set_num_threads(N)
+    LinearAlgebra.BLAS.set_num_threads(N)
+end
+
 function oind2eins(oindA::NTuple{NAo}, cindA::NTuple{NAc},
           oindB::NTuple{NBo}, cindB::NTuple{NBc},
           tindC::NTuple{NCt}) where {NAo, NAc, NBo, NBc, NCt}

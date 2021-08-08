@@ -1,4 +1,5 @@
 @testset "Basis Set" begin
+    @set printstyle none
     bfH = Fermi.GaussianBasis.BasisFunction(0, 
     [0.9817067282501578, 0.9494640079478909, 0.2959064596969707], 
     [3.425250914, 0.6239137298, 0.168855404])
@@ -50,7 +51,7 @@
     @set basis sto-3g
 
     bs = Fermi.GaussianBasis.BasisSet()
-    x = @capture_out display(bs)
+    x = Fermi.GaussianBasis.string_repr(bs)
     @test begin
           occursin("sto-3g Basis Set", x) &&
           occursin(r"Number of shells:\s+?5", x) &&
@@ -58,13 +59,13 @@
           occursin("O: 1s 2s 1p", x) &&
           occursin("H: 1s", x)
     end
-    x = @capture_out display(bs[1,1])
+    x = Fermi.GaussianBasis.string_repr(bs[1,1])
     @test begin
           occursin("S shell with 1 basis built from 3 primitive gaussians", x) &&
           occursin(r"χ₀₀\s+?=\s+?\d+?\.\d+?⋅Y₀₀⋅exp\(-\d+?\.\d+?⋅r²\)", x) &&
           occursin(r"[+-]\s+?\d+?\.\d+?⋅Y₀₀⋅exp\(-\d+?\.\d+?⋅r²\)", x)
     end
-    x = @capture_out display(bs[1][3])
+    x = Fermi.GaussianBasis.string_repr(bs[1][3])
     @test begin
           occursin("P shell with 3 basis built from 3 primitive gaussians", x) &&
           occursin(r"χ.{2,3}\s+?=\s+?\d+?\.\d+?⋅Y.{2,3}⋅r¹⋅exp\(-\d+?\.\d+?⋅r²\)", x) &&

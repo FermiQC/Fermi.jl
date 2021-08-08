@@ -44,7 +44,7 @@ const Default = Dict{String,Union{Float64,Int,String,Bool}}(
                                   H        0.9197881882      2.4580185570      0.6297938832
                                   """,
                                   "printstyle" => "repl",
-                                  "output" => "output.jl",
+                                  "output" => "fermi.out",
                                   "basis" => "sto-3g",
                                   "jkfit" => "auto",
                                   "rifit" => "auto",
@@ -96,7 +96,8 @@ const Default = Dict{String,Union{Float64,Int,String,Bool}}(
                                   "cas_nroot" => 1,
                                   "min_matrix_elem" => 10^-9,
                                   "precision_override" => false,
-                                  "tblis" => false
+                                  "tblis" => false,
+                                  "eri_cutoff" => 10^-12
                                  )
 """
     Fermi.Options.Current

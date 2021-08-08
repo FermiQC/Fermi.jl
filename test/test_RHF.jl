@@ -40,7 +40,9 @@ Edf = [
             Fermi.Options.set("molstring", mol)
             Fermi.Options.set("basis", basis[i])
 
-            wf = @energy rhf
+            Iu = Fermi.Integrals.IntegralHelper(eri_type=Fermi.Integrals.SparseERI())
+
+            wf = @energy Iu => rhf
             @test isapprox(wf.energy, Econv[i], rtol=tol) # Energy from Psi4
         end
     end

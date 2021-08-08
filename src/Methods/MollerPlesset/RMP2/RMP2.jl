@@ -44,7 +44,13 @@ function RMP2(x...)
     if !any(i-> i isa RMP2Algorithm, x)
         RMP2(x..., get_rmp2_alg())
     else
-        throw(FermiException("invalid arguments for RMP2 method: $(x[1:end-1])"))
+        # Print the type of arguments given for a better feedback
+        args = "("
+        for a in x[1:end-1]
+            args *= "$(typeof(a)), "
+        end
+        args = args[1:end-2]*")"
+        throw(FermiException("invalid arguments for RMP2 method: $args"))
     end
 end
 
@@ -59,5 +65,5 @@ function string_repr(X::RMP2)
 end
 
 function show(io::IO, ::MIME"text/plain", X::RMP2)
-    print(string_repr(X))
+    print(io, string_repr(X))
 end

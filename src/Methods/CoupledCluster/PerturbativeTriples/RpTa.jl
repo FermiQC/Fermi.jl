@@ -8,7 +8,7 @@ function RCCSDpT(rhf::RHF, Alg::RpTa)
 end
 
 function RCCSDpT(Alg::RpTa)
-    aoints = IntegralHelper()
+    aoints = IntegralHelper{Float64}()
     rhf = RHF(aoints)
     moints = IntegralHelper(orbitals=rhf.orbitals)
     ccsd = RCCSD(moints, aoints)
