@@ -34,6 +34,17 @@ function geom_rms(mol1, mol2)
     return √(out / 3*N)
 end
 
+function findif_intgrad(X::String, mol, A, i, h=0.005)
+    mol_disp = create_displacement(mol, A, i, h)
+    I = Fermi.Integrals.IntegralHelper(molecule=mol_disp)
+    Xplus = I[X]
+    mol_disp = create_displacement(mol, A, i, -h)
+    I = Fermi.Integrals.IntegralHelper(molecule=mol_disp)
+    Xminus = I[X]
+    g = (Xplus - Xminus) ./ (2*h)
+    return g * PhysicalConstants.bohr_to_angstrom
+end
+
 function gradient_test(mol, energy_function, h=0.005)
     N = length(mol.atoms)
     Eplus = zeros(N,3)
