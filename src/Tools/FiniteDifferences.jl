@@ -4,25 +4,25 @@ function create_displacement(mol, A::Int, i::Int, h)
     atomA = mol.atoms[A]
     new_xyz = [atomA.xyz...]
     new_xyz[i] += h #* √(mass[atomA.Z]) * PhysicalConstants.bohr_to_angstrom
-    new_atoms[A] = Fermi.Geometry.Atom(atomA.AtomicSymbol, atomA.Z, (new_xyz[1], new_xyz[2], new_xyz[3]))
+    new_atoms[A] = Fermi.Atom(atomA.AtomicSymbol, atomA.Z, (new_xyz[1], new_xyz[2], new_xyz[3]))
 
-    return Fermi.Geometry.Molecule(new_atoms, mol.charge, mol.multiplicity)
+    return Fermi.Molecule(new_atoms, mol.charge, mol.multiplicity)
 end
 
 function apply_gradient(mol, g, d = 0.001)
     Zvals = [A.Z for A = mol.atoms]
     Svals = [A.AtomicSymbol for A = mol.atoms]
 
-    new_atoms = Fermi.Geometry.Atom[]
+    new_atoms = Fermi.Atom[]
 
     for i = eachindex(Zvals)
         x = mol.atoms[i].xyz[1] - d*g[i, 1]
         y = mol.atoms[i].xyz[2] - d*g[i, 2]
         z = mol.atoms[i].xyz[3] - d*g[i, 3]
-        push!(new_atoms, Fermi.Geometry.Atom(Svals[i], Zvals[i], (x,y,z)))
+        push!(new_atoms, Fermi.Atom(Svals[i], Zvals[i], (x,y,z)))
     end
 
-    return Fermi.Geometry.Molecule(new_atoms, mol.charge, mol.multiplicity)
+    return Fermi.Molecule(new_atoms, mol.charge, mol.multiplicity)
 end
 
 function geom_rms(mol1, mol2)
@@ -73,7 +73,7 @@ function opt_test(energy_function; h=0.005, d=0.01)
 
     scf_Etol  = Options.get("scf_e_conv")
     scf_Dtol  = Options.get("scf_max_rms")
-    old_mol = Fermi.Geometry.Molecule()
+    old_mol = Fermi.Molecule()
 
     # Central
     wfn = eval(Expr(:call, energy_function, old_mol))

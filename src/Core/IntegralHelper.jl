@@ -8,7 +8,6 @@ module Integrals
 using Fermi
 using Fermi.Libcint
 using Fermi.Options
-using Fermi.Geometry
 using Fermi.GaussianBasis
 using Fermi.Orbitals
 using LinearAlgebra

@@ -19,9 +19,6 @@ using Fermi.GaussianBasis
 # ╔═╡ 71915091-164d-440f-931e-7abaa1764e77
 using Plots
 
-# ╔═╡ 913f76eb-3087-4a85-ae69-5dd7565964e9
-using Fermi.Geometry
-
 # ╔═╡ aec67321-b943-478b-9765-8cb95c0f9d06
 using Fermi.Integrals
 

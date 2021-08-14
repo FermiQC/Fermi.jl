@@ -509,7 +509,7 @@ end
 
 macro freezecore()
     quote 
-        mol = Fermi.Geometry.Molecule()
+        mol = Fermi.Molecule()
         atoms = mol.atoms
         # Dcore maps ranges of atomic numbers to number of core electrons
         Dcore = Fermi.PhysicalConstants.core_elec_perrow

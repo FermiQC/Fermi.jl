@@ -8,7 +8,6 @@ module MollerPlesset
 using Fermi
 using Fermi.Options
 using Fermi: AbstractWavefunction
-using Fermi.Geometry
 using Fermi.Integrals
 using Fermi.Orbitals
 

@@ -66,7 +66,7 @@ end
 function RHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, C::FermiMDArray{Float64,2}, Λ::FermiMDArray{Float64,2}, Alg::RHFa)
 
     molecule = ints.molecule
-    output(Fermi.Geometry.string_repr(molecule))
+    output(Fermi.string_repr(molecule))
     # Grab some options
     maxit = Options.get("scf_max_iter")
     Etol  = Options.get("scf_e_conv")

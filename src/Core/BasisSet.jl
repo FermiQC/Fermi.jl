@@ -6,10 +6,10 @@ Module handling basis functions and basis set.
 module GaussianBasis
 
 using Fermi
-using Fermi.Geometry
 using Fermi.Options
 using Memoize
 using Formatting
+using Molecules
 
 import Base: getindex, show
 
@@ -65,7 +65,7 @@ Object holding a set of BasisFunction objects associated with each atom in a mol
 
 | Name        | Type                               |   Description |
 |:------------|:-----------------------------------|:-----------------------------------------------------------|
-|`molecule`   | `Molecule`                         | Fermi.Geometry.Molecule object  |
+|`molecule`   | `Molecule`                         | Fermi.Molecule object  |
 |`basis_name` | `String`                           | String holding the basis set name  |
 |`basis`      | `Dict{Atom,Array{BasisFunction,1}}`| A dictionary that maps Atom objects to an Array of BasisFunction  |
 |`natoms`     | `Int32`                            | Number of atoms in the BasisSet |
@@ -110,7 +110,7 @@ julia> @molecule {
     H 0.0 0.0 0.0
     H 0.0 0.0 0.7
 } 
-julia> mol = Fermi.Geometry.Molecule()
+julia> mol = Fermi.Molecule()
 # Lets create an S basis function for H
 julia> s = Fermi.GaussianBasis.BasisFunction(0, [0.5215367271], [0.122])
 # Now a P basis function
@@ -157,7 +157,7 @@ function BasisSet(mol::Molecule, basis_name::String)
     output("\n  ⇒ Preparing new Basis Set: {:s}", basis_name)
     shells = Dict{Atom, Array{BasisFunction,1}}()
     for A in mol.atoms
-        shells[A] = read_basisset(basis_name, A.AtomicSymbol)
+        shells[A] = read_basisset(basis_name, Molecules.symbol(A))
     end
     BasisSet(mol, basis_name, shells)
 end
@@ -325,7 +325,7 @@ function string_repr(B::BasisSet)
     for A in B.molecule.atoms
         # Count how many times s,p,d appears for numbering
         count = zeros(Int16, 7)
-        out *= "$(A.AtomicSymbol): "
+        out *= "$(Molecules.symbol(A)): "
         for bfs in B.basis[A]
             L = bfs.l
             count[L+1] += 1
