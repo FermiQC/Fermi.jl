@@ -112,23 +112,6 @@ function Molecule(atoms::Vector{T}, charge::Int, multiplicity::Int) where T <: A
 end
 
 """
-    Fermi.get_xyz(M::Molecule)
-
-Returns a XYZ string in angstrom for the given Molecule.
-"""
-function get_xyz(M::Molecule)
-
-    molstring = ""
-
-    for i in eachindex(M.atoms)
-
-        A = M.atoms[i]
-        molstring *= format("{}   {: 15.12f}   {: 15.12f}   {: 15.12f}\n", Molecules.symbol(A), A.xyz...)
-    end
-    return molstring
-end
-
-"""
     Fermi.string_repr(M::Molecule)
 
 Returns a nicely formatted string with all the molecule's information
@@ -136,7 +119,7 @@ Returns a nicely formatted string with all the molecule's information
 function string_repr(M::Molecule)
     out = ""
     out = out*format("Molecule:\n\n")
-    out = out*format(Fermi.get_xyz(M))
+    out = out*format(Molecules.get_xyz(M.atoms))
     out = out*format("\n")
     out = out*format("\nCharge: {}   ", M.charge)
     out = out*format("Multiplicity: {}   \n", M.multiplicity)
