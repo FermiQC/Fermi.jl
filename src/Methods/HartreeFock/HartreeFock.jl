@@ -6,6 +6,7 @@ Module for running Hartree--Fock computations in Fermi.
 # Methods
 
     > Fermi.HartreeFock.RHF
+    > Fermi.HartreeFock.UHF
 """
 module HartreeFock
 # Import Fermi basics

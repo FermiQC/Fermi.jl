@@ -107,29 +107,30 @@ function build_fock!(F::FermiMDArray{Float64}, H::FermiMDArray{Float64}, D::Ferm
         Ft = Farrays[Threads.threadid()]
         @inbounds begin
             @fastmath begin
-            ij = Fermi.index2(i-1,j-1)
+            ij = Fermi.index2(i-1,j-1) # +1 added afterwards
             ik = Fermi.index2(i-1,k-1) + 1
             il = Fermi.index2(i-1,l-1) + 1
 
             jk = Fermi.index2(j-1,k-1) + 1
             jl = Fermi.index2(j-1,l-1) + 1
 
-            kl = Fermi.index2(k-1,l-1) 
+            kl = Fermi.index2(k-1,l-1) # +1 added afterwards
 
+            # Logical auxiliar: γpq (whether p and q are different) Xpq = δpq + 1
             γij = i !== j
-            Xik = i === k ? 2 : 1
-            Xjk = j === k ? 2 : 1
+            Xik = i === k ? 2.0 : 1.0
+            Xjk = j === k ? 2.0 : 1.0
 
             γkl = k !== l
             γab = ij !== kl
 
-            Xil = i === l ? 2 : 1
-            Xjl = j === l ? 2 : 1
+            Xil = i === l ? 2.0 : 1.0
+            Xjl = j === l ? 2.0 : 1.0
 
             if γij && γkl && γab
                 # J
-                Ft[ij+1] += 4*D[k,l]*ν
-                Ft[kl+1] += 4*D[i,j]*ν
+                Ft[ij+1] += 4.0*D[k,l]*ν
+                Ft[kl+1] += 4.0*D[i,j]*ν
 
                 # K
                 Ft[ik] -= Xik*D[j,l]*ν
@@ -139,16 +140,16 @@ function build_fock!(F::FermiMDArray{Float64}, H::FermiMDArray{Float64}, D::Ferm
 
             elseif γkl && γab
                 # J
-                Ft[ij+1] += 4*D[k,l]*ν
-                Ft[kl+1] += 2*D[i,j]*ν
+                Ft[ij+1] += 4.0*D[k,l]*ν
+                Ft[kl+1] += 2.0*D[i,j]*ν
 
                 # K
                 Ft[ik] -= Xik*D[j,l]*ν
                 Ft[il] -= Xil*D[j,k]*ν
             elseif γij && γab
                 # J
-                Ft[ij+1] += 2*D[k,l]*ν
-                Ft[kl+1] += 4*D[i,j]*ν
+                Ft[ij+1] += 2.0*D[k,l]*ν
+                Ft[kl+1] += 4.0*D[i,j]*ν
 
                 # K
                 Ft[ik] -= Xik*D[j,l]*ν
@@ -160,7 +161,7 @@ function build_fock!(F::FermiMDArray{Float64}, H::FermiMDArray{Float64}, D::Ferm
                 # and i < j ⇒ i < l
 
                 # J
-                Ft[ij+1] += 4*D[k,l]*ν
+                Ft[ij+1] += 4.0*D[k,l]*ν
 
                 # K
                 Ft[ik] -= D[j,l]*ν
@@ -168,12 +169,12 @@ function build_fock!(F::FermiMDArray{Float64}, H::FermiMDArray{Float64}, D::Ferm
                 Ft[jl] -= D[i,k]*ν
             elseif γab
                 # J
-                Ft[ij+1] += 2*D[k,l]*ν
-                Ft[kl+1] += 2*D[i,j]*ν
+                Ft[ij+1] += 2.0*D[k,l]*ν
+                Ft[kl+1] += 2.0*D[i,j]*ν
                 # K
                 Ft[ik] -= Xik*D[j,l]*ν
             else
-                Ft[ij+1] += 2*D[k,l]*ν
+                Ft[ij+1] += 2.0*D[k,l]*ν
                 Ft[ik] -= D[j,l]*ν
             end
         end
