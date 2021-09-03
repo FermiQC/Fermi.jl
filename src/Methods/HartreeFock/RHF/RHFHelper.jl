@@ -99,96 +99,85 @@ function build_fock!(F::FermiMDArray{Float64}, H::FermiMDArray{Float64}, D::Ferm
     idxs = ints["ERI"].indexes
 
     nbas = ints.orbitals.basisset.nbas
-    Farrays = [zeros(Int((nbas^2 + nbas)/2)) for i = 1:Threads.nthreads()]
+    Farrays = [zeros(nbas, nbas) for i = 1:Threads.nthreads()]
 
     Threads.@threads for z = eachindex(eri_vals)
+    @inbounds @fastmath begin
         i,j,k,l = idxs[z] .+ 1
         ν = eri_vals[z]
         Ft = Farrays[Threads.threadid()]
-        @inbounds begin
-            @fastmath begin
-            ij = Fermi.index2(i-1,j-1) # +1 added afterwards
-            ik = Fermi.index2(i-1,k-1) + 1
-            il = Fermi.index2(i-1,l-1) + 1
+        ij = Fermi.index2(i-1,j-1) 
+        kl = Fermi.index2(k-1,l-1) 
 
-            jk = Fermi.index2(j-1,k-1) + 1
-            jl = Fermi.index2(j-1,l-1) + 1
+        # Logical auxiliar: γpq (whether p and q are different) Xpq = δpq + 1
+        γij = i !== j
+        γkl = k !== l
+        γab = ij !== kl
 
-            kl = Fermi.index2(k-1,l-1) # +1 added afterwards
+        Xik = i === k ? 2.0 : 1.0
+        Xjk = j === k ? 2.0 : 1.0
+        Xil = i === l ? 2.0 : 1.0
+        Xjl = j === l ? 2.0 : 1.0
 
-            # Logical auxiliar: γpq (whether p and q are different) Xpq = δpq + 1
-            γij = i !== j
-            Xik = i === k ? 2.0 : 1.0
-            Xjk = j === k ? 2.0 : 1.0
+        if γij && γkl && γab
+            #J
+            Ft[i,j] += 4.0*D[k,l]*ν
+            Ft[k,l] += 4.0*D[i,j]*ν
 
-            γkl = k !== l
-            γab = ij !== kl
+            # K
+            Ft[i,k] -= Xik*D[j,l]*ν
+            Ft[j,k] -= Xjk*D[i,l]*ν
+            Ft[i,l] -= Xil*D[j,k]*ν
+            Ft[j,l] -= Xjl*D[i,k]*ν
 
-            Xil = i === l ? 2.0 : 1.0
-            Xjl = j === l ? 2.0 : 1.0
+        elseif γkl && γab
+            # J
+            Ft[i,j] += 4.0*D[k,l]*ν
+            Ft[k,l] += 2.0*D[i,j]*ν
 
-            if γij && γkl && γab
-                # J
-                Ft[ij+1] += 4.0*D[k,l]*ν
-                Ft[kl+1] += 4.0*D[i,j]*ν
+            # K
+            Ft[i,k] -= Xik*D[j,l]*ν
+            Ft[i,l] -= Xil*D[j,k]*ν
+        elseif γij && γab
+            # J
+            Ft[i,j] += 2.0*D[k,l]*ν
+            Ft[k,l] += 4.0*D[i,j]*ν
 
-                # K
-                Ft[ik] -= Xik*D[j,l]*ν
-                Ft[jk] -= Xjk*D[i,l]*ν
-                Ft[il] -= Xil*D[j,k]*ν
-                Ft[jl] -= Xjl*D[i,k]*ν
+            # K
+            Ft[i,k] -= Xik*D[j,l]*ν
+            Ft[j,k] -= Xjk*D[i,l]*ν
 
-            elseif γkl && γab
-                # J
-                Ft[ij+1] += 4.0*D[k,l]*ν
-                Ft[kl+1] += 2.0*D[i,j]*ν
+        elseif γij && γkl
 
-                # K
-                Ft[ik] -= Xik*D[j,l]*ν
-                Ft[il] -= Xil*D[j,k]*ν
-            elseif γij && γab
-                # J
-                Ft[ij+1] += 2.0*D[k,l]*ν
-                Ft[kl+1] += 4.0*D[i,j]*ν
+            # Only possible if i = k and j = l
+            # and i < j ⇒ i < l
 
-                # K
-                Ft[ik] -= Xik*D[j,l]*ν
-                Ft[jk] -= Xjk*D[i,l]*ν
+            # J
+            Ft[i,j] += 4.0*D[k,l]*ν
 
-            elseif γij && γkl
-
-                # Only possible if i = k and j = l
-                # and i < j ⇒ i < l
-
-                # J
-                Ft[ij+1] += 4.0*D[k,l]*ν
-
-                # K
-                Ft[ik] -= D[j,l]*ν
-                Ft[il] -= D[j,k]*ν
-                Ft[jl] -= D[i,k]*ν
-            elseif γab
-                # J
-                Ft[ij+1] += 2.0*D[k,l]*ν
-                Ft[kl+1] += 2.0*D[i,j]*ν
-                # K
-                Ft[ik] -= Xik*D[j,l]*ν
-            else
-                Ft[ij+1] += 2.0*D[k,l]*ν
-                Ft[ik] -= D[j,l]*ν
-            end
-        end
+            # K
+            Ft[i,k] -= D[j,l]*ν
+            Ft[i,l] -= D[j,k]*ν
+            Ft[j,l] -= D[i,k]*ν
+        elseif γab
+            # J
+            Ft[i,j] += 2.0*D[k,l]*ν
+            Ft[k,l] += 2.0*D[i,j]*ν
+            # K
+            Ft[i,k] -= Xik*D[j,l]*ν
+        else
+            Ft[i,j] += 2.0*D[k,l]*ν
+            Ft[i,k] -= D[j,l]*ν
         end
     end
+    end
 
-    # Reduce values produces by each thread
-    for i::Int16 = 1:nbas
-        for j::Int16 = i:nbas
-            @inbounds begin
-                ij = Fermi.index2(i-1,j-1)
-                for k = eachindex(Farrays)
-                    F[i,j] += Farrays[k][ij+1]
-                end
+    Fred = sum(Farrays)
+    Threads.@threads for i = 1:nbas
+        @inbounds @fastmath begin
+            F[i,i] += Fred[i,i] 
+            for j = (i+1):nbas
+                F[i,j] += Fred[i,j] + Fred[j,i]
                 F[j,i] = F[i,j]
             end
         end
