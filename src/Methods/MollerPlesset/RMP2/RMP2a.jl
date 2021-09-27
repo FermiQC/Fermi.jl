@@ -1,7 +1,7 @@
-using TensorOperations
-using LinearAlgebra
 using LoopVectorization
-using TBLIS
+using LinearAlgebra
+using MKL
+using TensorOperations
 
 function RMP2(Alg::RMP2a)
     aoints = IntegralHelper{Float64}()
@@ -90,7 +90,7 @@ function RMP2(ints::IntegralHelper{<:AbstractFloat,<:AbstractERI,<:AbstractRestr
     output(repeat("-",80))
 
     # Compute MP2 energy
-    t = @elapsed Emp2 = RMP2_energy(ints, Alg)
+    Emp2 = RMP2_energy(ints, Alg)
     Eref = ints.orbitals.sd_energy
 
     output("   @Final RMP2 Correlation Energy {:>20.12f} Eₕ", Emp2)
