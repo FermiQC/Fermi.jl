@@ -1,5 +1,7 @@
 using TensorOperations
 using LinearAlgebra
+using LoopVectorization
+using TBLIS
 
 function RMP2(Alg::RMP2a)
     aoints = IntegralHelper{Float64}()
@@ -141,15 +143,18 @@ function RMP2_nonrhf_energy(ints::IntegralHelper{T,E,O}, ϵo::AbstractArray{T,1}
 end
 
 function RMP2_rhf_energy(ints::IntegralHelper{T,RIFIT,O}, ϵo::AbstractArray{T,1}, ϵv::AbstractArray{T,1}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
-    Bov = ints["BOV"].data
+    Bvo = permutedims(ints["BOV"].data, (1,3,2))
 
     output(" Computing DF-MP2 Energy... ", ending="")
     v_size = length(ϵv)
     o_size = length(ϵo)
 
     # Pre-allocating arrays for threads
-    BABs = [zeros(T, v_size, v_size) for i=1:Threads.nthreads()]
-    BBAs = [zeros(T, v_size, v_size) for i=1:Threads.nthreads()]
+    BABs = [zeros(T, v_size, v_size) for _ = 1:Threads.nthreads()]
+
+    # Disable BLAS threading
+    nt = BLAS.get_num_threads()
+    BLAS.set_num_threads(1)
 
     # Vector containing the energy contribution computed by each thread
     ΔMP2s = zeros(T,Threads.nthreads())
@@ -159,38 +164,34 @@ function RMP2_rhf_energy(ints::IntegralHelper{T,RIFIT,O}, ϵo::AbstractArray{T,1
         @sync for i in 1:o_size
             Threads.@spawn begin
             id = Threads.threadid()
-            @views Bi = Bov[:,i,:]
-            BAB = BABs[id]
-            BBA = BBAs[id]
+
+            Bab = BABs[id]
+            @views Bi = Bvo[:,:,i]
+
             for j in i:o_size
 
-                @views Bj = Bov[:,j,:]
-                @tensor BAB[a,b] = Bi[Q,a]*Bj[Q,b]
-                transpose!(BBA,BAB)
+                @views Bj = Bvo[:,:,j]
+                @tensor Bab[a,b] = Bi[Q,a]*Bj[Q,b]
 
                 eij = ϵo[i] + ϵo[j]
-                dmp2_1 = zero(T)
-                dmp2_2 = zero(T) 
-                @fastmath for b in 1:v_size
-                    @inbounds eij_b = eij - ϵv[b]
-                    for a in 1:v_size
-                        @inbounds begin 
-                            iajb = BAB[a,b]
-                            d = iajb/(eij_b - ϵv[a])
-                            dmp2_1 += d*iajb
-                            dmp2_2 += d*BBA[a,b]
-                        end
+                E = zero(T)
+                @turbo for a = eachindex(ϵv)
+                    eija = eij - ϵv[a]
+                    for b = eachindex(ϵv)
+                        D = eija - ϵv[b]
+                        E += Bab[a,b] * (TWO * Bab[a,b] - Bab[b,a]) / D
                     end
                 end
-                fac = i != j ? TWO : ONE 
-                dmp2 = TWO*dmp2_1 - dmp2_2
-                ΔMP2s[id] += fac*dmp2
+                fac = i !== j ? TWO : ONE 
+                ΔMP2s[id] += fac * E
             end
-            end
-        end
+        end # spawn
+        end # sync
         Emp2 = sum(ΔMP2s)
-    end
+    end # time
     output("Done in {:5.5f} seconds.", t)
+
+    BLAS.set_num_threads(nt)
     return Emp2
 end
 
