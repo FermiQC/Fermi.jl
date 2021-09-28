@@ -1,4 +1,8 @@
 using LinearAlgebra
+using LoopVectorization
+using MKL
+using BliContractor
+using TBLIS
 
 function RCCSDpT(rhf::RHF, Alg::RpTa)
     aoints = IntegralHelper()
@@ -18,111 +22,133 @@ end
 function RCCSDpT(ccsd::RCCSD, moints::IntegralHelper{T,E,O}, Alg::RpTa) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
 
     output("\n   • Perturbative Triples Started\n")
+    output("   - Using TBLIS")
 
-    T1 = ccsd.T1.data
-    T2 = ccsd.T2.data
+    T1 = permutedims(ccsd.T1.data, (2,1))
+    T2 = permutedims(ccsd.T2.data, (4,3,2,1))
 
-    Vovvv = moints["OVVV"].data
-    Vooov = moints["OOOV"].data
-    Vovov = moints["OVOV"].data
+    # Invert order, but retains chemist's notation
+    Vvvvo = permutedims(moints["OVVV"].data, (4,3,2,1))
 
-    o,v = size(T1)
+    # Switch to physicist notation for better memory layout
+    Vvooo = permutedims(moints["OOOV"].data, (4,1,2,3))
+    Vvvoo = permutedims(moints["OVOV"].data, (2,4,1,3))
+
+    v,o = size(T1)
 
     fo = moints["Fii"].data
     fv = moints["Faa"].data
 
     # Pre-allocate Intermediate arrays
-    Ws  = [Array{T}(undef, v,v,v) for i = 1:Threads.nthreads()] 
-    Vs  = [Array{T}(undef, v,v,v) for i = 1:Threads.nthreads()] 
-    #Evals = zeros(T, Threads.nthreads())
-    Evals = zeros(T, o)
+    Ws  = [Array{T}(undef, v,v,v) for _ = 1:Threads.nthreads()] 
+    Vs  = [Array{T}(undef, v,v,v) for _ = 1:Threads.nthreads()] 
+    Evals = zeros(T, Threads.nthreads())
 
     output("Computing energy contribution from occupied orbitals:")
-    BLAS_THREADS = LinearAlgebra.BLAS.get_num_threads()
-    LinearAlgebra.BLAS.set_num_threads(1)
+    BLAS_THREADS = BLAS.get_num_threads()
+    BLAS.set_num_threads(1)
+    TBLIS_THREADS = TBLIS.set_num_threads(1)
+
     t = @elapsed begin
+    #@sync for i in 1:o 
+    #hreads.@spawn begin
     Threads.@threads for i in 1:o
+    @inbounds begin
         id = Threads.threadid()
         W = Ws[id]
         V = Vs[id]
-        @views Vovvv_1i = Vovvv[i,:,:,:]
 
-        @views T2_1i    = T2[i,:,:,:]
-        @views T1_1i    = T1[i, :]
+        # T1 views → V
+        @views T1_i   = T1[:,i]
+
+        # T2 views → W
+        @views T2_i   = T2[:,:,:,i]
+
+        @views Vvvvo_i = Vvvvo[:,:,:,i]
+
         for j in 1:i
             Dij = fo[i] + fo[j]
 
-            @views Vovvv_1j    = Vovvv[j,:,:,:]
-            @views Vovov_1i_3j = Vovov[i,:,j,:]
+            # T1 views → V
+            @views T1_j  = T1[:,j]
 
-            @views Vooov_2i_3j = Vooov[:,i,j,:]
-            @views Vooov_2j_3i = Vooov[:,j,i,:]
+            # T2 views → W
+            @views T2_j  = T2[:,:,:,j]
+            ## Twice 
+            @views T2_ji = T2[:,:,j,i]
+            @views T2_ij = T2[:,:,i,j]
 
-            @views T2_1i_2j    = T2[i,j,:,:]
-            @views T2_1j_2i    = T2[j,i,:,:]
-            @views T2_1j       = T2[j,:,:,:]
-            @views T1_1j       = T1[j, :]
+            @views Vvvvo_j    = Vvvvo[:,:,:,j]
+
+            @views Vvvoo_ij = Vvvoo[:,:,i,j]
+
+            @views Vvooo_ij = Vvooo[:,:,i,j]
+            @views Vvooo_ji = Vvooo[:,:,j,i]
+
             δij = i == j
             for k in 1:j
                 Dijk = Dij + fo[k]
 
-                @views Vovvv_1k    = Vovvv[k,:,:,:]
+                # T1 views → V
+                @views T1_k = T1[:,k]
 
-                @views Vooov_2j_3k = Vooov[:,j,k,:]
-                @views Vooov_2k_3j = Vooov[:,k,j,:]
-                @views Vooov_2k_3i = Vooov[:,k,i,:]
-                @views Vooov_2i_3k = Vooov[:,i,k,:]
+                # T2 views → W
+                @views T2_k = T2[:,:,:,k]
+                ## Twice 
+                @views T2_jk = T2[:,:,j,k]
+                @views T2_ik = T2[:,:,i,k]
+                @views T2_ki = T2[:,:,k,i]
+                @views T2_kj = T2[:,:,k,j]
 
-                @views T2_1k_2j = T2[k,j,:,:]
-                @views T2_1k_2i = T2[k,i,:,:]
-                @views T2_1i_2k = T2[i,k,:,:]
-                @views T2_1j_2k = T2[j,k,:,:]
+                @views Vvvvo_k  = Vvvvo[:,:,:,k]
 
-                @views T2_1k = T2[k,:,:,:]
-                @views T1_1k = T1[k, :]
+                @views Vvooo_jk = Vvooo[:,:,j,k]
+                @views Vvooo_kj = Vvooo[:,:,k,j]
+                @views Vvooo_ki = Vvooo[:,:,k,i]
+                @views Vvooo_ik = Vvooo[:,:,i,k]
 
-                @views Vovov_1j_3k = Vovov[j,:,k,:]
-                @views Vovov_1i_3k = Vovov[i,:,k,:]
+                @views Vvvoo_jk = Vvvoo[:,:,j,k]
+                @views Vvvoo_ik = Vvvoo[:,:,i,k]
 
                 # Build intermediates W and V for the set i j k
-                @tensoropt begin
-                    W[a,b,c]  =  Vovvv_1i[a,b,d]*T2_1k_2j[c,d] - Vooov_2j_3k[l,c]*T2_1i[l,a,b]  # ijk abc
-                    W[a,b,c] +=  Vovvv_1i[a,c,d]*T2_1j_2k[b,d] - Vooov_2k_3j[l,b]*T2_1i[l,a,c]  # ikj acb
-                    W[a,b,c] +=  Vovvv_1k[c,a,d]*T2_1j_2i[b,d] - Vooov_2i_3j[l,b]*T2_1k[l,c,a]  # kij cab
-                    W[a,b,c] +=  Vovvv_1k[c,b,d]*T2_1i_2j[a,d] - Vooov_2j_3i[l,a]*T2_1k[l,c,b]  # kji cba
-                    W[a,b,c] +=  Vovvv_1j[b,c,d]*T2_1i_2k[a,d] - Vooov_2k_3i[l,a]*T2_1j[l,b,c]  # jki bca
-                    W[a,b,c] +=  Vovvv_1j[b,a,d]*T2_1k_2i[c,d] - Vooov_2i_3k[l,c]*T2_1j[l,b,a]  # jik bac
+                @tensor begin
+                    W[a,b,c] =  Vvvvo_i[d,b,a]*T2_jk[d,c] - Vvooo_ij[b,l]*T2_k[a,c,l]
+                    W[a,b,c] += Vvvvo_j[d,a,b]*T2_ik[d,c] - Vvooo_ji[a,l]*T2_k[b,c,l]
+                    W[a,b,c] += Vvvvo_k[d,a,c]*T2_ij[d,b] - Vvooo_ki[a,l]*T2_j[c,b,l]
+                    W[a,b,c] += Vvvvo_k[d,b,c]*T2_ij[a,d] - Vvooo_kj[b,l]*T2_i[c,a,l]
+                    W[a,b,c] += Vvvvo_i[d,c,a]*T2_jk[b,d] - Vvooo_ik[c,l]*T2_j[a,b,l]
+                    W[a,b,c] += Vvvvo_j[d,c,b]*T2_ik[a,d] - Vvooo_jk[c,l]*T2_i[b,a,l]
 
-                    V[a,b,c]  = W[a,b,c] + Vovov_1j_3k[b,c]*T1_1i[a] + Vovov_1i_3k[a,c]*T1_1j[b] + Vovov_1i_3j[a,b]*T1_1k[c]
+                    V[a,b,c]  = W[a,b,c] + T1_i[a]*Vvvoo_jk[b,c] + Vvvoo_ik[a,c]*T1_j[b] + Vvvoo_ij[a,b]*T1_k[c]
                 end
 
                 # Compute Energy contribution
-                δjk = j == k
+                δjk = j === k
                 for a in 1:v
                     Dijka = Dijk - fv[a]
                     for b in 1:a
                         Dijkab = Dijka - fv[b]
-                        δab = a == b
-                        for c in 1:b
+                        δab = a === b
+                        @fastmath for c in 1:b
                             Dd = Dijkab - fv[c]
-                            δbc = b == c
-                            @inbounds begin
-                                X = (W[a,b,c]*V[a,b,c] + W[a,c,b]*V[a,c,b] + W[b,a,c]*V[b,a,c] + W[b,c,a]*V[b,c,a] + W[c,a,b]*V[c,a,b] + W[c,b,a]*V[c,b,a])
-                                Y = (V[a,b,c] + V[b,c,a] + V[c,a,b])
-                                Z = (V[a,c,b] + V[b,a,c] + V[c,b,a])
-                                Ef = (Y - 2*Z)*(W[a,b,c] + W[b,c,a] + W[c,a,b]) + (Z - 2*Y)*(W[a,c,b]+W[b,a,c]+W[c,b,a]) + 3*X
-                            end
-                            Evals[i] += Ef*(2-δij-δjk)/(Dd*(1+δab+δbc))
+                            δbc = b === c
+                            X = (W[a,b,c]*V[a,b,c] + W[a,c,b]*V[a,c,b] + W[b,a,c]*V[b,a,c] + W[b,c,a]*V[b,c,a] + W[c,a,b]*V[c,a,b] + W[c,b,a]*V[c,b,a])
+                            Y = (V[a,b,c] + V[b,c,a] + V[c,a,b])
+                            Z = (V[a,c,b] + V[b,a,c] + V[c,b,a])
+                            Ef = (Y - 2*Z)*(W[a,b,c] + W[b,c,a] + W[c,a,b]) + (Z - 2*Y)*(W[a,c,b]+W[b,a,c]+W[c,b,a]) + 3*X
+                            Evals[id] += Ef*(2 - δij - δjk) / (Dd*(1 + δab + δbc))
                         end
                     end
-                end
+                end 
             end
         end
         output("  Orbital {} ✔️", i)
     end
     end
+end
 
-    LinearAlgebra.BLAS.set_num_threads(BLAS_THREADS)
+    BLAS.set_num_threads(BLAS_THREADS)
+    TBLIS.set_num_threads(TBLIS_THREADS)
     Et = sum(Evals)
     output("Finished in {:5.5f} s", t)
     output("Final (T) contribution: {:15.10f}", Et)
