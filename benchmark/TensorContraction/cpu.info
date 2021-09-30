@@ -1,0 +1,77 @@
+// Present benchmarks were run on the following CPU
+// MemTotal:       1056470432 kB
+
+
+Intel(R) processor family information utility, Version 2019 Update 1 Build 20181016 (id: 1f6a76f43)
+Copyright (C) 2005-2018 Intel Corporation.  All rights reserved.
+
+=====  Processor composition  =====
+Processor name    : Intel(R) Xeon(R) Gold 6136  
+Packages(sockets) : 4
+Cores             : 48
+Processors(CPUs)  : 48
+Cores per package : 12
+Threads per core  : 1
+
+=====  Processor identification  =====
+Processor	Thread Id.	Core Id.	Package Id.
+0       	0   		0   		0   
+1       	0   		0   		1   
+2       	0   		0   		2   
+3       	0   		0   		3   
+4       	0   		4   		0   
+5       	0   		4   		1   
+6       	0   		4   		2   
+7       	0   		4   		3   
+8       	0   		1   		0   
+9       	0   		1   		1   
+10      	0   		1   		2   
+11      	0   		1   		3   
+12      	0   		3   		0   
+13      	0   		3   		1   
+14      	0   		3   		2   
+15      	0   		3   		3   
+16      	0   		2   		0   
+17      	0   		2   		1   
+18      	0   		2   		2   
+19      	0   		2   		3   
+20      	0   		10  		0   
+21      	0   		10  		1   
+22      	0   		11  		2   
+23      	0   		11  		3   
+24      	0   		9   		0   
+25      	0   		9   		1   
+26      	0   		8   		2   
+27      	0   		10  		3   
+28      	0   		19  		0   
+29      	0   		19  		1   
+30      	0   		10  		2   
+31      	0   		19  		3   
+32      	0   		16  		0   
+33      	0   		16  		1   
+34      	0   		18  		2   
+35      	0   		17  		3   
+36      	0   		18  		0   
+37      	0   		18  		1   
+38      	0   		27  		2   
+39      	0   		18  		3   
+40      	0   		25  		0   
+41      	0   		25  		1   
+42      	0   		24  		2   
+43      	0   		24  		3   
+44      	0   		26  		0   
+45      	0   		26  		1   
+46      	0   		25  		2   
+47      	0   		25  		3   
+=====  Placement on packages  =====
+Package Id.	Core Id.	Processors
+0   		0,4,1,3,2,10,9,19,16,18,25,26		0,4,8,12,16,20,24,28,32,36,40,44
+1   		0,4,1,3,2,10,9,19,16,18,25,26		1,5,9,13,17,21,25,29,33,37,41,45
+2   		0,4,1,3,2,11,8,10,18,27,24,25		2,6,10,14,18,22,26,30,34,38,42,46
+3   		0,4,1,3,2,11,10,19,17,18,24,25		3,7,11,15,19,23,27,31,35,39,43,47
+
+=====  Cache sharing  =====
+Cache	Size		Processors
+L1	32  KB		no sharing
+L2	1   MB		no sharing
+L3	24  MB		(0,4,8,12,16,20,24,28,32,36,40,44)(1,5,9,13,17,21,25,29,33,37,41,45)(2,6,10,14,18,22,26,30,34,38,42,46)(3,7,11,15,19,23,27,31,35,39,43,47)
