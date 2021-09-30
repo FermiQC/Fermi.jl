@@ -47,11 +47,9 @@ function RCCSDpT(ccsd::RCCSD, moints::IntegralHelper{T,E,O}, Alg::RpTa) where {T
     output("Computing energy contribution from occupied orbitals:")
     BLAS_THREADS = BLAS.get_num_threads()
     BLAS.set_num_threads(1)
-    TBLIS_THREADS = TBLIS.set_num_threads(1)
+    TBLIS_THREADS = TBLIS.set_num_threads(3)
 
     t = @elapsed begin
-    #@sync for i in 1:o 
-    #hreads.@spawn begin
     Threads.@threads for i in 1:o
     @inbounds begin
         id = Threads.threadid()
@@ -143,9 +141,9 @@ function RCCSDpT(ccsd::RCCSD, moints::IntegralHelper{T,E,O}, Alg::RpTa) where {T
             end
         end
         output("  Orbital {} ✔️", i)
-    end
-    end
-end
+    end # Threads (i loop)
+    end # inbounds
+    end # time
 
     BLAS.set_num_threads(BLAS_THREADS)
     TBLIS.set_num_threads(TBLIS_THREADS)

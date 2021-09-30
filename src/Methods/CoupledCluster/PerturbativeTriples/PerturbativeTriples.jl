@@ -1,7 +1,7 @@
 abstract type RpTAlgorithm end
 
 function get_rpt_alg()
-    implemented = [RpTa()]
+    implemented = [RpTa(), RpTb()]
     N = Options.get("pt_alg")
     try 
         return implemented[N]
@@ -40,4 +40,6 @@ end
 
 #implementations
 struct RpTa <: RpTAlgorithm end
+struct RpTb <: RpTAlgorithm end
 include("RpTa.jl")
+include("RpTb.jl")
