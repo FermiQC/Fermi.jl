@@ -1,0 +1,28 @@
+import psi4
+
+# Basic options trying to be uniform
+
+psi4.set_num_threads(10)
+psi4.set_memory('90 GB')
+psi4.set_options({"basis" : "cc-pvdz",
+                  "scf_type" : "df",
+                  "mp2_type" : "df",
+                  "df_basis_scf" : "cc-pvtz-jkfit",
+                  "df_basis_mp2" : "cc-pvtz-ri",
+                  "puream" : True,
+                  "e_convergence" : 1e-8,
+                  "d_convergence" : 1e-8})
+
+molecule {
+ N   -1.578718000000   -0.046611000000    0.000000000000
+ H   -2.158621000000    0.136396000000   -0.809565000000
+ H   -2.158621000000    0.136396000000    0.809565000000
+ H   -0.849471000000    0.658193000000    0.000000000000
+ N    1.578718000000    0.046611000000    0.000000000000
+ H    2.158621000000   -0.136396000000   -0.809565000000
+ H    0.849471000000   -0.658193000000    0.000000000000
+ H    2.158621000000   -0.136396000000    0.809565000000
+symmetry c1
+}
+
+energy("mp2")

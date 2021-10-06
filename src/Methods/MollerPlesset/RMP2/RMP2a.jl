@@ -1,69 +1,68 @@
 using LoopVectorization
 using LinearAlgebra
 using MKL
-using TensorOperations
 
-function RMP2(Alg::RMP2a)
+function RMP2(Alg::RMP2Algorithm)
     aoints = IntegralHelper{Float64}()
     rhf = RHF(aoints)
     moints = IntegralHelper(orbitals=rhf.orbitals)
     RMP2(moints, aoints, Alg)
 end
 
-function RMP2(aoints::IntegralHelper{Float64,E,AtomicOrbitals}, Alg::RMP2a) where E <: AbstractERI
+function RMP2(aoints::IntegralHelper{Float64,E,AtomicOrbitals}, Alg::RMP2Algorithm) where E <: AbstractERI
     rhf = RHF(aoints)
     moints = IntegralHelper(orbitals=rhf.orbitals)
     RMP2(moints, aoints, Alg)
 end
 
-function RMP2(O::AbstractRestrictedOrbitals, Alg::RMP2a)
+function RMP2(O::AbstractRestrictedOrbitals, Alg::RMP2Algorithm)
     aoints = IntegralHelper()
     moints = IntegralHelper(orbitals=O)
     RMP2(moints, aoints, Alg)
 end
 
-function RMP2(rhf::RHF, Alg::RMP2a)
+function RMP2(rhf::RHF, Alg::RMP2Algorithm)
     aoints = IntegralHelper()
     moints = IntegralHelper(orbitals=rhf.orbitals)
     RMP2(moints, aoints, Alg)
 end
 
-function RMP2(M::Molecule, Alg::RMP2a)
+function RMP2(M::Molecule, Alg::RMP2Algorithm)
     aoints = IntegralHelper{Float64}(molecule = M, eri_type=SparseERI)
     rhf = RHF(aoints)
     moints = IntegralHelper(molecule = M, orbitals=rhf.orbitals)
     RMP2(moints, aoints, Alg)
 end
 
-function RMP2(moints::IntegralHelper{T1,Chonky,O}, aoints::IntegralHelper{T2,E,AtomicOrbitals}, Alg::RMP2a) where {T1<:AbstractFloat,
+function RMP2(moints::IntegralHelper{T1,Chonky,O}, aoints::IntegralHelper{T2,E,AtomicOrbitals}, Alg::RMP2Algorithm) where {T1<:AbstractFloat,
                                                                                         T2<:AbstractFloat,O<:RHFOrbitals,E<:AbstractERI}
     mp_header()
     mo_from_ao!(moints, aoints, "OVOV")
     RMP2(moints, Alg)
 end
 
-function RMP2(moints::IntegralHelper{T1,E1,O}, aoints::IntegralHelper{T2,E2,AtomicOrbitals}, Alg::RMP2a) where {T1<:AbstractFloat,T2<:AbstractFloat,
+function RMP2(moints::IntegralHelper{T1,E1,O}, aoints::IntegralHelper{T2,E2,AtomicOrbitals}, Alg::RMP2Algorithm) where {T1<:AbstractFloat,T2<:AbstractFloat,
                                                                                 E1<:AbstractDFERI,E2<:AbstractDFERI,O<:RHFOrbitals}
     mp_header()
     mo_from_ao!(moints, aoints, "BOV")
     RMP2(moints, Alg)
 end
 
-function RMP2(moints::IntegralHelper{T1,Chonky,O}, aoints::IntegralHelper{T2,E,AtomicOrbitals}, Alg::RMP2a) where {T1<:AbstractFloat,
+function RMP2(moints::IntegralHelper{T1,Chonky,O}, aoints::IntegralHelper{T2,E,AtomicOrbitals}, Alg::RMP2Algorithm) where {T1<:AbstractFloat,
                                                                                         T2<:AbstractFloat,O<:AbstractRestrictedOrbitals,E<:AbstractERI}
     mp_header()
     mo_from_ao!(moints, aoints, "Fia","OVOV")
     RMP2(moints, Alg)
 end
 
-function RMP2(moints::IntegralHelper{T1,E1,O}, aoints::IntegralHelper{T2,E2,AtomicOrbitals}, Alg::RMP2a) where {T1<:AbstractFloat,T2<:AbstractFloat,
+function RMP2(moints::IntegralHelper{T1,E1,O}, aoints::IntegralHelper{T2,E2,AtomicOrbitals}, Alg::RMP2Algorithm) where {T1<:AbstractFloat,T2<:AbstractFloat,
                                                                                 E1<:AbstractDFERI,E2<:AbstractDFERI,O<:AbstractRestrictedOrbitals}
     mp_header()
     mo_from_ao!(moints, aoints, "Fia","BOV")
     RMP2(moints, Alg)
 end
 
-function RMP2(ints::IntegralHelper{<:AbstractFloat,<:AbstractERI,<:AbstractRestrictedOrbitals}, Alg::RMP2a)
+function RMP2(ints::IntegralHelper{<:AbstractFloat,<:AbstractERI,<:AbstractRestrictedOrbitals}, Alg::RMP2Algorithm)
 
     # Check frozen core and inactive virtual
     ndocc = ints.molecule.Nα
@@ -101,7 +100,7 @@ function RMP2(ints::IntegralHelper{<:AbstractFloat,<:AbstractERI,<:AbstractRestr
     RMP2(Emp2, Emp2+Eref)
 end
 
-function RMP2_energy(ints::IntegralHelper{T,E,O}, Alg::RMP2a) where {T<:AbstractFloat, E<:AbstractERI,O<:AbstractRestrictedOrbitals}
+function RMP2_energy(ints::IntegralHelper{T,E,O}, Alg::RMP2Algorithm) where {T<:AbstractFloat, E<:AbstractERI,O<:AbstractRestrictedOrbitals}
     inac = Options.get("drop_vir")
     core = Options.get("drop_occ")
     ndocc = ints.molecule.Nα
@@ -109,13 +108,13 @@ function RMP2_energy(ints::IntegralHelper{T,E,O}, Alg::RMP2a) where {T<:Abstract
     ϵo = ints["Fd"][(core+1):ndocc]
     ϵv = ints["Fd"][(ndocc+1):(nbf-inac)]
 
-    Emp2 = RMP2_nonrhf_energy(ints, ϵo, ϵv)
-    Emp2 += RMP2_rhf_energy(ints, ϵo, ϵv)
+    Emp2 = RMP2_nonrhf_energy(ints, ϵo, ϵv, Alg)
+    Emp2 += RMP2_rhf_energy(ints, ϵo, ϵv, Alg)
 
     return Emp2
 end
 
-function RMP2_energy(ints::IntegralHelper{T,E,RHFOrbitals}, Alg::RMP2a) where {T<:AbstractFloat, E<:AbstractERI}
+function RMP2_energy(ints::IntegralHelper{T,E,RHFOrbitals}, Alg::RMP2Algorithm) where {T<:AbstractFloat, E<:AbstractERI}
     inac = Options.get("drop_vir")
     core = Options.get("drop_occ")
     ndocc = ints.molecule.Nα
@@ -123,12 +122,12 @@ function RMP2_energy(ints::IntegralHelper{T,E,RHFOrbitals}, Alg::RMP2a) where {T
     ϵo = ints["Fd"][(core+1):ndocc]
     ϵv = ints["Fd"][(ndocc+1):(nbf-inac)]
 
-    Emp2 = RMP2_rhf_energy(ints, ϵo, ϵv)
+    Emp2 = RMP2_rhf_energy(ints, ϵo, ϵv, Alg)
 
     return Emp2
 end
 
-function RMP2_nonrhf_energy(ints::IntegralHelper{T,E,O}, ϵo::AbstractArray{T,1}, ϵv::AbstractArray{T,1}) where {T<:AbstractFloat,E<:AbstractERI, O<:AbstractRestrictedOrbitals}
+function RMP2_nonrhf_energy(ints::IntegralHelper{T,E,O}, ϵo::AbstractArray{T,1}, ϵv::AbstractArray{T,1}, Alg::RMP2Algorithm) where {T<:AbstractFloat,E<:AbstractERI, O<:AbstractRestrictedOrbitals}
 
     t = @elapsed begin
     output("Computing non-RHF contribution to the MP2 energy... ", ending="")
@@ -142,10 +141,11 @@ function RMP2_nonrhf_energy(ints::IntegralHelper{T,E,O}, ϵo::AbstractArray{T,1}
     return Emp2
 end
 
-function RMP2_rhf_energy(ints::IntegralHelper{T,RIFIT,O}, ϵo::AbstractArray{T,1}, ϵv::AbstractArray{T,1}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+function RMP2_rhf_energy(ints::IntegralHelper{T,RIFIT,O}, ϵo::AbstractArray{T,1}, ϵv::AbstractArray{T,1}, Alg::RMP2a) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
     Bvo = permutedims(ints["BOV"].data, (1,3,2))
 
-    output(" Computing DF-MP2 Energy... ", ending="")
+    output(" Computing DF-MP2 Energy")
+    output(" - Contraction engine: MKL")
     v_size = length(ϵv)
     o_size = length(ϵo)
 
@@ -153,7 +153,7 @@ function RMP2_rhf_energy(ints::IntegralHelper{T,RIFIT,O}, ϵo::AbstractArray{T,1
     BABs = [zeros(T, v_size, v_size) for _ = 1:Threads.nthreads()]
 
     # Disable BLAS threading
-    nt = BLAS.get_num_threads()
+    nt  = BLAS.get_num_threads()
     BLAS.set_num_threads(1)
 
     # Vector containing the energy contribution computed by each thread
@@ -171,7 +171,7 @@ function RMP2_rhf_energy(ints::IntegralHelper{T,RIFIT,O}, ϵo::AbstractArray{T,1
             for j in i:o_size
 
                 @views Bj = Bvo[:,:,j]
-                @tensor Bab[a,b] = Bi[Q,a]*Bj[Q,b]
+                mul!(Bab, transpose(Bi), Bj)
 
                 eij = ϵo[i] + ϵo[j]
                 E = zero(T)
@@ -195,7 +195,7 @@ function RMP2_rhf_energy(ints::IntegralHelper{T,RIFIT,O}, ϵo::AbstractArray{T,1
     return Emp2
 end
 
-function RMP2_rhf_energy(ints::IntegralHelper{T,Chonky,O}, ϵo::AbstractArray{T,1}, ϵv::AbstractArray{T,1}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+function RMP2_rhf_energy(ints::IntegralHelper{T,Chonky,O}, ϵo::AbstractArray{T,1}, ϵv::AbstractArray{T,1}, Alg::RMP2Algorithm) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
     output(" Computing MP2 Energy... ", ending="")
     ovov = ints["OVOV"]
 

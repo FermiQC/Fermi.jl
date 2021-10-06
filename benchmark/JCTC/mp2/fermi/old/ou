@@ -1,0 +1,7 @@
+┌ Warning: Package Fermi does not have LoopVectorization in its dependencies:
+│ - If you have Fermi checked out for development and have
+│   added LoopVectorization as a dependency but haven't updated your primary
+│   environment's manifest file, try `Pkg.resolve()`.
+│ - Otherwise you may need to report an issue with Fermi
+└ Loading LoopVectorization into Fermi from project dependency, future warnings for Fermi are suppressed.
+nt: 10
