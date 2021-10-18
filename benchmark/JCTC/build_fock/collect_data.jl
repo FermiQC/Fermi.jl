@@ -57,6 +57,7 @@ function get_psi4()
         timings[i] = (Ft[1] + Gt[1]) / Ncalls[1]
     end
 
+    cd("..")
     return timings
 end
 
