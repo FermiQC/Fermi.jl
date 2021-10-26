@@ -1,12 +1,19 @@
 using PrettyTables
+using Statistics
+
+function hasoutliers(data)
+    Qi, Qf = quantile(data, [0.01, 0.99])
+    return any( data .> Qf) || any(data .< Qi)
+end
 
 function raw_average(p = :fermi, engine = "MKL")
     if p == :fermi
         timings = get_fermi(engine)
+        avg = [sum(timings[s,:])/10 for s = 1:22]
     else
         timings = get_psi4()
+        avg = [sum(timings[s,:])/5 for s = 1:22]
     end
-    avg = [sum(timings[s,:])/10 for s = 1:22]
     return avg
 end
 
@@ -14,7 +21,7 @@ function get_fermi(engine = "MKL")
     timings = zeros(22,10)
     for s in 1:22
         for i in 1:10
-            rex = Regex("$(engine) DF-MP2 Energy: S$s\\s+?$i run:\\s+([0-9]*\\.?[0-9]*)")
+            rex = Regex("S$s - \\(T\\) alg $(engine == "MKL" ? 1 : 2)\\s+?$i run:\\s+([0-9]*\\.?[0-9]*)")
             timings[s,i] = get_linedata(rex, "fermi/output.dat")
         end
     end
@@ -22,13 +29,12 @@ function get_fermi(engine = "MKL")
 end
 
 function get_psi4()
-    Erex = r"DFMP2\sEnergy\s+:.+?([0-9]*\.?[0-9]*)w\s+[0-9]+\scalls"
-    Rrex = r"DFMP2\sBia Read\s+:.+?([0-9]*\.?[0-9]*)w\s+[0-9]+\scalls"
-    timings = zeros(22, 10)
+    Erex = r"FNOCC:\striples\s+:.+?([0-9]*\.?[0-9]*)w\s+[0-9]+\scalls"
+    timings = zeros(22, 5)
     for s in 1:22
-        for i in 1:10
+        for i in 1:5
             path = joinpath(@__DIR__, "psi4/R$i/S$s/timer.dat")
-            timings[s,i] = get_linedata(Erex, path) - get_linedata(Rrex, path)
+            timings[s,i] = get_linedata(Erex, path)
         end
     end
     return timings

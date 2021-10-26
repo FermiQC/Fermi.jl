@@ -1,0 +1,24 @@
+Python Version: 3.8.8.final.0 (64 bit)
+Cpuinfo Version: 7.0.0
+Vendor ID Raw: GenuineIntel
+Hardware Raw: 
+Brand Raw: Intel(R) Core(TM) i9-10900 CPU @ 2.80GHz
+Hz Advertised Friendly: 2.8000 GHz
+Hz Actual Friendly: 4.0000 GHz
+Hz Advertised: (2800000000, 0)
+Hz Actual: (3999962000, 0)
+Arch: X86_64
+Bits: 64
+Count: 20
+Arch String Raw: x86_64
+L1 Data Cache Size: 32768
+L1 Instruction Cache Size: 32768
+L2 Cache Size: 262144
+L2 Cache Line Size: 256
+L2 Cache Associativity: 6
+L3 Cache Size: 20971520
+Stepping: 5
+Model: 165
+Family: 6
+Processor Type: 
+Flags: 3dnowprefetch, abm, acpi, adx, aes, aperfmperf, apic, arat, arch_capabilities, arch_perfmon, art, avx, avx2, bmi1, bmi2, bts, clflush, clflushopt, cmov, constant_tsc, cpuid, cpuid_fault, cx16, cx8, de, ds_cpl, dtes64, dtherm, dts, epb, ept, ept_ad, erms, est, f16c, flexpriority, flush_l1d, fma, fpu, fsgsbase, fxsr, ht, hwp, hwp_act_window, hwp_epp, hwp_notify, ibpb, ibrs, ibrs_enhanced, ida, intel_pt, invpcid, invpcid_single, lahf_lm, lm, mca, mce, md_clear, mmx, monitor, movbe, mpx, msr, mtrr, nonstop_tsc, nopl, nx, ospke, osxsave, pae, pat, pbe, pcid, pclmulqdq, pdcm, pdpe1gb, pebs, pge, pku, pln, pni, popcnt, pse, pse36, pts, rdrand, rdrnd, rdseed, rdtscp, rep_good, sdbg, sep, sgx, sgx_lc, smap, smep, smx, ss, ssbd, sse, sse2, sse4_1, sse4_2, ssse3, stibp, syscall, tm, tm2, tpr_shadow, tsc, tsc_adjust, tsc_deadline_timer, tscdeadline, vme, vmx, vnmi, vpid, x2apic, xgetbv1, xsave, xsavec, xsaveopt, xsaves, xtopology, xtpr
