@@ -107,7 +107,7 @@ Fermi is a collection of *ab initio* methods. The long term goal is to provide p
 6. Interface with external modules for geometry optimization, vibrational analysis and themodynamic properties.
 
 ### Improvements
-1. In an effort to improve the composability within the Julia chemistry community, some modules are going to be factorized out and Fermi will act as a high-level interface. For example, we intend to create a HartreeFock.jl package with all the current code in `Fermi.HartreeFock`. This way, anyone interest in the bare Hartree-Fock code can have a cleaner access to it. 
+1. In an effort to improve the composability within the Julia chemistry community, some modules are going to be factorized out and Fermi will act as a high-level interface. For example, we intend to create a GaussianBasis.jl package with all the current integral code in it. That way, anyone interested in a basic, yet high level, integral code can use it.
 
 2. Performance boosts are always welcome! We need further testing and comparisons with well establish codes to find points to be improved. New backends for `BLAS` or `TBLIS` may also be considered.
 
