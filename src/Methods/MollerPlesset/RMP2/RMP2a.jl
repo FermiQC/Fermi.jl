@@ -1,6 +1,5 @@
 using LoopVectorization
 using LinearAlgebra
-using MKL
 
 function RMP2(Alg::RMP2Algorithm)
     aoints = IntegralHelper{Float64}()

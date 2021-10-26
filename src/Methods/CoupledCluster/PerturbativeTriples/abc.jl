@@ -1,6 +1,5 @@
 using LinearAlgebra
 using LoopVectorization
-using MKL
 
 function RCCSDpT(rhf::RHF, Alg::abc)
     aoints = IntegralHelper()

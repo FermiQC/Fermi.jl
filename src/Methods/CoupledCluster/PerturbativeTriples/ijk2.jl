@@ -1,6 +1,5 @@
 using LinearAlgebra
 using LoopVectorization
-using MKL
 using Octavian
 
 function RCCSDpT(rhf::RHF, Alg::ijk2)
