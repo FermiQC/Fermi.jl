@@ -1,7 +1,7 @@
 abstract type RpTAlgorithm end
 
 function get_rpt_alg()
-    implemented = [RpTa()]
+    implemented = [ijk(), ijk2(), abc()]
     N = Options.get("pt_alg")
     try 
         return implemented[N]
@@ -39,5 +39,9 @@ function RCCSDpT(x...)
 end
 
 #implementations
-struct RpTa <: RpTAlgorithm end
-include("RpTa.jl")
+struct ijk <: RpTAlgorithm end
+struct ijk2 <: RpTAlgorithm end
+struct abc <: RpTAlgorithm end
+include("ijk.jl")
+include("ijk2.jl")
+include("abc.jl")

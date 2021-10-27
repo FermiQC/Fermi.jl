@@ -1,7 +1,6 @@
 module Orbitals
 
 using Fermi
-using Fermi.Geometry
 using Fermi.GaussianBasis
 using TensorOperations
 
@@ -49,7 +48,7 @@ Alternatively, one can pass these informations explicitly:
 
     Orbs = GeneralRestrictedOrbitals(X, molecule=mol, name="myorbitals", basis="cc-pvdz")
 
-`name` and `basis` are Strings, whereas `mol` is a `Fermi.Geometry.Molecule` object.
+`name` and `basis` are Strings, whereas `mol` is a `Fermi.Molecule` object.
 
 # Fields
 
@@ -71,7 +70,7 @@ end
 
 function GeneralRestrictedOrbitals(C::AbstractArray{T,2}; mol=nothing, basis="undef", sd_energy=zero(T)) where T <: AbstractFloat
 
-    mol === nothing ? mol = Fermi.Geometry.Molecule() : nothing
+    mol === nothing ? mol = Fermi.Molecule() : nothing
     basis == "undef" ? basis = Fermi.Options.get("basis") : nothing
 
     GeneralRestrictedOrbitals{T}(mol, basis, sd_energy, C)

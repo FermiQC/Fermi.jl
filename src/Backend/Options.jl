@@ -1,4 +1,4 @@
-export @get, @set, @reset, @molecule, @lookup
+export @get, @set, @reset, @molecule, @lookup, @freezecore
 
 using Formatting
 using PrettyTables
@@ -96,8 +96,9 @@ const Default = Dict{String,Union{Float64,Int,String,Bool}}(
                                   "cas_nroot" => 1,
                                   "min_matrix_elem" => 10^-9,
                                   "precision_override" => false,
-                                  "tblis" => false,
-                                  "eri_cutoff" => 10^-12
+                                  "tblis" => true,
+                                  "eri_cutoff" => 10^-12,
+                                  "findif_disp_size" => 0.005
                                  )
 """
     Fermi.Options.Current
@@ -503,5 +504,23 @@ macro lookup(A::Symbol)
             end
             pretty_table(data; header=["Keyword", "Current Value"])
         end
+    end
+end
+
+macro freezecore()
+    quote 
+        mol = Fermi.Molecule()
+        atoms = mol.atoms
+        # Dcore maps ranges of atomic numbers to number of core electrons
+        Dcore = Fermi.PhysicalConstants.core_elec_perrow
+        Ncore = 0
+        for a in atoms
+            for k in keys(Dcore)
+                a.Z in k ? Ncore += Dcore[k] : nothing
+            end
+        end
+        # Divide by two to get number of dropped occupied
+        Ncore = Ncore >> 1
+        Fermi.Options.set("drop_occ", Ncore)
     end
 end

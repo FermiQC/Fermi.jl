@@ -6,13 +6,13 @@ Module for running Hartree--Fock computations in Fermi.
 # Methods
 
     > Fermi.HartreeFock.RHF
+    > Fermi.HartreeFock.UHF
 """
 module HartreeFock
 # Import Fermi basics
 using LinearAlgebra: hermitian, vcat
 using Fermi
 using Fermi.Options
-using Fermi.Geometry
 using Fermi.Integrals
 using Fermi.Orbitals
 

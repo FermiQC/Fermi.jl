@@ -17,7 +17,7 @@ abstract type RMP2Algorithm end
 Returns a singleton type corresponding to a RMP2 implementation based on the options.
 """
 function get_rmp2_alg()
-    implemented = [RMP2a()]
+    implemented = [RMP2a(), RMP2b()]
     N = Options.get("mp2_alg")
     try 
         return implemented[N]
@@ -39,6 +39,8 @@ end
 # For each implementation a singleton type must be create
 struct RMP2a <: RMP2Algorithm end
 include("RMP2a.jl")
+struct RMP2b <: RMP2Algorithm end
+include("RMP2b.jl")
 
 function RMP2(x...)
     if !any(i-> i isa RMP2Algorithm, x)

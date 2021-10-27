@@ -121,6 +121,7 @@ function cc_update_T2!(newT2::AbstractArray{T,4}, T1::AbstractArray{T,2}, T2::Ab
     cc_update_T2_v4_term!(newT2, T1, T2, moints, alg)
 
     TWO = T(2)
+    FOUR = T(4)
     @tensoropt (i=>x, j=>x, k=>x, l=>x, a=>10x, b=>10x, c=>10x, d=>10x) begin
         newT2[i,j,a,b] += Vovov[i,a,j,b]
         newT2[i,j,a,b] += T1[k,a]*T1[l,b]*Voooo[i,k,j,l]
@@ -140,7 +141,7 @@ function cc_update_T2!(newT2::AbstractArray{T,4}, T1::AbstractArray{T,2}, T2::Ab
         newT2[i,j,a,b] += T2[i,j,a,c]*T2[l,k,b,d]*Vovov[k,c,l,d]
         newT2[i,j,a,b] += -TWO*T2[i,j,a,c]*T2[k,l,b,d]*Vovov[k,c,l,d]
         newT2[i,j,a,b] += T2[k,j,a,c]*T2[i,l,d,b]*Vovov[l,c,k,d]
-        newT2[i,j,a,b] += 4.0*T2[i,k,a,c]*T2[j,l,b,d]*Vovov[k,c,l,d]
+        newT2[i,j,a,b] += FOUR*T2[i,k,a,c]*T2[j,l,b,d]*Vovov[k,c,l,d]
         newT2[i,j,a,b] += T2[i,j,d,c]*T2[l,k,a,b]*Vovov[k,c,l,d]
         newT2[i,j,a,b] += T1[i,c]*T1[j,d]*T1[k,a]*T1[l,b]*Vovov[k,c,l,d]
         newT2[i,j,a,b] += T1[i,c]*T1[j,d]*T2[l,k,a,b]*Vovov[l,c,k,d]

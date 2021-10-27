@@ -8,7 +8,6 @@ module Integrals
 using Fermi
 using Fermi.Libcint
 using Fermi.Options
-using Fermi.Geometry
 using Fermi.GaussianBasis
 using Fermi.Orbitals
 using LinearAlgebra
@@ -163,8 +162,13 @@ function IntegralHelper(x...;k...)
     end
 end
 
-function IntegralHelper{T}(;molecule = Molecule(), orbitals = AtomicOrbitals(), 
+function IntegralHelper{T}(;molecule = Molecule(), orbitals = nothing, 
                            basis = Options.get("basis"), eri_type=nothing) where T<:AbstractFloat
+
+    if orbitals === nothing
+        bset = BasisSet(molecule, basis)
+        orbitals = AtomicOrbitals(bset)
+    end
 
     # If the associated orbitals are AtomicOrbitals and DF is requested, JKFIT is set by default
     if Options.get("df") && orbitals isa AtomicOrbitals && eri_type === nothing

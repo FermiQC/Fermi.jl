@@ -26,7 +26,7 @@ include("Backend/Output.jl")
 include("Backend/Libcint.jl")
 include("Backend/PhysicalConstants.jl")
 include("Core/DIIS.jl")
-include("Core/Geometry.jl")                               
+include("Core/Molecule.jl")                               
 include("Core/BasisSet.jl")
 include("Core/Orbitals.jl")
 include("Core/IntegralHelper.jl")
@@ -35,5 +35,6 @@ include("Methods/MollerPlesset/MollerPlesset.jl")
 include("Methods/CoupledCluster/CoupledCluster.jl")
 
 include("Tools/SinglePointEnergy.jl")
+include("Tools/FiniteDifferences.jl")
 
 end # module

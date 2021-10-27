@@ -26,12 +26,6 @@ Fermi.DIIS
 Fermi.PhysicalConstants
 ```
 
-## Geometry
-
-```@docs
-Fermi.Geometry
-```
-
 ## GaussianBasis
 
 ```@docs

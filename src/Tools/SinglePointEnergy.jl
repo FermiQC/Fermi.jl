@@ -35,12 +35,8 @@ or
     RHF            Restricted Hartree-Fock.
     UHF            Unrestricted Hartree-Fock
     RMP2           Restricted Moller-Plesset PT order 2.
-    RMP3           Restricted Moller-Plesset PT order 3.
-    CASCI          Restricted configuration interaction within given active space.
     CCSD           Restricted Coupled-Cluster with Single and Double substitutions
     CCSD(T)        Restricted Coupled-Cluster with Single and Double substitutions and perturbative triples.
-    ecCCSD         Restricted externally corrected CCSD. External correction from CASCI computation.
-    ecCCSD(T)      Restricted externally corrected CCSDpT. External correction from CASCI computation.
 """
 macro energy(comm)
     # Clean spaces and colon from string

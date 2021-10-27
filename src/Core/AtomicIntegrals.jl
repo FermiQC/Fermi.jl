@@ -34,7 +34,8 @@ function compute_ERI!(I::IntegralHelper{T, E, AtomicOrbitals}) where {T<:Abstrac
     auxbs = I.eri_type.basisset
     J = FermiMDArray(ao_2e2c(auxbs, T))
     Pqp = FermiMDArray(ao_2e3c(bs, auxbs, T))
-    Jh = Array(real(J^(-1/2)))
+    Jh = similar(J)
+    Jh .= Array(real(J^(-1/2)))
     @tensor b[Q,p,q] := Pqp[p,q,P]*Jh[P,Q]
     I.cache["ERI"] = b
 end
@@ -81,7 +82,7 @@ function find_indices(nbf::Signed)
     return out
 end
 
-include("Integrals/OneElectron.jl")
-include("Integrals/TwoElectronTwoCenter.jl")
-include("Integrals/TwoElectronThreeCenter.jl")
-include("Integrals/TwoElectronFourCenter.jl")
+include("AtomicIntegrals/OneElectron.jl")
+include("AtomicIntegrals/TwoElectronTwoCenter.jl")
+include("AtomicIntegrals/TwoElectronThreeCenter.jl")
+include("AtomicIntegrals/TwoElectronFourCenter.jl")

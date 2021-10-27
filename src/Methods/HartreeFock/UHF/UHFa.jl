@@ -28,7 +28,7 @@ end
 
 function UHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, Cα::FermiMDArray{Float64, 2}, Cβ::FermiMDArray{Float64, 2}, Λ::FermiMDArray{Float64, 2}, Alg::UHFa)
     molecule = ints.molecule
-    output(Fermi.Geometry.string_repr(molecule))
+    output(Fermi.string_repr(molecule))
     
     # Grab options
     maxit = Options.get("scf_max_iter")
