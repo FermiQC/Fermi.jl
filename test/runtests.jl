@@ -13,8 +13,6 @@ tol = 1E-8
     include("test_arrays.jl")
     include("test_contract.jl")
     include("test_geometry.jl")
-    include("test_basisset.jl")
-    include("test_integrals.jl")
     include("test_diis.jl")
     include("test_orbitals.jl")
     include("test_phycons.jl")

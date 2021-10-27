@@ -6,16 +6,17 @@ Module to compute and manage molecular integrals.
 module Integrals
 
 using Fermi
-using Fermi.Libcint
 using Fermi.Options
-using Fermi.GaussianBasis
 using Fermi.Orbitals
 using LinearAlgebra
+using GaussianBasis
 using TensorOperations
 
 import Base: getindex, setindex!, delete!, show
 
 export IntegralHelper, delete!, mo_from_ao!, JKFIT, RIFIT, Chonky, AbstractDFERI, AbstractERI, SparseERI
+export BasisSet, BasisFunction
+
 
 """
     Fermi.Integrals.AbstractERI
@@ -44,7 +45,7 @@ Concrete type representing a density-fitted ERI using a JKFIT auxiliar basis set
 
 | Name       | Type       | Description |
 |:-----------|:-----------|:----------------------------------------------------|
-|`basisset`  | `BasisSet` | Fermi.GaussianBasis.BasisSet object for the auxiliar JK basis |
+|`basisset`  | `BasisSet` | BasisSet object for the auxiliar JK basis |
 
 # Examples
 
@@ -76,7 +77,7 @@ function JKFIT(mol::Molecule = Molecule())
 end
 
 function JKFIT(mol::Molecule, basis::String)
-    return JKFIT(BasisSet(mol, basis))
+    return JKFIT(BasisSet(basis, mol.atoms))
 end
 
 """
@@ -88,7 +89,7 @@ Concrete type representing a density-fitted ERI using a RIFIT auxiliar basis set
 
 | Name       | Type       | Description |
 |:-----------|:-----------|:----------------------------------------------------|
-|`basisset`  | `BasisSet` | Fermi.GaussianBasis.BasisSet object for the auxiliar RI basis |
+|`basisset`  | `BasisSet` | BasisSet object for the auxiliar RI basis |
 
 # Struct tree
 
@@ -112,7 +113,7 @@ function RIFIT(mol::Molecule = Molecule())
 end
 
 function RIFIT(mol::Molecule, basis::String)
-    return RIFIT(BasisSet(mol, basis))
+    return RIFIT(BasisSet(basis, mol.atoms))
 end
 
 struct Chonky <:AbstractERI end
@@ -166,7 +167,7 @@ function IntegralHelper{T}(;molecule = Molecule(), orbitals = nothing,
                            basis = Options.get("basis"), eri_type=nothing) where T<:AbstractFloat
 
     if orbitals === nothing
-        bset = BasisSet(molecule, basis)
+        bset = BasisSet(basis, molecule.atoms)
         orbitals = AtomicOrbitals(bset)
     end
 
