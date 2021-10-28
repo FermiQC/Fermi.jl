@@ -3,7 +3,7 @@ import Base: size, permutedims, permutedims!, getindex, setindex!, ndims, show, 
 import Base: iterate, length, similar, adjoint, eltype, +, -, *, /, ^, BroadcastStyle
 import Strided: UnsafeStridedView
 
-export FermiMDArray, FermiMDrand, FermiMDzeros, Fermi4SymArray, diagonalize
+export FermiMDArray, FermiMDrand, FermiMDzeros, FermiSparse, diagonalize
 
 abstract type AbstractFermiArray{T,N} <: AbstractArray{T,N} end
 """
@@ -77,18 +77,18 @@ function index2(i::Signed, j::Signed)::Signed
 end
 
 # This function is not useful currently, but it will be for direct computations
-function index4(i::Signed , j::Signed, k::Signed, l::Signed)::Signed
-    return index2(index2(i,j), index2(k,l))
-end
-
-function getindex(A::Fermi4SymArray, I::Vararg{Signed,4})
-    idx = index4((I .- 1)...) + 1
-    return A.data[idx]
-end
-
-function getindex(A::Fermi4SymArray, i::Signed)
-    return A.data[i]
-end
+#function index4(i::Signed , j::Signed, k::Signed, l::Signed)::Signed
+#    return index2(index2(i,j), index2(k,l))
+#end
+#
+#function getindex(A::Fermi4SymArray, I::Vararg{Signed,4})
+#    idx = index4((I .- 1)...) + 1
+#    return A.data[idx]
+#end
+#
+#function getindex(A::Fermi4SymArray, i::Signed)
+#    return A.data[i]
+#end
 
 # Creates a FermiMDArray from a native Julia Array
 function FermiMDArray(A::AbstractArray)
