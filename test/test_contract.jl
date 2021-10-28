@@ -4,7 +4,7 @@ import TBLIS
 import TensorOperations: contract!
 
 @testset "Tensor Contraction" begin
-    Fermi.tblis_set_num_threads(1)
+    Fermi.set_num_threads(1)
     @test TBLIS.get_num_threads() == 1
 
     # Using Aᵢₘₙ⋅Bₘₙⱼ = Cᵢⱼ

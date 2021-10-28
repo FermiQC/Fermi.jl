@@ -8,7 +8,7 @@ import TensorOperations: scalar
 import TBLIS
 
 function set_num_threads(N = Threads.nthreads())
-    tblis_set_num_threads(N)
+    TBLIS.set_num_threads(N)
     LinearAlgebra.BLAS.set_num_threads(N)
 end
 

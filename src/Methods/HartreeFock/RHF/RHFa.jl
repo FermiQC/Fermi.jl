@@ -1,3 +1,5 @@
+using GaussianBasis
+
 function RHF(Alg::RHFa)
     ints = IntegralHelper{Float64}()
     RHF(ints, Alg)
@@ -39,22 +41,21 @@ function RHF(wfn::RHF, Alg::RHFa)
 
     output("Using {} wave function as initial guess", wfn.orbitals.basis)
 
+    # B = target basis set
     intsB = IntegralHelper{Float64}()
 
     # Assert both A and B have the same molecule.
-    if intsB.molecule != wfn.molecule
-        output(" ! Input molecule does not match the molecule from the RHF wave function !")
-    end
-
-    basisB = Options.get("basis")
+    #if intsB.molecule != wfn.molecule
+    #    output(" ! Input molecule does not match the molecule from the RHF wave function !")
+    #end
 
     Sbb = intsB["S"]
     Λ = Array(Sbb^(-1/2))
 
     Ca = wfn.orbitals.C
-    bsA = Fermi.GaussianBasis.BasisSet(wfn.molecule, wfn.orbitals.basis)
-    bsB = Fermi.GaussianBasis.BasisSet(intsB.molecule, intsB.basis)
-    Sab = Fermi.Integrals.ao_1e(bsA, bsB, "overlap")
+    bsA = GaussianBasis.BasisSet(wfn.orbitals.basis, wfn.molecule.atoms)
+    bsB = GaussianBasis.BasisSet(intsB.basis, intsB.molecule.atoms)
+    Sab = GaussianBasis.overlap(bsA, bsB)
 
     T = transpose(Ca)*Sab*(Sbb^-1.0)*transpose(Sab)*Ca
     Cb = (Sbb^-1.0)*transpose(Sab)*Ca*T^(-1/2)
