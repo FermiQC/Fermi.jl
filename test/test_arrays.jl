@@ -1,4 +1,5 @@
 using LinearAlgebra
+using TensorOperations
 import Strided: UnsafeStridedView
 
 @testset "Arrays" begin
@@ -51,7 +52,11 @@ import Strided: UnsafeStridedView
     
     @test UnsafeStridedView(A) == UnsafeStridedView(A.data)
 
-    # A = FermiMDArray([1])
+    idx = [ (1,1,1,1), (2,2,2,2), (3,3,3,3)]
+    val = rand(3)
+    A = FermiSparse(idx, val)
+    @test ndims(A) == 4
+
     # x = @capture_out display(A)
     # println("")
     # @test occursin("Fermi Memory-held Dense Array", x)

@@ -120,4 +120,20 @@ using Fermi.Options
     end
     x = @capture_out showerror(IOContext(stdout, :short => true), Fermi.Options.FermiException("Testing the error!"))
     @test occursin("Testing the error!", x)
+
+    @molecule {
+        H 0.0 0.0 0.0  # 0
+        H 0.0 0.0 0.0  # 0 
+        Li 1.0 0.0 0.0 # 2
+        Na 0.0 1.0 0.0 # 10
+        K 0.0 0.1 1.0  # 18
+        Rb 0.0 0.1 1.0 # 36
+        Cs 0.0 0.1 1.0 # 54
+        Fr 0.0 0.1 1.0 # 86
+        # total 206 core elections → 103 dropped doubly occupied orbitals
+    }
+
+    @freezecore
+    x = @get drop_occ
+    @test x == 103
 end

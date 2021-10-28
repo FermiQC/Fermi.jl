@@ -1,4 +1,5 @@
 using Fermi.Options
+using TensorOperations
 import TBLIS
 import TensorOperations: contract!
 
@@ -33,4 +34,22 @@ import TensorOperations: contract!
     C2 = FermiMDzeros(2,2)
     contract!(α, A, :N, B, :N, β, C2, oindA, cindA, oindB, cindB, tindC)
     @test C1 ≈ C2
+
+    A = FermiMDrand(5,5)
+    B = FermiMDrand(5,5)
+    C = zeros(5,5)
+
+    @set tblis true
+    @tensor C[i,j] = A[i,k]*B[k,j]
+    @test C ≈ A*B
+
+    A = rand(5,5)
+    B = FermiMDrand(5,5)
+    C = zeros(5,5)
+
+    @tensor C[i,j] = A[i,k]*B[k,j]
+    @test C ≈ A*B
+
+    @tensor C[i,j] = B[i,k]*A[k,j]
+    @test C ≈ B*A
 end
