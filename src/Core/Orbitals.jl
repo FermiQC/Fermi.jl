@@ -23,10 +23,6 @@ struct AtomicOrbitals <: AbstractOrbitals
     basisset::BasisSet
 end
 
-function AtomicOrbitals()
-    return AtomicOrbitals(BasisSet())
-end
-
 function AtomicOrbitals(mol:: Molecule, basis::String)
     return AtomicOrbitals(BasisSet(basis, mol.atoms))
 end

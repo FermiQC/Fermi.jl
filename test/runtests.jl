@@ -9,13 +9,13 @@ tol = 1E-8
 
 @testset "Fermi" begin
     #include("test_options.jl")
-    include("test_output.jl")
+    #include("test_output.jl")
     #include("test_arrays.jl")
     #include("test_contract.jl")
-    #include("test_geometry.jl")
+    #include("test_molecule.jl")
     #include("test_diis.jl")
-    #include("test_orbitals.jl")
-    include("test_phycons.jl")
+    include("test_orbitals.jl")
+    #include("test_phycons.jl")
     #include("test_RHF.jl")
     #include("test_UHF.jl")
     #include("test_MP.jl")
