@@ -96,6 +96,10 @@ struct RHFa <: RHFAlgorithm end
 include("RHFa.jl")
 include("RHFHelper.jl")
 
+
+# Gradient methods
+include("Gradients/RHFgrad.jl")
+
 ### MISCELLANEOUS
 # Pretty printing
 function string_repr(X::RHF)

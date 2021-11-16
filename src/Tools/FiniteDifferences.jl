@@ -1,12 +1,9 @@
 function create_displacement(mol, A::Int, i::Int, h)
 
-    new_atoms = [mol.atoms...]
-    atomA = mol.atoms[A]
-    new_xyz = [atomA.xyz...]
-    new_xyz[i] += h #* √(mass[atomA.Z]) * PhysicalConstants.bohr_to_angstrom
-    new_atoms[A] = Fermi.Atom(atomA.AtomicSymbol, atomA.Z, (new_xyz[1], new_xyz[2], new_xyz[3]))
+    new_mol = deepcopy(mol)
+    new_mol.atoms[A].xyz[i] += h
 
-    return Fermi.Molecule(new_atoms, mol.charge, mol.multiplicity)
+    return new_mol
 end
 
 function apply_gradient(mol, g, d = 0.001)
