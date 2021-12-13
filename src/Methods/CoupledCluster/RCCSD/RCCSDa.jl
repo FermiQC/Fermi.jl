@@ -100,6 +100,7 @@ function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::
             T2 .= newT2
             oldE = Ecc
 
+            #debug
             update_amp!(newT1, newT2, T1, T2, moints, alg)
 
             # Compute residues 
