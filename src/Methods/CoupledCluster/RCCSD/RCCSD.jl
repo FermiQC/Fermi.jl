@@ -91,7 +91,7 @@ function RCCSD(moints::IntegralHelper{T,E,O}) where {T<:AbstractFloat,E<:Abstrac
     v = size(moints.orbitals.C,1) - Options.get("drop_vir") - moints.molecule.Nα
 
     output("Using MP2 guess")
-    T1guess = moints["Fia"]
+    T1guess = deepcopy(moints["Fia"])
     T2guess = permutedims(moints["OVOV"], (1,3,2,4))
 
     # Orbital energies line

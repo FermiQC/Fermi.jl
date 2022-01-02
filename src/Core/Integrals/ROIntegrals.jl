@@ -823,7 +823,7 @@ function compute_F!(I::IntegralHelper{T,E,O}) where {T<:AbstractFloat, E<:Abstra
     compute_F!(I, aoints)
 end
 
-function compute_F!(I::IntegralHelper{<:AbstractFloat,Chonky,<:AbstractRestrictedOrbitals}, aoints::IntegralHelper{<:AbstractFloat, Chonky, AtomicOrbitals})
+function compute_F!(I::IntegralHelper{T,Chonky,O}, aoints::IntegralHelper{T, Chonky, AtomicOrbitals}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
 
     core = Options.get("drop_occ")
     inac = Options.get("drop_vir")
