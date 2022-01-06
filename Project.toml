@@ -16,11 +16,13 @@ Suppressor = "fd094767-a336-5f1f-9728-57cf17d0bbfb"
 TBLIS = "48530278-0828-4a49-9772-0f3830dfa1e9"
 TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+libcint_jll = "574b78ca-bebd-517c-801d-4735c93a9686"
 
 [compat]
 Formatting = "^0.4.1"
 Memoize = "0.4"
 Molecules = "^0.1.1"
+libcint_jll = "5"
 PrettyTables = "1"
 Strided = "1"
 Suppressor = "0.2"
