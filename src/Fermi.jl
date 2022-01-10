@@ -19,10 +19,10 @@ _struct tree:_
 """
 abstract type AbstractWavefunction end
 
-include("Backend/Options.jl")                             
+include("Core/Options.jl")                             
 include("Backend/Arrays.jl")
 include("Backend/Contract.jl")
-include("Backend/Output.jl")
+include("Core/Output.jl")
 include("Backend/PhysicalConstants.jl")
 include("Core/DIIS.jl")
 include("Core/Molecule.jl")                               
