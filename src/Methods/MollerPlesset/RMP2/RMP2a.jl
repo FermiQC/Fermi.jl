@@ -110,9 +110,6 @@ function RMP2_energy(ints::IntegralHelper{T,E,O}, Alg::RMP2Algorithm) where {T<:
     Emp2 = RMP2_nonrhf_energy(ints, ϵo, ϵv, Alg)
     Emp2 += RMP2_rhf_energy(ints, ϵo, ϵv, Alg)
 
-    E0 = ints.molecule.Vnuc + 2*sum(ϵo)
-    println(E0)
-
     return Emp2
 end
 
