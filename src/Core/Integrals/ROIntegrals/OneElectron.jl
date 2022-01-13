@@ -1,28 +1,4 @@
-function compute_S!(I::IntegralHelper{T, E, O}) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
-        # Create AO integral object
-        basis = I.orbitals.basis
-        aoorbs = AtomicOrbitals(I.molecule, basis)
-        aoints = IntegralHelper{T}(molecule=I.molecule, orbitals=aoorbs, basis=basis, eri_type=I.eri_type)
-        compute_S!(I, aoints)
-end
-
-function compute_T!(I::IntegralHelper{T, E, O}) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
-        # Create AO integral object
-        basis = I.orbitals.basis
-        aoorbs = AtomicOrbitals(I.molecule, basis)
-        aoints = IntegralHelper{T}(molecule=I.molecule, orbitals=aoorbs, basis=basis, eri_type=I.eri_type)
-        compute_T!(I,aoints)
-end
-
-function compute_V!(I::IntegralHelper{T, E, O}) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
-        # Create AO integral object
-        basis = I.orbitals.basis
-        aoorbs = AtomicOrbitals(I.molecule, basis)
-        aoints = IntegralHelper{T}(molecule=I.molecule, orbitals=aoorbs, basis=basis, eri_type=I.eri_type)
-        compute_V!(I,aoints)
-end
-
-function compute_S!(I::IntegralHelper{T, E, O}, ints::IntegralHelper{T, E, AtomicOrbitals}) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
+function compute_S!(I::IntegralHelper{T, <:AbstractERI, O}, ints::IntegralHelper{T, <:AbstractERI, AtomicOrbitals}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
     # Compute AO overlap
     Sao = ints["S"]
 
@@ -35,7 +11,7 @@ function compute_S!(I::IntegralHelper{T, E, O}, ints::IntegralHelper{T, E, Atomi
     I.cache["S"] = S
 end
 
-function compute_T!(I::IntegralHelper{T, E, O}, ints::IntegralHelper{T, E, AtomicOrbitals}) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
+function compute_T!(I::IntegralHelper{T, <:AbstractERI, O}, ints::IntegralHelper{T, <:AbstractERI, AtomicOrbitals}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
     # Compute AO overlap
     Tao = ints["T"]
 
@@ -48,7 +24,7 @@ function compute_T!(I::IntegralHelper{T, E, O}, ints::IntegralHelper{T, E, Atomi
     I.cache["T"] = Tmo
 end
 
-function compute_V!(I::IntegralHelper{T, E, O}, ints::IntegralHelper{T, E, AtomicOrbitals}) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
+function compute_V!(I::IntegralHelper{T, <:AbstractERI, O}, ints::IntegralHelper{T, <:AbstractERI, AtomicOrbitals}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
     # Compute AO overlap
     Vao = ints["V"]
 

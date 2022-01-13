@@ -1,4 +1,4 @@
-function compute!(I::IntegralHelper, entry::String)
+function compute!(I::IntegralHelper{<:AbstractFloat,<:AbstractERI,AtomicOrbitals}, entry::String)
 
     if entry == "S" 
         compute_S!(I)

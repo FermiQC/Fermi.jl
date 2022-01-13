@@ -1,4 +1,5 @@
-function compute_ERI!(I::IntegralHelper{T, RIFIT, O}, aoints::IntegralHelper{T, RIFIT, AtomicOrbitals}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+function compute_ERI!(I::IntegralHelper{T, E, O}, aoints::IntegralHelper{T, E, AtomicOrbitals}) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
+
     Bμν = aoints["ERI"]
 
     C = I.orbitals.C
@@ -9,30 +10,6 @@ function compute_ERI!(I::IntegralHelper{T, RIFIT, O}, aoints::IntegralHelper{T, 
         Bpq[Q,p,q] :=  Bμν[Q, μ, ν]*C[μ, p]*C[ν, q]
     end
     I["ERI"] = Bpq
-end
-
-function compute_BOO!(I::IntegralHelper{T, E, O}) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
-    # Create AO integral object
-    basis = I.orbitals.basis
-    aoorbs = AtomicOrbitals(I.molecule, basis)
-    aoints = IntegralHelper{T}(molecule=I.molecule, orbitals=aoorbs, basis=basis, eri_type=I.eri_type)
-    compute_BOO!(I,aoints)
-end
-
-function compute_BVV!(I::IntegralHelper{T, E, O}) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
-    # Create AO integral object
-    basis = I.orbitals.basis
-    aoorbs = AtomicOrbitals(I.molecule, basis)
-    aoints = IntegralHelper{T}(molecule=I.molecule, orbitals=aoorbs, basis=basis, eri_type=I.eri_type)
-    compute_BVV!(I,aoints)
-end
-
-function compute_BOV!(I::IntegralHelper{T, E, O}) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
-    # Create AO integral object
-    basis = I.orbitals.basis
-    aoorbs = AtomicOrbitals(I.molecule, basis)
-    aoints = IntegralHelper{T}(molecule=I.molecule, orbitals=aoorbs, basis=basis, eri_type=I.eri_type)
-    compute_BOV!(I,aoints)
 end
 
 function compute_BOO!(I::IntegralHelper{T, E, O}, aoints::IntegralHelper{T, E, AtomicOrbitals}) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
@@ -91,51 +68,128 @@ function compute_BVV!(I::IntegralHelper{T, E, O}, aoints::IntegralHelper{T, E, A
     I["BVV"] = Bab
 end
 
-function compute_OOOO!(I::IntegralHelper{T,E,O}) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
-    Boo = I["BOO"]
+function compute_OOOO!(I::IntegralHelper{T,E,O}, aoints::IntegralHelper{T, E, AtomicOrbitals}) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
+
+    # Get BOO
+    if haskey(I.cache, "BOO")
+        Boo = I["BOO"]
+    else
+        compute_BOO!(I, aoints)
+        Boo = I["BOO"]
+        delete!(I, "BOO")
+    end
+
     @tensoropt (i=>x, j=>x, k=>x, l=>x, a=>10x, b=>10x, c=>10x, d=>10x, Q=>20x) begin 
         OOOO[i,j,k,l] :=  Boo[Q, i, j]*Boo[Q, k, l]
     end
     I["OOOO"] = OOOO
 end
 
-function compute_OOOV!(I::IntegralHelper{T,E,O}) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
-    Boo = I["BOO"]
-    Bov = I["BOV"]
+function compute_OOOV!(I::IntegralHelper{T,E,O}, aoints::IntegralHelper{T, E, AtomicOrbitals}) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
+
+    # Get BOO
+    if haskey(I.cache, "BOO")
+        Boo = I["BOO"]
+    else
+        compute_BOO!(I, aoints)
+        Boo = I["BOO"]
+        delete!(I, "BOO")
+    end
+
+    # Get BOV
+    if haskey(I.cache, "BOV")
+        Bov = I["BOV"]
+    else
+        compute_BOV!(I, aoints)
+        Bov = I["BOV"]
+        delete!(I, "BOV")
+    end
+
     @tensoropt (i=>x, j=>x, k=>x, l=>x, a=>10x, b=>10x, c=>10x, d=>10x, Q=>20x) begin 
         OOOV[i,j,k,a] :=  Boo[Q, i, j]*Bov[Q, k, a]
     end
     I["OOOV"] = OOOV
 end
 
-function compute_OOVV!(I::IntegralHelper{T,E,O}) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
-    Boo = I["BOO"]
-    Bvv = I["BVV"]
+function compute_OOVV!(I::IntegralHelper{T,E,O}, aoints::IntegralHelper{T, E, AtomicOrbitals}) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
+
+    # Get BOO
+    if haskey(I.cache, "BOO")
+        Boo = I["BOO"]
+    else
+        compute_BOO!(I, aoints)
+        Boo = I["BOO"]
+        delete!(I, "BOO")
+    end
+
+    # Get BVV
+    if haskey(I.cache, "BVV")
+        Bvv = I["BVV"]
+    else
+        compute_BVV!(I, aoints)
+        Bvv = I["BVV"]
+        delete!(I, "BVV")
+    end
     @tensoropt (i=>x, j=>x, k=>x, l=>x, a=>10x, b=>10x, c=>10x, d=>10x, Q=>20x) begin 
         OOVV[i,j,a,b] :=  Boo[Q, i, j]*Bvv[Q, a, b]
     end
     I["OOVV"] = OOVV
 end
 
-function compute_OVOV!(I::IntegralHelper{T,E,O}) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
-    Bov = I["BOV"]
+function compute_OVOV!(I::IntegralHelper{T,E,O}, aoints::IntegralHelper{T, E, AtomicOrbitals}) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
+
+    # Get BOV
+    if haskey(I.cache, "BOV")
+        Bov = I["BOV"]
+    else
+        compute_BOV!(I, aoints)
+        Bov = I["BOV"]
+        delete!(I, "BOV")
+    end
+
     @tensoropt (i=>x, j=>x, k=>x, l=>x, a=>10x, b=>10x, c=>10x, d=>10x, Q=>20x) begin 
         OVOV[i,a,j,b] :=  Bov[Q, i, a]*Bov[Q, j, b]
     end
     I["OVOV"] = OVOV
 end
 
-function compute_OVVV!(I::IntegralHelper{T,E,O}) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
-    Bov = I["BOV"]
-    Bvv = I["BVV"]
+function compute_OVVV!(I::IntegralHelper{T,E,O}, aoints::IntegralHelper{T, E, AtomicOrbitals}) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
+
+    # Get BOV
+    if haskey(I.cache, "BOV")
+        Bov = I["BOV"]
+    else
+        compute_BOV!(I, aoints)
+        Bov = I["BOV"]
+        delete!(I, "BOV")
+    end
+    
+    # Get BVV
+    if haskey(I.cache, "BVV")
+        Bvv = I["BVV"]
+    else
+        compute_BVV!(I, aoints)
+        Bvv = I["BVV"]
+        delete!(I, "BVV")
+    end
+
     @tensoropt (i=>x, j=>x, k=>x, l=>x, a=>10x, b=>10x, c=>10x, d=>10x, Q=>20x) begin 
         OVVV[i,a,b,c] :=  Bov[Q, i, a]*Bvv[Q, b, c]
     end
     I["OVVV"] = OVVV
 end
 
-function compute_VVVV!(I::IntegralHelper{T,E,O}) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
-    Bvv = I["BVV"]
+function compute_VVVV!(I::IntegralHelper{T,E,O}, aoints::IntegralHelper{T, E, AtomicOrbitals}) where {T<:AbstractFloat, E<:AbstractDFERI, O<:AbstractRestrictedOrbitals}
+
+    # Get BVV
+    if haskey(I.cache, "BVV")
+        Bvv = I["BVV"]
+    else
+        compute_BVV!(I, aoints)
+        Bvv = I["BVV"]
+        delete!(I, "BVV")
+    end
+
     @tensoropt (i=>x, j=>x, k=>x, l=>x, a=>10x, b=>10x, c=>10x, d=>10x, Q=>20x) begin 
         VVVV[a,b,c,d] :=  Bvv[Q, a, b]*Bvv[Q, c, d]
     end

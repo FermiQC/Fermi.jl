@@ -12,10 +12,15 @@ using LinearAlgebra
 using GaussianBasis
 using TensorOperations
 
+import Fermi: string_repr
 import Base: getindex, setindex!, delete!, show
+import GaussianBasis: BasisSet
 
 export IntegralHelper, delete!, mo_from_ao!
 export BasisSet, BasisFunction
+
+# Expand BasisSet methods to handle molecules.
+BasisSet(name::String, mol::Molecule) = BasisSet(name, mol.atoms)
 
 include("ERITypes.jl")
 
@@ -66,7 +71,7 @@ function IntegralHelper{T}(;molecule = Molecule(), orbitals = nothing,
                            basis = Options.get("basis"), eri_type=nothing) where T<:AbstractFloat
 
     if orbitals === nothing
-        bset = BasisSet(basis, molecule.atoms)
+        bset = BasisSet(basis, molecule)
         orbitals = AtomicOrbitals(bset)
     end
 
@@ -90,9 +95,9 @@ end
 
 function IntegralHelper{T}(bset::BasisSet, eri_type=nothing) where T<:AbstractFloat
     IntegralHelper{T}(
-        molecule = bset.molecule,
+        molecule = Molecule(bset.atoms, Options.get("charge"), Options.get("multiplicity")),
         orbitals = AtomicOrbitals(bset),
-        basis = bset.basis_name,
+        basis = bset.name,
         eri_type=eri_type
     )
 end
@@ -129,7 +134,9 @@ end
 
 # Integrals specific to orbital types
 include("AtomicIntegrals.jl")
-include("ROIntegrals.jl")
+
+# MO conversions for Restricted Orbitals
+include("ROIntegrals/ROIntegrals.jl")
 
 # Pretty printing
 function string_repr(X::IntegralHelper{T,E,O}) where {T,E,O}
@@ -151,7 +158,7 @@ end
 
 function string_repr(X::AbstractDFERI)
     eri_string = replace("$(typeof(X))", "Fermi.Integrals."=>"")
-    return "$(eri_string): $(X.basisset.basis_name)"
+    return "$(eri_string): $(X.basisset.name)"
 end
 
 function show(io::IO, ::MIME"text/plain", X::T) where T<:Union{IntegralHelper,JKFIT,RIFIT}
