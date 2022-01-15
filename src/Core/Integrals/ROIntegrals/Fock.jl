@@ -70,7 +70,16 @@ function compute_F!(I::IntegralHelper{T1,<:AbstractDFERI,<:AbstractRestrictedOrb
     I["Fab"] = Fmol[v,v] - diagm(Fd[v])
 end
 
-function compute_F!(I::IntegralHelper{T,Chonky,RHFOrbitals}, aoints::IntegralHelper{T, Chonky, AtomicOrbitals}) where T<:AbstractFloat
+function compute_F!(I::IntegralHelper{<:AbstractFloat,Chonky,RHFOrbitals}, aoints::IntegralHelper{<:AbstractFloat, SparseERI, AtomicOrbitals})
+    compute_F!(I)
+end
+
+function compute_F!(I::IntegralHelper{<:AbstractFloat,RIFIT,RHFOrbitals}, aoints::IntegralHelper{<:AbstractFloat, <:AbstractDFERI, AtomicOrbitals})
+    compute_F!(I)
+end
+
+function compute_F!(I::IntegralHelper{T, <:AbstractERI, RHFOrbitals}) where T<:AbstractFloat
+
     core = Options.get("drop_occ")
     inac = Options.get("drop_vir")
     ndocc = I.molecule.Nα
