@@ -29,13 +29,21 @@ end
 Compute contributions from off-diagonal Fock terms to the CC energy from T1 and T2 amplitudes constructed with a set of restricted orbitals.
 See also: `cc_update_energy`
 """
-function od_cc_update_energy(T1::AbstractArray{T, 2}, T2::AbstractArray{T, 4}, moints::IntegralHelper{T,Chonky,O}, 
+function cc_update_energy(T1::AbstractArray{T, 2}, T2::AbstractArray{T, 4}, moints::IntegralHelper{T,Chonky,O}, 
                           alg::RCCSDa) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
 
     f = moints["Fia"]
+    Vovov = moints["OVOV"]
+    CC_energy = zero(T)
     TWO = T(2)
-    CC_energy = cc_update_energy(T1, T2, moints, alg)
-    @tensor CC_energy += TWO*f[k,c]*T1[k,c]
+    @tensoropt (k=>x, l=>x, c=>100x, d=>100x)  begin
+        B[l,c,k,d] := TWO*T2[k,l,c,d]
+        B[l,c,k,d] -= T1[l,c]*T1[k,d]
+        B[l,c,k,d] -= T2[l,k,c,d]
+        CC_energy += B[l,c,k,d]*Vovov[k,c,l,d]
+        CC_energy += TWO*T1[l,c]*T1[k,d]*Vovov[l,c,k,d]
+        CC_energy += TWO*f[k,c]*T1[k,c]
+    end
     
     return CC_energy
 end

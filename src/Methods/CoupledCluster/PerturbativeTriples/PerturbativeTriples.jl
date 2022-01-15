@@ -24,6 +24,30 @@ struct RCCSDpT{T} <: AbstractCCWavefunction
     correction::T
 end
 
+"""
+    Fermi.CoupledCluster.get_pt_alg
+
+Returns a singleton type corresponding to a RCCSD(T) implementation based on the options.
+"""
+function get_pt_alg(N::Int = Options.get("pt_alg"))
+    try 
+        return get_pt_alg(Val(N))
+    catch MethodError
+        throw(FermiException("implementation number $N not available for RCCSD(T)."))
+    end
+end
+
+# Implementations
+struct ijk <: RpTAlgorithm end
+include("ijk.jl")
+get_pt_alg(x::Val{1}) = ijk()
+struct ijk2 <: RpTAlgorithm end
+include("ijk2.jl")
+get_pt_alg(x::Val{2}) = ijk2()
+struct abc <: RpTAlgorithm end
+include("abc.jl")
+get_pt_alg(x::Val{3}) = abc()
+
 function RCCSDpT(x...)
     if !any(i-> i isa RpTAlgorithm, x)
         RCCSDpT(x..., get_rpt_alg())
@@ -38,10 +62,3 @@ function RCCSDpT(x...)
     end
 end
 
-#implementations
-struct ijk <: RpTAlgorithm end
-struct ijk2 <: RpTAlgorithm end
-struct abc <: RpTAlgorithm end
-include("ijk.jl")
-include("ijk2.jl")
-include("abc.jl")

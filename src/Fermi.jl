@@ -19,17 +19,15 @@ _struct tree:_
 """
 abstract type AbstractWavefunction end
 
-include("Backend/Options.jl")                             
+include("Core/Options.jl")                             
 include("Backend/Arrays.jl")
 include("Backend/Contract.jl")
-include("Backend/Output.jl")
-include("Backend/Libcint.jl")
+include("Core/Output.jl")
 include("Backend/PhysicalConstants.jl")
 include("Core/DIIS.jl")
 include("Core/Molecule.jl")                               
-include("Core/BasisSet.jl")
 include("Core/Orbitals.jl")
-include("Core/IntegralHelper.jl")
+include("Core/Integrals/IntegralHelper.jl")
 include("Methods/HartreeFock/HartreeFock.jl")
 include("Methods/MollerPlesset/MollerPlesset.jl")
 include("Methods/CoupledCluster/CoupledCluster.jl")

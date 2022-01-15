@@ -7,12 +7,8 @@ import TensorOperations: similarstructure_from_indices
 import TensorOperations: scalar
 import TBLIS
 
-function tblis_set_num_threads(N)
-    TBLIS.set_num_threads(N)
-end
-
 function set_num_threads(N = Threads.nthreads())
-    tblis_set_num_threads(N)
+    TBLIS.set_num_threads(N)
     LinearAlgebra.BLAS.set_num_threads(N)
 end
 
@@ -22,7 +18,6 @@ function oind2eins(oindA::NTuple{NAo}, cindA::NTuple{NAc},
 
     # This function converts the numerical scheme used in TensorOperations
     # to represent contractions into an Einsum scheme.
-
 
     # Check contraction consistency.
     NAo + NBo == NCt || throw(IndexError("number of outer index not consistent."))

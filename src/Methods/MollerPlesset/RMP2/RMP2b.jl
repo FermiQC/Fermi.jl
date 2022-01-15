@@ -2,8 +2,10 @@ using LoopVectorization
 using LinearAlgebra
 using Octavian
 
-function RMP2_rhf_energy(ints::IntegralHelper{T,RIFIT,O}, ϵo::AbstractArray{T,1}, ϵv::AbstractArray{T,1}, Alg::RMP2b) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+function RMP2_canonical_energy(ints::IntegralHelper{T,RIFIT,O}, Alg::RMP2b) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
     Bvo = permutedims(ints["BOV"].data, (1,3,2))
+    ϵo = ints["Fii"]
+    ϵv = ints["Faa"]
 
     output(" Computing DF-MP2 Energy")
     output(" - Contraction engine: Octavian")

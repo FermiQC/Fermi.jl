@@ -28,6 +28,34 @@ Edf = [
 ]
 
 @testset "RHF" begin
+
+    # Test argument error
+    @test_throws FermiException Fermi.HartreeFock.RHF(1)
+
+    # Test core guess 
+    mol = Molecule()
+    @set scf_guess core
+    wfn = @energy mol => rhf
+    @test isapprox(wfn.energy, -74.96500289468489, rtol=tol)
+
+    # Test dense array
+    Iu = Fermi.Integrals.IntegralHelper(eri_type=Fermi.Integrals.Chonky())
+    wfn = @energy Iu => rhf
+    @test isapprox(wfn.energy, -74.96500289468489, rtol=tol)
+
+    # Test using initial wave function guess
+    @set scf_max_iter 5
+    wfn2 = @energy wfn => rhf
+    @test isapprox(wfn.energy, -74.96500289468489, rtol=tol)
+
+    # Test invalid number of electrons
+    @set charge 1
+    @set multiplicity 2
+    mol = Molecule()
+    @test_throws FermiException @energy mol => rhf
+
+    @reset
+    @set printstyle none
     @testset "Conventional" begin
         Fermi.Options.set("df", false)
 
@@ -64,4 +92,5 @@ Edf = [
             @test isapprox(wf.energy, Edf[i], rtol=tol) # Energy from Psi4
         end
     end
+
 end

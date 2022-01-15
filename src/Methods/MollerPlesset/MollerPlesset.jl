@@ -28,7 +28,7 @@ Abstract type common to all Møller-Plesset wave functions.
 
 **AbstractMPWavefunction** <: AbstractWavefunction
 """
-abstract type AbstractMPWavefunction <: Fermi.AbstractWavefunction end
+abstract type AbstractMPWavefunction <: AbstractWavefunction end
 
 # Restricted MP2
 include("RMP2/RMP2.jl")

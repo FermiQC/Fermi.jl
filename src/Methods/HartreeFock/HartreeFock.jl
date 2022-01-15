@@ -43,32 +43,7 @@ Struct tree
 """
 abstract type AbstractHFWavefunction <: Fermi.AbstractWavefunction end
 
-"""
-    Fermi.HartreeFock.get_scf_alg()
-
-Returns a singleton type corresponding to a RHF implementation based on the options.
-"""
-
-function get_scf_alg()
-    ref = Options.get("reference")
-    if ref == "rhf"
-        implemented = [RHFa()]
-    elseif ref == "uhf"
-        implemented = [UHFa()]
-    else
-        throw(FermiException("$ref is not a supported reference energy"))
-    end
-
-    N = Options.get("scf_alg")
-    try
-        return implemented[N]
-    catch BoundsError
-        throw(FermiException("implementation number $N not available for $ref."))
-    end
-end
-
 # Different Hartree-Fock methods are included here:
-
 # Restricted Hartree--Fock
 include("RHF/RHF.jl")
 

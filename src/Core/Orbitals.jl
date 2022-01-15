@@ -1,8 +1,7 @@
 module Orbitals
 
 using Fermi
-using Fermi.GaussianBasis
-using TensorOperations
+using GaussianBasis
 
 export AbstractOrbitals, AtomicOrbitals, AbstractRestrictedOrbitals, AbstractUnrestrictedOrbitals
 export GeneralRestrictedOrbitals
@@ -24,12 +23,8 @@ struct AtomicOrbitals <: AbstractOrbitals
     basisset::BasisSet
 end
 
-function AtomicOrbitals()
-    return AtomicOrbitals(BasisSet())
-end
-
 function AtomicOrbitals(mol:: Molecule, basis::String)
-    return AtomicOrbitals(BasisSet(mol, basis))
+    return AtomicOrbitals(BasisSet(basis, mol.atoms))
 end
 
 abstract type AbstractRestrictedOrbitals <: AbstractOrbitals end
