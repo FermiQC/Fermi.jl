@@ -4,6 +4,10 @@ using LinearAlgebra
 function RMP2(Alg::RMP2Algorithm)
     aoints = IntegralHelper{Float64}()
     rhf = RHF(aoints)
+
+    if typeof(aoints.eri_type) === JKFIT || Options.get("precision") == "single"
+        aoints = IntegralHelper(eri_type=RIFIT())
+    end
     moints = IntegralHelper(orbitals=rhf.orbitals)
     RMP2(moints, aoints, Alg)
 end
@@ -15,14 +19,14 @@ function RMP2(aoints::IntegralHelper{Float64,E,AtomicOrbitals}, Alg::RMP2Algorit
 end
 
 function RMP2(O::AbstractRestrictedOrbitals, Alg::RMP2Algorithm)
-    aoints = IntegralHelper()
     moints = IntegralHelper(orbitals=O)
+    aoints = IntegralHelper(eri_type=moints.eri_type)
     RMP2(moints, aoints, Alg)
 end
 
 function RMP2(rhf::RHF, Alg::RMP2Algorithm)
-    aoints = IntegralHelper()
     moints = IntegralHelper(orbitals=rhf.orbitals)
+    aoints = IntegralHelper(eri_type=moints.eri_type)
     RMP2(moints, aoints, Alg)
 end
 
@@ -33,31 +37,17 @@ function RMP2(M::Molecule, Alg::RMP2Algorithm)
     RMP2(moints, aoints, Alg)
 end
 
-function RMP2(moints::IntegralHelper{T1,Chonky,O}, aoints::IntegralHelper{T2,E,AtomicOrbitals}, Alg::RMP2Algorithm) where {T1<:AbstractFloat,
-                                                                                        T2<:AbstractFloat,O<:RHFOrbitals,E<:AbstractERI}
+function RMP2(moints::IntegralHelper{T,Chonky,<:AbstractRestrictedOrbitals}, aoints::IntegralHelper{T,<:AbstractERI,AtomicOrbitals}, Alg::RMP2Algorithm) where T<:AbstractFloat
     mp_header()
-    mo_from_ao!(moints, aoints, "OVOV")
+    Fermi.Integrals.compute!(moints, aoints, "OVOV")
+    Fermi.Integrals.compute!(moints, aoints, "F")
     RMP2(moints, Alg)
 end
 
-function RMP2(moints::IntegralHelper{T1,E1,O}, aoints::IntegralHelper{T2,E2,AtomicOrbitals}, Alg::RMP2Algorithm) where {T1<:AbstractFloat,T2<:AbstractFloat,
-                                                                                E1<:AbstractDFERI,E2<:AbstractDFERI,O<:RHFOrbitals}
+function RMP2(moints::IntegralHelper{T,E,<:AbstractRestrictedOrbitals}, aoints::IntegralHelper{T,E,AtomicOrbitals}, Alg::RMP2Algorithm) where {T<:AbstractFloat, E<:AbstractDFERI}
     mp_header()
-    mo_from_ao!(moints, aoints, "BOV")
-    RMP2(moints, Alg)
-end
-
-function RMP2(moints::IntegralHelper{T1,Chonky,O}, aoints::IntegralHelper{T2,E,AtomicOrbitals}, Alg::RMP2Algorithm) where {T1<:AbstractFloat,
-                                                                                        T2<:AbstractFloat,O<:AbstractRestrictedOrbitals,E<:AbstractERI}
-    mp_header()
-    mo_from_ao!(moints, aoints, "Fia","OVOV")
-    RMP2(moints, Alg)
-end
-
-function RMP2(moints::IntegralHelper{T1,E1,O}, aoints::IntegralHelper{T2,E2,AtomicOrbitals}, Alg::RMP2Algorithm) where {T1<:AbstractFloat,T2<:AbstractFloat,
-                                                                                E1<:AbstractDFERI,E2<:AbstractDFERI,O<:AbstractRestrictedOrbitals}
-    mp_header()
-    mo_from_ao!(moints, aoints, "Fia","BOV")
+    Fermi.Integrals.compute!(moints, aoints, "BOV")
+    Fermi.Integrals.compute!(moints, aoints, "F")
     RMP2(moints, Alg)
 end
 
@@ -75,8 +65,6 @@ function RMP2(ints::IntegralHelper{<:AbstractFloat,<:AbstractERI,<:AbstractRestr
     if inac ≥ nvir
         throw(FermiException("invalid number of inactive virtual orbitals ($inac) for $nvir total virtual orbitals"))
     end
-
-    # Collect RHF information
 
     output("  Starting MP2 computation")
     output(" Number of frozen orbitals:             {:d}" , core)
@@ -100,33 +88,22 @@ function RMP2(ints::IntegralHelper{<:AbstractFloat,<:AbstractERI,<:AbstractRestr
 end
 
 function RMP2_energy(ints::IntegralHelper{T,E,O}, Alg::RMP2Algorithm) where {T<:AbstractFloat, E<:AbstractERI,O<:AbstractRestrictedOrbitals}
-    inac = Options.get("drop_vir")
-    core = Options.get("drop_occ")
-    ndocc = ints.molecule.Nα
-    nbf = size(ints.orbitals.C,1)
-    ϵo = ints["Fd"][(core+1):ndocc]
-    ϵv = ints["Fd"][(ndocc+1):(nbf-inac)]
 
-    Emp2 = RMP2_nonrhf_energy(ints, ϵo, ϵv, Alg)
-    Emp2 += RMP2_rhf_energy(ints, ϵo, ϵv, Alg)
+    Emp2 = RMP2_nonrhf_energy(ints, Alg)
+    Emp2 += RMP2_canonical_energy(ints, Alg)
 
     return Emp2
 end
 
-function RMP2_energy(ints::IntegralHelper{T,E,RHFOrbitals}, Alg::RMP2Algorithm) where {T<:AbstractFloat, E<:AbstractERI}
-    inac = Options.get("drop_vir")
-    core = Options.get("drop_occ")
-    ndocc = ints.molecule.Nα
-    nbf = size(ints.orbitals.C,1)
-    ϵo = ints["Fd"][(core+1):ndocc]
-    ϵv = ints["Fd"][(ndocc+1):(nbf-inac)]
-
-    Emp2 = RMP2_rhf_energy(ints, ϵo, ϵv, Alg)
-
+function RMP2_energy(ints::IntegralHelper{<:AbstractFloat, <:AbstractERI, RHFOrbitals}, Alg::RMP2Algorithm) 
+    Emp2 = RMP2_canonical_energy(ints, Alg)
     return Emp2
 end
 
-function RMP2_nonrhf_energy(ints::IntegralHelper{T,E,O}, ϵo::AbstractArray{T,1}, ϵv::AbstractArray{T,1}, Alg::RMP2Algorithm) where {T<:AbstractFloat,E<:AbstractERI, O<:AbstractRestrictedOrbitals}
+function RMP2_nonrhf_energy(ints::IntegralHelper{<:AbstractFloat, <:AbstractERI, <:AbstractRestrictedOrbitals}, Alg::RMP2Algorithm)
+
+    ϵo = ints["Fii"]
+    ϵv = ints["Faa"]
 
     t = @elapsed begin
     output("Computing non-RHF contribution to the MP2 energy... ", ending="")
@@ -140,11 +117,12 @@ function RMP2_nonrhf_energy(ints::IntegralHelper{T,E,O}, ϵo::AbstractArray{T,1}
     return Emp2
 end
 
-function RMP2_rhf_energy(ints::IntegralHelper{T,RIFIT,O}, ϵo::AbstractArray{T,1}, ϵv::AbstractArray{T,1}, Alg::RMP2a) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+function RMP2_canonical_energy(ints::IntegralHelper{T, <:AbstractDFERI, <:AbstractRestrictedOrbitals}, Alg::RMP2Algorithm) where T<:AbstractFloat
     Bvo = permutedims(ints["BOV"].data, (1,3,2))
+    ϵo = ints["Fii"]
+    ϵv = ints["Faa"]
 
-    output(" Computing DF-MP2 Energy")
-    output(" - Contraction engine: MKL")
+    output(" Computing DF-MP2 Energy!")
     v_size = length(ϵv)
     o_size = length(ϵo)
 
@@ -194,9 +172,11 @@ function RMP2_rhf_energy(ints::IntegralHelper{T,RIFIT,O}, ϵo::AbstractArray{T,1
     return Emp2
 end
 
-function RMP2_rhf_energy(ints::IntegralHelper{T,Chonky,O}, ϵo::AbstractArray{T,1}, ϵv::AbstractArray{T,1}, Alg::RMP2Algorithm) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
+function RMP2_canonical_energy(ints::IntegralHelper{T, Chonky, <:AbstractRestrictedOrbitals}, Alg::RMP2Algorithm) where T<:AbstractFloat
     output(" Computing MP2 Energy... ", ending="")
     ovov = ints["OVOV"]
+    ϵo = ints["Fii"]
+    ϵv = ints["Faa"]
 
     ΔMP2s = zeros(T,Threads.nthreads())
     TWO = T(2.0)
