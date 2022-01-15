@@ -6,7 +6,9 @@ energy_dict = Dict{String, String}(
     "mp2" => "Fermi.MollerPlesset.RMP2()",
     "rmp2" => "Fermi.MollerPlesset.RMP2()",
     "ccsd" => "Fermi.CoupledCluster.RCCSD()",
+    "rccsd" => "Fermi.CoupledCluster.RCCSD()",
     "ccsd(t)"=> "Fermi.CoupledCluster.RCCSDpT()",
+    "rccsd(t)"=> "Fermi.CoupledCluster.RCCSDpT()",
 )
 
 """
