@@ -41,7 +41,7 @@ Computes RHF using information from Fermi.CurrentOptions.
 | `nvir`  | Number of virtual spatial orbitals |
 | `orbitals` |    RHF Orbitals object      |
 | `e_conv`   | ΔE from the last iteration  |
-| `d_conv`   |  RMS from the last iteration|
+| `d_conv`   |  Orbitals RMS change from the last iteration|
 
 # Relevant options 
 
@@ -49,7 +49,7 @@ These options can be set with `@set <option> <value>`
 
 | Option         | What it does                      | Type      | choices [default]     |
 |----------------|-----------------------------------|-----------|-----------------------|
-| `scf_alg`      | Picks SCF algorithm               | `Int`     | [1]                   |
+| `rhf_alg`      | Picks RHF algorithm               | `Int`     | [1]                   |
 | `scf_max_rms`  | RMS density convergence criterion | `Float64` | [10^-9]               |
 | `scf_max_iter` | Max number of iterations          | `Int`     | [50]                  |
 | `scf_e_conv`   | Energy convergence criterion      | `Float64` | [10^-10]              |
@@ -78,7 +78,7 @@ end
 
 function RHF(x...)
     if !any(i-> i isa RHFAlgorithm, x)
-        RHF(x..., get_scf_alg())
+        RHF(x..., get_rhf_alg())
     else
         # Print the type of arguments given for a better feedback
         args = "("
@@ -90,11 +90,26 @@ function RHF(x...)
     end
 end
 
+"""
+    Fermi.HartreeFock.get_rhf_alg()
+
+Returns a singleton type corresponding to a RHF implementation.
+"""
+function get_rhf_alg(N::Int = Options.get("rhf_alg"))
+    try 
+        return get_rhf_alg(Val(N))
+    catch MethodError
+        throw(FermiException("implementation number $N not available for RHF."))
+    end
+end
+
 # Actual RHF routine is in here
 # For each implementation a singleton type must be create
 struct RHFa <: RHFAlgorithm end
 include("RHFa.jl")
 include("RHFHelper.jl")
+# And a number is assigned to the implementation
+get_rhf_alg(x::Val{1}) = RHFa()
 
 
 # Gradient methods

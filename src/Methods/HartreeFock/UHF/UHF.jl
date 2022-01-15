@@ -20,20 +20,37 @@ struct UHF <: AbstractHFWavefunction
 end
 
 function UHF(x...)
-    ref = Fermi.Options.get("reference")
-    if ref != "uhf"
-        throw(FermiException("reference ($ref) is not appropriate for uhf"))
-    end
     if !any(i-> i isa UHFAlgorithm, x)
-        UHF(x..., get_scf_alg())
+        UHF(x..., get_uhf_alg())
     else
-        throw(FermiException("invalid arguments for UHF method: $(x[1:end-1])"))
+        # Print the type of arguments given for a better feedback
+        args = "("
+        for a in x[1:end-1]
+            args *= "$(typeof(a)), "
+        end
+        args = args[1:end-2]*")"
+        throw(FermiException("invalid arguments for UHF method: $args"))
+    end
+end
+
+"""
+    Fermi.HartreeFock.get_uhf_alg()
+
+Returns a singleton type corresponding to a UHF implementation.
+"""
+function get_uhf_alg(N::Int = Options.get("uhf_alg"))
+    try 
+        return get_uhf_alg(Val(N))
+    catch MethodError
+        throw(FermiException("implementation number $N not available for UHF."))
     end
 end
 
 struct UHFa <: UHFAlgorithm end
 include("UHFa.jl")
 include("UHFHelper.jl")
+# And a number is assigned to the implementation
+get_uhf_alg(x::Val{1}) = UHFa()
 
 function string_repr(X::UHF)
     out = ""

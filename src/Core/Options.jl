@@ -55,7 +55,8 @@ const Default = Dict{String,Union{Float64,Int,String,Bool}}(
                                   "scf_max_iter" => 50,
                                   "scf_max_rms" => 10^-9,
                                   "scf_e_conv" => 10^-10,
-                                  "scf_alg" => 1,
+                                  "rhf_alg" => 1,
+                                  "uhf_alg" => 1,
                                   "mp2_alg" => 1,
                                   "df" => false, 
                                   "oda" => true,
@@ -98,7 +99,8 @@ const Default = Dict{String,Union{Float64,Int,String,Bool}}(
                                   "precision_override" => false,
                                   "tblis" => true,
                                   "eri_cutoff" => 10^-12,
-                                  "findif_disp_size" => 0.005
+                                  "findif_disp_size" => 0.005,
+                                  "return_ints" => false
                                  )
 """
     Fermi.Options.Current
