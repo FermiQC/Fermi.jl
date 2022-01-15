@@ -1,134 +1,116 @@
 using Fermi.HartreeFock
 
+import Base: show
+
 export RCCSD
 
-abstract type RCCSDAlgorithm end
+"""
+    Fermi.CoupledCluster.RCCSDAlgorithm
 
-function get_rccsd_alg()
-    implemented = [RCCSDa()]
-    N = Options.get("cc_alg")
-    try 
-        return implemented[N]
-    catch BoundsError
-        throw(FermiException("implementation number $N not available for RCCSD."))
-    end
-end
+Abstract type for RCCSD implementations.
+"""
+abstract type RCCSDAlgorithm end
 
 """
     Fermi.CoupledCluster.RCCSD
-    TODO
 
-Fermi struct that holds information about RCCSD wavefunctions
+Wave function object for Restricted Coupled Cluster Singles and Doubles.
+
+# High Level Interface 
+Run a RCCSD computation and return the RCCSD object:
+```
+julia> @energy rccsd 
+```
+Equivalent to
+```
+julia> Fermi.CoupledCluster.RCCSD()
+```
+This function calls a constructor that runs a RCCSD computation based on the options found in `Fermi.Options`.
 
 # Fields
 
-    CorrelationEnergy   CCSD correlation energy
-    T1                  T1 amplitudes
-    T2                  T2 amplitudes
+| Name   |   Description     |
+|--------|---------------------|
+| `guessenergy` |   Energy recovered in the first iteration, normally RMP2 |
+| `correlation` |   Computed RCCSD correlation energy |
+| `energy`   |   Total wave function energy (Reference energy + Correlation energy)      |
+| `e_conv`   | ΔE from the last iteration  |
+| `t_conv`   |  Amplitudes RMS change from the last iteration|
 
-_struct tree:_
+# Relevant options 
 
-**RCCSD** <: AbstractCCWavefunction <: AbstractCorrelatedWavefunction <: AbstractWavefunction
+These options can be set with `@set <option> <value>`
+
+| Option         | What it does                      | Type      | choices [default]     |
+|----------------|-----------------------------------|-----------|-----------------------|
+| `cc_alg`      | Picks RCCSD algorithm              | `Int`     | [1]                   |
+| `cc_e_conv`   | Energy convergence criterion           | `Float64` | [10^-10]              |
+| `cc_max_rms`    | Amplitudes RMS convergence criterion   | `Float64` | [10^-10]              |
+| `cc_max_iter`   | Max number of CC iterations   | `Int` | [50]              |
+| `cc_damp_ratio` | Fraction of old amplitudes to be kept   | `Float64` | 0.0--1.0 [0.0]              |
+| `cc_diis` | Whether to use DIIS   | `Bool` | `false` [`true`]              |
+| `diis_start` | Iteration number where DIIS starts   | `Int` | [3]              |
+| `cc_diis_relax` | Interval between DIIS extrapolations   | `Int` | [3]              |
+| `cc_ndiis` | Maximum number of stored vectors for DIIS   | `Int` | [3]              |
+| `basis`       | What basis set to use             | `String`  | ["sto-3g"]            |
+| `df`          | Whether to use density fitting    | `Bool`    | `true` [`false`]      |
+| `rifit`       | What aux. basis set to use for RI | `String`  | ["auto"]              |
+| `drop_occ`    | Number of occupied electrons to be dropped | `Int`  | [0]              |
+| `drop_vir`    | Number of virtual electrons to be dropped | `Int`  | [0]              |
 """
 struct RCCSD{T} <: AbstractCCWavefunction 
     guessenergy::Float64
-    energy::Float64
     correlation::T
+    energy::Float64
     T1::AbstractArray{T,2}
     T2::AbstractArray{T,4}
-    δE::T
-    residue::T
+    e_conv::T
+    t_conv::T
 end
 
-function RCCSD()
-    aoints = IntegralHelper{Float64}()
-    #aoints = IntegralHelper{Float64}(eri_type=JKFIT())
-    rhf = RHF(aoints)
-    moints = IntegralHelper(orbitals=rhf.orbitals)
-    RCCSD(moints, aoints)
-end
+"""
+    Fermi.CoupledCluster.get_rccsd_alg
 
-function RCCSD(moints::IntegralHelper{T1,E1,O}, aoints::IntegralHelper{T2,E2,AtomicOrbitals}) where {T1<:AbstractFloat,
-                                                                                        T2<:AbstractFloat,O<:AbstractRestrictedOrbitals,
-                                                                                        E1<:AbstractERI,E2<:AbstractERI}
-    mo_from_ao!(moints, aoints, "Fd","OOOO", "OOOV", "OOVV", "OVOV", "OVVV", "VVVV")
-    RCCSD(moints)
-end
-
-function RCCSD(moints::IntegralHelper{T1,E1,O}, aoints::IntegralHelper{T2,E2,AtomicOrbitals}) where {T1<:AbstractFloat,T2<:AbstractFloat,
-                                                                                E1<:AbstractDFERI,E2<:AbstractDFERI,O<:AbstractRestrictedOrbitals}
-    mo_from_ao!(moints, aoints, "Fd","BOO", "BOV", "BVV")
-    RCCSD(moints)
-end
-
-function RCCSD{Float64}(mol = Molecule(), ints = IntegralHelper{Float64}())
-
-    # Compute Restricted Hartree-Fock
-    refwfn = RHF(mol, ints)
-
-    # Delete integrals that are not gonna be used anymore
-    delete!(ints, "S", "T", "V", "JKERI")
-    RCCSD{Float64}(refwfn, ints)
-end
-
-function RCCSD{Float32}(mol = Molecule(), ints = IntegralHelper{Float32}())
-
-    # Note that using this method a new IntegralHelper object
-    # is created within the RHF call. This is necessary becasue
-    # RHF needs a double precision integral helper
-
-    # Compute Restricted Hartree-Fock
-    refwfn = RHF(mol)
-
-    RCCSD{Float32}(refwfn, ints)
-end
-
-function RCCSD(moints::IntegralHelper{T,E,O}) where {T<:AbstractFloat,E<:AbstractERI,O<:AbstractRestrictedOrbitals}
-
-    # Create zeroed guesses for amplitudes
-
-    o = moints.molecule.Nα - Options.get("drop_occ")
-    v = size(moints.orbitals.C,1) - Options.get("drop_vir") - moints.molecule.Nα
-
-    output("Using MP2 guess")
-    T1guess = deepcopy(moints["Fia"])
-    T2guess = permutedims(moints["OVOV"], (1,3,2,4))
-
-    # Orbital energies line
-    if haskey(moints.cache, "D1")
-        d = moints["D1"]
-    else
-        Fd = moints["Fd"]
-        ndocc = moints.molecule.Nα
-        frozen = Options.get("drop_occ")
-        inac = Options.get("drop_vir")
-        ϵo = Fd[(1+frozen:ndocc)]
-        ϵv = Fd[(1+ndocc):end-inac]
-
-        d = FermiMDArray([ϵo[i]-ϵv[a] for i=eachindex(ϵo), a=eachindex(ϵv)])
-        moints["D1"] = d
+Returns a singleton type corresponding to a RCCSD implementation based on the options.
+"""
+function get_rccsd_alg(N::Int = Options.get("cc_alg"))
+    try 
+        return get_rccsd_alg(Val(N))
+    catch MethodError
+        throw(FermiException("implementation number $N not available for RCCSD."))
     end
-
-    if haskey(moints.cache, "D2")
-        D = moints["D2"]
-    else
-        Fd = moints["Fd"]
-        ndocc = moints.molecule.Nα
-        frozen = Options.get("drop_occ")
-        inac = Options.get("drop_vir")
-        ϵo = Fd[(1+frozen:ndocc)]
-        ϵv = Fd[(1+ndocc):end-inac]
-
-        D = FermiMDArray([ϵo[i]+ϵo[j]-ϵv[a]-ϵv[b] for i=eachindex(ϵo), j=eachindex(ϵo), a=eachindex(ϵv), b=eachindex(ϵv)])
-        moints["D2"] = D
-    end
-
-    T1guess ./= d
-    T2guess ./= D
-
-    RCCSD(moints, T1guess, T2guess, get_rccsd_alg())
 end
 
 # For each implementation a singleton type must be create
 struct RCCSDa <: RCCSDAlgorithm end
 include("RCCSDa.jl")
+# And a number is assigned to the implementation
+get_rccsd_alg(x::Val{1}) = RCCSDa()
+
+function RCCSD(x...)
+    if !any(i-> i isa RCCSDAlgorithm, x)
+        RCCSD(x..., get_rccsd_alg())
+    else
+        # Print the type of arguments given for a better feedback
+        args = "("
+        for a in x[1:end-1]
+            args *= "$(typeof(a)), "
+        end
+        args = args[1:end-2]*")"
+        throw(FermiException("invalid arguments for RCCSD method: $args"))
+    end
+end
+
+## MISCELLANEOUS
+# Pretty printing
+function string_repr(X::RCCSD)
+    out = ""
+    out = out*" ⇒ Fermi Restricted CCSD Wave function\n"
+    out = out*" ⋅ Correlation Energy:     $(X.correlation)\n"
+    out = out*" ⋅ Total Energy:           $(X.energy)"
+    return out
+end
+
+function show(io::IO, ::MIME"text/plain", X::RCCSD)
+    print(io, string_repr(X))
+end

@@ -2,18 +2,11 @@ using LinearAlgebra
 using LoopVectorization
 using Octavian
 
-function RCCSDpT(rhf::RHF, Alg::ijk2)
-    aoints = IntegralHelper()
-    moints = IntegralHelper(orbitals=rhf.orbitals)
-    ccsd = RCCSD(moints, aoints)
-    return RCCSDpT(ccsd, moints, Alg)
-end
-
 function RCCSDpT(Alg::ijk2)
-    aoints = IntegralHelper{Float64}()
-    rhf = RHF(aoints)
-    moints = IntegralHelper(orbitals=rhf.orbitals)
-    ccsd = RCCSD(moints, aoints)
+    val = Options.get("return_ints")
+    Options.set("return_ints", true)
+    ccsd, moints = RCCSD()
+    Options.set("return_ints", val)
     return RCCSDpT(ccsd, moints, Alg)
 end
 

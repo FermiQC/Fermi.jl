@@ -2,6 +2,84 @@ using TensorOperations
 
 include("RCCSDHelper.jl")
 
+function RCCSD(alg::RCCSDa)
+    aoints = IntegralHelper{Float64}()
+    rhf = RHF(aoints)
+
+    if typeof(aoints.eri_type) === JKFIT || Options.get("precision") == "single"
+        aoints = IntegralHelper(eri_type=RIFIT())
+    end
+    moints = IntegralHelper(orbitals=rhf.orbitals)
+    RCCSD(moints, aoints, alg)
+end
+
+function RCCSD(moints::IntegralHelper{T,<:AbstractERI,<:AbstractRestrictedOrbitals}, aoints::IntegralHelper{T,<:AbstractERI,AtomicOrbitals}, alg::RCCSDa) where T<:AbstractFloat
+
+    Fermi.Integrals.compute!(moints, aoints, "F")
+    Fermi.Integrals.compute!(moints, aoints, "OOOO")
+    Fermi.Integrals.compute!(moints, aoints, "OOOV")
+    Fermi.Integrals.compute!(moints, aoints, "OOVV")
+    Fermi.Integrals.compute!(moints, aoints, "OVOV")
+    Fermi.Integrals.compute!(moints, aoints, "OVVV")
+    Fermi.Integrals.compute!(moints, aoints, "VVVV")
+    RCCSD(moints, alg)
+end
+
+function RCCSD(moints::IntegralHelper{T,E1,<:AbstractRestrictedOrbitals}, aoints::IntegralHelper{T,E2,AtomicOrbitals}, alg::RCCSDa) where {T<:AbstractFloat,T2<:AbstractFloat,
+                                                                                E1<:AbstractDFERI,E2<:AbstractDFERI}
+    Fermi.Integrals.compute!(moints, aoints, "F")
+    Fermi.Integrals.compute!(moints, aoints, "BOO")
+    Fermi.Integrals.compute!(moints, aoints, "BOV")
+    Fermi.Integrals.compute!(moints, aoints, "BVV")
+    RCCSD(moints, alg)
+end
+
+function RCCSD(moints::IntegralHelper{T,E,O}, alg::RCCSDa) where {T<:AbstractFloat,E<:AbstractERI,O<:AbstractRestrictedOrbitals}
+
+    # Create zeroed guesses for amplitudes
+
+    o = moints.molecule.Nα - Options.get("drop_occ")
+    v = size(moints.orbitals.C,1) - Options.get("drop_vir") - moints.molecule.Nα
+
+    output("Using MP2 guess")
+    T1guess = deepcopy(moints["Fia"])
+    T2guess = permutedims(moints["OVOV"], (1,3,2,4))
+
+    # Orbital energies line
+    if haskey(moints.cache, "D1")
+        d = moints["D1"]
+    else
+        Fd = moints["Fd"]
+        ndocc = moints.molecule.Nα
+        frozen = Options.get("drop_occ")
+        inac = Options.get("drop_vir")
+        ϵo = Fd[(1+frozen:ndocc)]
+        ϵv = Fd[(1+ndocc):end-inac]
+
+        d = FermiMDArray([ϵo[i]-ϵv[a] for i=eachindex(ϵo), a=eachindex(ϵv)])
+        moints["D1"] = d
+    end
+
+    if haskey(moints.cache, "D2")
+        D = moints["D2"]
+    else
+        Fd = moints["Fd"]
+        ndocc = moints.molecule.Nα
+        frozen = Options.get("drop_occ")
+        inac = Options.get("drop_vir")
+        ϵo = Fd[(1+frozen:ndocc)]
+        ϵv = Fd[(1+ndocc):end-inac]
+
+        D = FermiMDArray([ϵo[i]+ϵo[j]-ϵv[a]-ϵv[b] for i=eachindex(ϵo), j=eachindex(ϵo), a=eachindex(ϵv), b=eachindex(ϵv)])
+        moints["D2"] = D
+    end
+
+    T1guess ./= d
+    T2guess ./= D
+
+    RCCSD(moints, T1guess, T2guess, alg)
+end
+
 function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::AbstractArray{T,4}, 
                     alg::RCCSDa) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
  
@@ -151,5 +229,9 @@ function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::
     output(" @Final CCSD Energy:                 {:15.10f}", Ecc+Eref)
     output(repeat("-",80))
 
-    return RCCSD(Eguess, Ecc+Eref, Ecc, newT1, newT2, dE, rms)
+    if Options.get("return_ints")
+        return RCCSD(Eguess, Ecc, Ecc+Eref, newT1, newT2, dE, rms), moints
+    else
+        return RCCSD(Eguess, Ecc, Ecc+Eref, newT1, newT2, dE, rms)
+    end
 end
