@@ -1,5 +1,5 @@
 # Fermi.jl
-Fermi is Julia framework for *ab initio* quantum chemistry. The main goal of Fermi is two offer two key resources:
+Fermi is Julia framework for *ab initio* quantum chemistry. The main goal of Fermi is to offer two key resources:
 
 - A collection of standard methods in electronic structure theory, such as Hartree--Fock and Coupled Cluster.
 - An efficient development platform for quantum chemistry methods.
