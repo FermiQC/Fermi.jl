@@ -4,7 +4,7 @@ Fermi is Julia framework for *ab initio* quantum chemistry. The main goal of Fer
 - A collection of standard methods in electronic structure theory, such as Hartree--Fock and Coupled Cluster.
 - An efficient development platform for quantum chemistry methods.
 
-For an academic overview of the project, check our paper published at the Journal of Chemical Theory and Computation:
+📝 For an academic overview of the project, check our paper published at the Journal of Chemical Theory and Computation:
 
 [Fermi.jl: A Modern Design for Quantum Chemistry](https://pubs.acs.org/doi/abs/10.1021/acs.jctc.1c00719)
 
@@ -99,7 +99,7 @@ end
 
 ## Interactive Usage
 
-For quick tasks, debugging, or if you are simply browsing the code, this might be your best option. Moreover, this feature allows for usage within notebook environments such as [Jupyter](https://jupyter.org/try) and [Pluto](https://github.com/fonsp/Pluto.jl). Some objects, such as `Molecule`, `BasisSet` or `RHF`, can be printed directly on the terminal for some overview of their content.
+Interactive usage may be your best option for quick tasks, debugging, or if you are simply browsing the code. Moreover, this feature allows for usage within notebook environments such as [Jupyter](https://jupyter.org/try) and [Pluto](https://github.com/fonsp/Pluto.jl). Some objects, such as `Molecule`, `BasisSet` or `RHF`, can be printed directly on the terminal for some overview of their content.
 ```julia
 julia> using Fermi
 julia> using Fermi.Integrals
