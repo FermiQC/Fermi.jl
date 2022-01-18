@@ -8,18 +8,18 @@ uhf_boys = [["oh", "cc-pvtz", 0, 2], ["methyl", "cc-pvdz", 0, 2], ["methylene", 
 tol = 1E-8
 
 @testset "Fermi" begin
-    include("test_options.jl")
-    include("test_output.jl")
-    include("test_arrays.jl")
-    include("test_contract.jl")
-    include("test_molecule.jl")
-    include("test_diis.jl")
-    include("test_orbitals.jl")
-    include("test_phycons.jl")
-    include("test_integrals.jl")
-    include("test_RHF.jl")
-    include("test_UHF.jl")
-    include("test_MP.jl")
-    include("test_pT.jl")
+    @time include("test_options.jl")
+    @time include("test_output.jl")
+    @time include("test_arrays.jl")
+    @time include("test_contract.jl")
+    @time include("test_molecule.jl")
+    @time include("test_diis.jl")
+    @time include("test_orbitals.jl")
+    @time include("test_phycons.jl")
+    @time include("test_integrals.jl")
+    @time include("test_RHF.jl")
+    @time include("test_UHF.jl")
+    @time include("test_MP.jl")
+    @time include("test_pT.jl")
     @reset
 end
