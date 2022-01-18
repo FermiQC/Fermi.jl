@@ -1,20 +1,22 @@
 using Documenter, Fermi
 
+Basics = "Basics" => "index.md"
+Methods = "Methods" => ["hartreefock.md", "mp.md", "cc.md"]
+Index = "Index" => "indice.md"
+
+PAGES = [
+    Basics,
+    Methods,
+    Index
+]
+
 makedocs(
     sitename="Fermi.jl",
     authors = "Gustavo Aroeira",
     format = Documenter.HTML(
         sidebar_sitename = false
     ),
-    pages = [
-        "Home" => "index.md",
-        "Modules" => "modules.md",
-        "Core" => "core.md",
-        "Backend" => "backend.md",
-        "Methods" => "methods.md",
-        "Contributing" => "contributing.md",
-        "Index" => "indice.md"
-    ]
+    pages = PAGES
 )
 
 deploydocs(

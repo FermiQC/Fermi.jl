@@ -63,6 +63,21 @@ Multiple options can be set using the macro `@set` with curly braces
 
 The macro `@energy` returns a wave function object associated with the methods requested. See the documentation for each method for more details.
 
+## Output
+
+Results of computations are returned to the REPL terminal by default. This can be controlled with the keywords `printstyle` and `output`.
+
+- `output` contains the name of the file where results will be written. The default is `fermi.out`
+
+- `printstyle` accepts four options
+
+|    |    |
+|----|----|
+| **repl** | Print results to the REPL terminal |
+| **file** | Print results to the file specified with the keyword `output` |
+| **both** | Print results to the REPL and write it to the file specified with the keyword `output` |
+| **none** | Does not print any results |
+
 ## Argument passing
 
 In some situations, we may want to pass argument to the energy computation. There are two ways to do that in Fermi. 

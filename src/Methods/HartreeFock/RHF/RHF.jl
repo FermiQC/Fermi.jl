@@ -29,7 +29,7 @@ Equivalent to
 ```
 julia> Fermi.HartreeFock.RHF()
 ```
-Computes RHF using information from Fermi.CurrentOptions.
+Computes RHF using information from `Fermi.Options.Current`
 
 # Fields
 
