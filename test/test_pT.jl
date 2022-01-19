@@ -58,7 +58,8 @@ CCSDdf = [
     @testset "Conventional" begin
         Fermi.Options.set("df", false)
 
-        mols = rand(eachindex(molecules), 3)
+        #mols = rand(eachindex(molecules), 3)
+        mols = [1,2,7]
         for i = mols
             # Read molecule
             path = joinpath(@__DIR__, "xyz/"*molecules[i]*".xyz")
@@ -78,7 +79,8 @@ CCSDdf = [
         Fermi.Options.set("jkfit", "cc-pvqz-jkfit")
         Fermi.Options.set("rifit", "cc-pvqz-rifit")
 
-        mols = rand(eachindex(molecules), 3)
+        #mols = rand(eachindex(molecules), 3)
+        mols = [1,2,7]
         for i = mols
             # Read molecule
             path = joinpath(@__DIR__, "xyz/"*molecules[i]*".xyz")

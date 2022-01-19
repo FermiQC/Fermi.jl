@@ -152,7 +152,7 @@ function RMP2_canonical_energy(ints::IntegralHelper{T, <:AbstractDFERI, <:Abstra
 
                 eij = ϵo[i] + ϵo[j]
                 E = zero(T)
-                @turbo for a = eachindex(ϵv)
+                @inbounds for a = eachindex(ϵv)
                     eija = eij - ϵv[a]
                     for b = eachindex(ϵv)
                         D = eija - ϵv[b]

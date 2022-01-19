@@ -8,12 +8,6 @@ Fermi has a number of submodules organized for specific tasks. All modules are a
 Fermi.Options
 ```
 
-## Libcint
-
-```@docs
-Fermi.Libcint
-```
-
 ## DIIS
 
 ```@docs
@@ -24,12 +18,6 @@ Fermi.DIIS
 
 ```@docs
 Fermi.PhysicalConstants
-```
-
-## GaussianBasis
-
-```@docs
-Fermi.GaussianBasis
 ```
 
 ## Orbitals

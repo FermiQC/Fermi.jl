@@ -1,10 +1,10 @@
 # Fermi.jl
-Fermi is Julia framework for *ab initio* quantum chemistry. The main goal of Fermi is two offer two key resources:
+Fermi is Julia framework for *ab initio* quantum chemistry. The main goal of Fermi is to offer two key resources:
 
 - A collection of standard methods in electronic structure theory, such as Hartree--Fock and Coupled Cluster.
 - An efficient development platform for quantum chemistry methods.
 
-For an academic overview of the project, check our paper published at the Journal of Chemical Theory and Computation:
+📝 For an academic overview of the project, check our paper published at the Journal of Chemical Theory and Computation:
 
 [Fermi.jl: A Modern Design for Quantum Chemistry](https://pubs.acs.org/doi/abs/10.1021/acs.jctc.1c00719)
 
@@ -63,6 +63,21 @@ Multiple options can be set using the macro `@set` with curly braces
 
 The macro `@energy` returns a wave function object associated with the methods requested. See the documentation for each method for more details.
 
+## Output
+
+Results of computations are returned to the REPL terminal by default. This can be controlled with the keywords `printstyle` and `output`.
+
+- `output` contains the name of the file where results will be written. The default is `fermi.out`
+
+- `printstyle` accepts four options
+
+|    |    |
+|----|----|
+| **repl** | Print results to the REPL terminal |
+| **file** | Print results to the file specified with the keyword `output` |
+| **both** | Print results to the REPL and write it to the file specified with the keyword `output` |
+| **none** | Does not print any results |
+
 ## Argument passing
 
 In some situations, we may want to pass argument to the energy computation. There are two ways to do that in Fermi. 
@@ -99,7 +114,7 @@ end
 
 ## Interactive Usage
 
-For quick tasks, debugging, or if you are simply browsing the code, this might be your best option. Moreover, this feature allows for usage within notebook environments such as [Jupyter](https://jupyter.org/try) and [Pluto](https://github.com/fonsp/Pluto.jl). Some objects, such as `Molecule`, `BasisSet` or `RHF`, can be printed directly on the terminal for some overview of their content.
+Interactive usage may be your best option for quick tasks, debugging, or if you are simply browsing the code. Moreover, this feature allows for usage within notebook environments such as [Jupyter](https://jupyter.org/try) and [Pluto](https://github.com/fonsp/Pluto.jl). Some objects, such as `Molecule`, `BasisSet` or `RHF`, can be printed directly on the terminal for some overview of their content.
 ```julia
 julia> using Fermi
 julia> using Fermi.Integrals

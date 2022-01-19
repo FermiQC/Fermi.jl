@@ -7,6 +7,7 @@
     <th>Documentation</th>
     <th>Build Status</th>
     <th>License</th>
+    <th>Citation</th>
   </tr>
   <tr>
     <td align="center">
@@ -27,14 +28,22 @@
       <img src=https://img.shields.io/badge/License-MIT-blue.svg>
       </a>
     </td>
+    <td align="center">
+      <a href=https://pubs.acs.org/doi/10.1021/acs.jctc.1c00719>
+      <img src=https://img.shields.io/badge/JCTC-10.1021/acs.jctc.1c00719-darkgreen.svg>
+      </a>
+    </td>
   </tr>
 </table>
 
-Fermi is a quantum chemistry program written in (nearly) pure Julia. This code is developed at
+Fermi is a quantum chemistry framework written in pure Julia. This code is developed at
 the [Center for Computational Quantum Chemistry](https://github.com/CCQC) at the University of Georgia under the supervision 
 of [Dr. Justin M. Turney](https://github.com/jturney) and Prof. Henry F. Schaefer.
 
 This work is supported by the U.S. National Science Foundation under grant number CHE-1661604.
+
+For an academic overview of this project, check our paper published in the Journal of Chemical Theory and Computation:
+[Fermi.jl: A Modern Design for Quantum Chemistry](https://pubs.acs.org/doi/10.1021/acs.jctc.1c00719)
 
 Fermi focuses on post Hartree--Fock methods. Currently, only restricted references are supported.
 This is intended as a research code with an ever growing collection of methods implemented in
@@ -67,8 +76,6 @@ If you would like the latest updates, use instead
 ```
 pkg> add Fermi#master
 ```
-Everything should work automatically, the most flagile part is building the integral library [libcint](https://github.com/sunqm/libcint). The file [`deps/build.jl`](https://github.com/gustavojra/Fermi.jl/blob/master/deps/build.jl) contains simple commands to clone and build this library, you might need to modify it to better suit your system. If you do, rerun the build step using `pkg> build Fermi`. Please reach out 
-if you encounter any problem.
 
 ## Running single point energies
 A minimal example of a computation is provided here. For more info check the documentation.
@@ -110,6 +117,3 @@ Fermi is a collection of *ab initio* methods. The long term goal is to provide p
 1. In an effort to improve the composability within the Julia chemistry community, some modules are going to be factorized out and Fermi will act as a high-level interface. For example, we intend to create a GaussianBasis.jl package with all the current integral code in it. That way, anyone interested in a basic, yet high level, integral code can use it.
 
 2. Performance boosts are always welcome! We need further testing and comparisons with well establish codes to find points to be improved. New backends for `BLAS` or `TBLIS` may also be considered.
-
-## Employee of the month
-   <img src="https://i.ibb.co/JQzmwTf/new.gif" alt="">
