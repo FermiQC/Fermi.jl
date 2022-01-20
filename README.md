@@ -97,23 +97,12 @@ Finally, run a computation
 @energy ccsd;
 ```
 
+## Fermi Ecosystem 
+
+[Molecules.jl](https://github.com/FermiQC/Molecules.jl): A package that deals with `Atom` objects. It can parse XYZ files and compute properties related to the position of nuclei.
+
+[GaussianBasis.jl](https://github.com/FermiQC/GaussianBasis.jl): A library for integrals and basis set objects. It can parse `.gbs` basis set files and create `BasisFunction` and `BasisSet` structures. Integrals over Gaussian basis are computed using `libcint`.
+
 ## Contribute
 PR's, issues, and suggestions are very welcome! You might consider reaching out before starting
 work so that we can avoid duplication of efforts. Check the roadmap below for an idea of where this project is heading towards. Contact [Gustavo Aroeira](https://github.com/gustavojra) for any inquiries. 
-
-## Roadmap
-
-Fermi is a collection of *ab initio* methods. The long term goal is to provide production level implementations for daily applications.
-
-### New features
-1. Gradients for current methods. Three types of gradients are going to be considered: analytical, finite diferences, and automatic differentiation. 
-2. Implementations for unrestricted refences, e.g. UCCSD(T).
-3. High-order coupled cluster methods, such as CCSDT, and CCSDT(Q).
-4. CBS extrapolation schemes and focal-point analysis.
-5. Local correlation methods.
-6. Interface with external modules for geometry optimization, vibrational analysis and themodynamic properties.
-
-### Improvements
-1. In an effort to improve the composability within the Julia chemistry community, some modules are going to be factorized out and Fermi will act as a high-level interface. For example, we intend to create a GaussianBasis.jl package with all the current integral code in it. That way, anyone interested in a basic, yet high level, integral code can use it.
-
-2. Performance boosts are always welcome! We need further testing and comparisons with well establish codes to find points to be improved. New backends for `BLAS` or `TBLIS` may also be considered.
