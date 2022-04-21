@@ -85,11 +85,18 @@ Edf = [
             mol = open(f->read(f,String), path)
 
             # Define options
+            Fermi.Options.set("rhf_alg", 1)
             Fermi.Options.set("molstring", mol)
             Fermi.Options.set("basis", basis[i])
 
             wf = @energy rhf
             @test isapprox(wf.energy, Edf[i], rtol=tol) # Energy from Psi4
+
+            if i in [3,5,7]
+                Fermi.Options.set("rhf_alg", 2)
+                wf = @energy rhf
+                @test isapprox(wf.energy, Edf[i], rtol=tol) # Energy from Psi4
+            end
         end
     end
 

@@ -40,7 +40,7 @@ function RHF_gwh_guess(ints::IntegralHelper)
     nvir = size(S,1) - ndocc
     F = similar(S)
 
-    for i = 1:ndocc+nvir
+    for i = 1:(ndocc+nvir)
         F[i,i] = H[i,i]
         for j = i+1:ndocc+nvir
             F[i,j] = 0.875*S[i,j]*(H[i,i] + H[j,j])
@@ -80,7 +80,7 @@ function build_fock!(F::FermiMDArray{Float64}, H::FermiMDArray{Float64}, D::Ferm
 end
 
 """
-    build_fock!(F::FermiMDArray{Float64,2}, H::FermiMDArray{Float64,2}, D::FermiMDArray{Float64,2}, b::FermiMDArray{Float64,3})
+    build_fock!(F::FermiMDArray{Float64,2}, H::FermiMDArray{Float64,2}, D::FermiMDArray{Float64,2}, ints::IntegralHelper{Float64,<:AbstractDFERI,AtomicOrbitals})
 
 Build a Fock matrix into `F` using the Core Hamiltonian `H`, density matrix `D` and two-electron repulsion integral `ERI`
 approximated by density fitting.

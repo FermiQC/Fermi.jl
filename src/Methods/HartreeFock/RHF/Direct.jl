@@ -1,24 +1,15 @@
-using GaussianBasis
-
-function RHF(Alg::A) where A <: RHFAlgorithm
-    ints = IntegralHelper{Float64}()
-    RHF(ints, Alg)
-end
-
-function RHF(mol::Molecule, Alg::A) where A <: RHFAlgorithm
-    RHF(IntegralHelper{Float64}(molecule=mol), Alg)
-end
-
-function RHF(ints::IntegralHelper{Float64}, Alg::A) where A <: RHFAlgorithm
+function RHF(ints::IntegralHelper{Float64}, Alg::Direct)
 
     Fermi.HartreeFock.hf_header()
 
-    output("Collecting necessary integrals...")
+    output("Collecting One-electron integrals...")
     t = @elapsed begin
         ints["S"]
         ints["T"]
         ints["V"]
-        ints["ERI"]
+        if !haskey(ints.cache, "Jinv")
+            ints["Jinv"] = inv(GaussianBasis.ERI_2e2c(ints.eri_type.basisset))
+        end
     end
     output("Done in {:10.5f} s", t)
 
@@ -32,49 +23,19 @@ function RHF(ints::IntegralHelper{Float64}, Alg::A) where A <: RHFAlgorithm
     RHF(ints, C, Λ, Alg)
 end
 
-function RHF(wfn::RHF, Alg::A) where A <: RHFAlgorithm
+function RHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, C::FermiMDArray{Float64,2}, Λ::FermiMDArray{Float64,2}, Alg::Direct)
 
-    Fermi.HartreeFock.hf_header()
-
-    # Projection of A→ B done using equations described in Werner 2004 
-    # https://doi.org/10.1080/0026897042000274801
-
-    output("Using {} wave function as initial guess", wfn.orbitals.basis)
-
-    # B = target basis set
-    intsB = IntegralHelper{Float64}()
-
-    # Assert both A and B have the same molecule.
-    #if intsB.molecule != wfn.molecule
-    #    output(" ! Input molecule does not match the molecule from the RHF wave function !")
-    #end
-
-    Sbb = intsB["S"]
-    Λ = Array(Sbb^(-1/2))
-
-    Ca = wfn.orbitals.C
-    bsA = GaussianBasis.BasisSet(wfn.orbitals.basis, wfn.molecule.atoms)
-    bsB = GaussianBasis.BasisSet(intsB.basis, intsB.molecule.atoms)
-    Sab = GaussianBasis.overlap(bsA, bsB)
-
-    T = transpose(Ca)*Sab*(Sbb^-1.0)*transpose(Sab)*Ca
-    Cb = (Sbb^-1.0)*transpose(Sab)*Ca*T^(-1/2)
-    Cb = real.(Cb)
-
-    RHF(intsB, FermiMDArray(Cb), FermiMDArray(Λ), Alg)
-end
-
-function RHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, C::FermiMDArray{Float64,2}, Λ::FermiMDArray{Float64,2}, Alg::RHFa)
+    output("Using the DIRECT algorithm.")
 
     molecule = ints.molecule
     output(Fermi.string_repr(molecule))
     # Grab some options
-    maxit = Options.get("scf_max_iter")
-    Etol  = Options.get("scf_e_conv")
-    Dtol  = Options.get("scf_max_rms")
-    do_diis = Options.get("diis")
-    oda = Options.get("oda")
-    oda_cutoff = Options.get("oda_cutoff")
+    maxit       = Options.get("scf_max_iter")
+    Etol        = Options.get("scf_e_conv")
+    Dtol        = Options.get("scf_max_rms")
+    do_diis     = Options.get("diis")
+    oda         = Options.get("oda")
+    oda_cutoff  = Options.get("oda_cutoff")
     oda_shutoff = Options.get("oda_shutoff")
 
     # Variables that will get updated iteration-to-iteration
@@ -110,17 +71,22 @@ function RHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, C::Fe
     S = ints["S"]
     T = ints["T"]
     V = ints["V"]
-    ERI = ints["ERI"]
+    if !haskey(ints.cache, "Jinv")
+        ints["Jinv"] = inv(GaussianBasis.ERI_2e2c(ints.eri_type.basisset))
+    end
+    Jinv = ints["Jinv"]
 
     # Form the density matrix from occupied subset of guess coeffs
     Co = C[:, 1:ndocc]
-    @tensor D[u,v] := Co[u,m]*Co[v,m]
+    D  = Co*Co'
     D_old = deepcopy(D)
-    eps = FermiMDzeros(Float64,ndocc+nvir)
+    eps = nothing
 
-    # Build the inital Fock Matrix and diagonalize
-    F = FermiMDzeros(Float64,nao,nao)
-    build_fock!(F, T + V, D, ints)
+    # Build the inital Fock Matrix
+    F = T + V
+    coulumb_to_fock!(F, D, Jinv, ints.orbitals.basisset, ints.eri_type.basisset)
+    exchange_to_fock!(F, C, Jinv, ints.molecule.Nα, ints.orbitals.basisset, ints.eri_type.basisset)
+
     F̃ = deepcopy(F)
     D̃ = deepcopy(D)
     N = length(D) # Number of elements in D (For RMS computation)
@@ -142,10 +108,12 @@ function RHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, C::Fe
 
             # Produce new Density Matrix
             Co = C[:,1:ndocc]
-            @tensor D[u,v] = Co[u,m]*Co[v,m]
+            D = Co*Co'
 
             # Build the Fock Matrix
-            build_fock!(F, T + V, D, ints)
+            F .= T + V
+            coulumb_to_fock!(F, D, Jinv, ints.orbitals.basisset, ints.eri_type.basisset)
+            exchange_to_fock!(F, C, Jinv, ints.molecule.Nα, ints.orbitals.basisset, ints.eri_type.basisset)
             Eelec = RHFEnergy(D, T + V, F)
 
             # Compute Energy
