@@ -34,7 +34,7 @@ Concrete type representing a density-fitted ERI using a JKFIT auxiliar basis set
 The JKFIT structure is used to build a IntegralHelper
 ```julia
 julia> jk = Fermi.Integrals.JKFIT()
-julia> ints = 
+julia> ints = Fermi.Integrals.IntegralHelper(eri_type=jk) 
 ```
 
 # Struct tree

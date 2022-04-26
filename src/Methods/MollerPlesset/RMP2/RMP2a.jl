@@ -1,5 +1,6 @@
 using LoopVectorization
 using LinearAlgebra
+using TensorOperations
 
 function RMP2(Alg::RMP2Algorithm)
     aoints = IntegralHelper{Float64}()
@@ -87,37 +88,7 @@ function RMP2(ints::IntegralHelper{<:AbstractFloat,<:AbstractERI,<:AbstractRestr
     RMP2(Emp2, Emp2+Eref)
 end
 
-function RMP2_energy(ints::IntegralHelper{T,E,O}, Alg::RMP2Algorithm) where {T<:AbstractFloat, E<:AbstractERI,O<:AbstractRestrictedOrbitals}
-
-    Emp2 = RMP2_nonrhf_energy(ints, Alg)
-    Emp2 += RMP2_canonical_energy(ints, Alg)
-
-    return Emp2
-end
-
-function RMP2_energy(ints::IntegralHelper{<:AbstractFloat, <:AbstractERI, RHFOrbitals}, Alg::RMP2Algorithm) 
-    Emp2 = RMP2_canonical_energy(ints, Alg)
-    return Emp2
-end
-
-function RMP2_nonrhf_energy(ints::IntegralHelper{<:AbstractFloat, <:AbstractERI, <:AbstractRestrictedOrbitals}, Alg::RMP2Algorithm)
-
-    ϵo = ints["Fii"]
-    ϵv = ints["Faa"]
-
-    t = @elapsed begin
-    output("Computing non-RHF contribution to the MP2 energy... ", ending="")
-
-    Dia = [ϵo[i]-ϵv[a] for i = eachindex(ϵo), a = eachindex(ϵv)]
-    Fia = ints["Fia"]
-    Emp2 = sum(transpose(Fia)*(Fia ./ Dia))
-    end
-    output("Done in {:3.5f} seconds.", t)
-
-    return Emp2
-end
-
-function RMP2_canonical_energy(ints::IntegralHelper{T, <:AbstractDFERI, <:AbstractRestrictedOrbitals}, Alg::RMP2Algorithm) where T<:AbstractFloat
+function RMP2_energy(ints::IntegralHelper{T, <:AbstractDFERI, RHFOrbitals}, Alg::RMP2Algorithm) where T<:AbstractFloat
     Bvo = permutedims(ints["BOV"].data, (1,3,2))
     ϵo = ints["Fii"]
     ϵv = ints["Faa"]
@@ -172,7 +143,7 @@ function RMP2_canonical_energy(ints::IntegralHelper{T, <:AbstractDFERI, <:Abstra
     return Emp2
 end
 
-function RMP2_canonical_energy(ints::IntegralHelper{T, Chonky, <:AbstractRestrictedOrbitals}, Alg::RMP2Algorithm) where T<:AbstractFloat
+function RMP2_energy(ints::IntegralHelper{T, Chonky, RHFOrbitals}, Alg::RMP2Algorithm) where T<:AbstractFloat
     output(" Computing MP2 Energy... ", ending="")
     ovov = ints["OVOV"]
     ϵo = ints["Fii"]
@@ -198,4 +169,75 @@ function RMP2_canonical_energy(ints::IntegralHelper{T, Chonky, <:AbstractRestric
     end
     output("Done in {:5.5f} s\n", t)
     return sum(ΔMP2s)
+end
+
+function RMP2_energy(ints::IntegralHelper{T, Chonky, <:AbstractRestrictedOrbitals}, Alg::RMP2Algorithm) where T<:AbstractFloat
+    output(" Computing Iterative MP2 Energy")
+
+    foo = ints["Fij"]
+    fvv = ints["Fab"]
+    ϵo = ints["Fii"]
+    ϵv = ints["Faa"]
+    Vovov = ints["OVOV"]
+    newT2 = permutedims(Vovov, (1,3,2,4))
+    invD = FermiMDArray([1.0/(ϵo[i]+ϵo[j]-ϵv[a]-ϵv[b]) for i=eachindex(ϵo), j=eachindex(ϵo), a=eachindex(ϵv), b=eachindex(ϵv)])
+    T2 = similar(newT2)
+
+    # Iteration parameters
+    ite = 1
+    Emp2 = 0.0
+    oldE = 0.0
+    dE = 1.0
+    rms = 1.0
+    main_time = 0.0 
+
+    e_conv = Options.get("cc_e_conv")
+    max_iter = Options.get("cc_max_iter")
+    max_rms = Options.get("cc_max_rms")
+
+    output("{:10s}    {: 15s}    {: 12s}    {:12s}    {:10s}","Iteration","CC Energy","ΔE","Max RMS","time (s)")
+    while (abs(dE) > e_conv || rms > max_rms)
+        if ite > max_iter
+            output("\n⚠️  MP2 Equations did not converge in {:1.0d} iterations.", max_iter)
+            break
+        end
+        t = @elapsed begin
+
+            T2 .= newT2
+            oldE = Emp2
+            TWO = T(2)
+            @tensor begin
+                newT2[i,j,a,b]  = fvv[c,a]*T2[i,j,c,b]
+                newT2[i,j,a,b] -= foo[i,k]*T2[k,j,a,b]
+            end
+            newT2 .+= permutedims(newT2, (2,1,4,3))
+            newT2 .+= permutedims(Vovov, (1,3,2,4))
+            newT2 .*= invD 
+
+            @tensor begin
+                #Energy
+                B[l,c,k,d] := TWO*newT2[k,l,c,d]
+                B[l,c,k,d] -= newT2[l,k,c,d]
+                Emp2 = B[l,c,k,d]*Vovov[k,c,l,d]
+            end
+
+            # Compute residues 
+            rms = sqrt(sum((newT2 .- T2).^2)/length(T2))
+        end
+        dE = Emp2 - oldE
+        main_time += t
+        output("    {:<5.0d}    {:<15.10f}    {:>+12.10f}    {:<12.10f}    {:<10.5f}", ite, Emp2, dE, rms, t)
+        ite += 1
+    end
+    output("\nMain MP2 iterations done in {:5.5f} s", main_time)
+    output("Average time per iteration {:5.5f}", main_time/(ite-1))
+
+    # Converged?
+    conv = false
+    if abs(dE) < e_conv && rms < max_rms 
+        output("\n 🍾 Equations Converged!")
+        conv = true
+    end
+
+    return Emp2
 end

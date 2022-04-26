@@ -111,6 +111,11 @@ include("RHFHelper.jl")
 # And a number is assigned to the implementation
 get_rhf_alg(x::Val{1}) = RHFa()
 
+struct Direct <: RHFAlgorithm end
+include("Direct.jl")
+include("DirectHelper.jl")
+get_rhf_alg(x::Val{2}) = Direct()
+
 
 # Gradient methods
 include("Gradients/RHFgrad.jl")
