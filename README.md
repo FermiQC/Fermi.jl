@@ -105,4 +105,23 @@ Finally, run a computation
 
 ## Contribute
 PR's, issues, and suggestions are very welcome! You might consider reaching out before starting
-work so that we can avoid duplication of efforts. Check the roadmap below for an idea of where this project is heading towards. Contact [Gustavo Aroeira](https://github.com/gustavojra) for any inquiries. 
+work so that we can avoid duplication of efforts. Besides browsing our issues for things that needs fixing/enhancement you can check the desired features below for ideas of what you can do! Contact [Gustavo Aroeira](https://github.com/gustavojra) for any inquiries. 
+
+## Desired Features 
+
+**1. New Methods for Energy Computations**
+  * Unrestricted MP2
+  * Unrestricted CC and High order CC methods (e.g. CCSDT, CCSDTQ)
+  * Configuration Interaction (CID, CISD, FCI, selective CI, etc) 
+  * Relativistic Methods
+  * Methods beyond Born-Oppenheimer approximation
+  * Excited States
+**2. Properties**
+  * Dipole Moments
+  * Polarizability
+  * IR intensities
+  * Harmonic Frequencies
+  * Anharmonic Frequencies
+**3. Computational schemes**
+  * GPU Computations
+  * Distributed Computations
