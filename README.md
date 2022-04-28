@@ -116,12 +116,14 @@ work so that we can avoid duplication of efforts. Besides browsing our issues fo
   * Relativistic Methods
   * Methods beyond Born-Oppenheimer approximation
   * Excited States
+
 **2. Properties**
   * Dipole Moments
   * Polarizability
   * IR intensities
   * Harmonic Frequencies
   * Anharmonic Frequencies
+
 **3. Computational schemes**
   * GPU Computations
   * Distributed Computations
