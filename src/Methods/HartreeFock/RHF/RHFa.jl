@@ -61,10 +61,10 @@ function RHF(wfn::RHF, Alg::A) where A <: RHFAlgorithm
     Cb = (Sbb^-1.0)*transpose(Sab)*Ca*T^(-1/2)
     Cb = real.(Cb)
 
-    RHF(intsB, FermiMDArray(Cb), FermiMDArray(Λ), Alg)
+    RHF(intsB, Cb, Λ, Alg)
 end
 
-function RHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, C::FermiMDArray{Float64,2}, Λ::FermiMDArray{Float64,2}, Alg::RHFa)
+function RHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, C::AbstractMatrix, Λ::AbstractMatrix, Alg::RHFa)
 
     molecule = ints.molecule
     output(Fermi.string_repr(molecule))
@@ -116,10 +116,10 @@ function RHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, C::Fe
     Co = C[:, 1:ndocc]
     @tensor D[u,v] := Co[u,m]*Co[v,m]
     D_old = deepcopy(D)
-    eps = FermiMDzeros(Float64,ndocc+nvir)
+    eps = zeros(Float64,ndocc+nvir)
 
     # Build the inital Fock Matrix and diagonalize
-    F = FermiMDzeros(Float64,nao,nao)
+    F = zeros(Float64,nao,nao)
     build_fock!(F, T + V, D, ints)
     F̃ = deepcopy(F)
     D̃ = deepcopy(D)
@@ -135,7 +135,7 @@ function RHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, C::Fe
             Ft = Λ'*F*Λ
 
             # Get orbital energies and transformed coefficients
-            eps,Ct = diagonalize(Ft, hermitian=true)
+            eps, Ct = LinearAlgebra.eigen(Symmetric(Ft), sortby=x->x)
 
             # Reverse transformation to get MO coefficients
             C = Λ*Ct

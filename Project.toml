@@ -1,7 +1,7 @@
 name = "Fermi"
 uuid = "9237668d-08c8-4784-b8dd-383aa52fcf74"
 authors = ["gustavojra <gustavo.aroeira@gmail.com>"]
-version = "0.3.0"
+version = "0.4.0"
 
 [deps]
 Formatting = "59287772-0a20-5a39-b81b-1366585eb4c0"
@@ -17,9 +17,9 @@ TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
-Formatting = "^0.4.1"
-GaussianBasis = "^0.2"
 Molecules = "^0.1.1"
+GaussianBasis = "^0.3"
+Formatting = "^0.4.1"
 PrettyTables = "1"
 Strided = "1"
 Suppressor = "0.2"

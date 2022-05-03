@@ -30,7 +30,7 @@ Edf = [
 @testset "RHF" begin
 
     # Test argument error
-    @test_throws FermiException Fermi.HartreeFock.RHF(1)
+    @test_throws Fermi.Options.FermiException Fermi.HartreeFock.RHF(1)
 
     # Test core guess 
     mol = Molecule()
@@ -52,7 +52,7 @@ Edf = [
     @set charge 1
     @set multiplicity 2
     mol = Molecule()
-    @test_throws FermiException @energy mol => rhf
+    @test_throws Fermi.Options.FermiException @energy mol => rhf
 
     @reset
     @set printstyle none

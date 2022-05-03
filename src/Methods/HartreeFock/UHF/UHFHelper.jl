@@ -72,7 +72,7 @@ function build_fock!(Fα, Fβ, Jα, Jβ, Kα, Kβ, Dα, Dβ, ints::IntegralHelpe
 end
 
 function calcJK!(J, K, D, ints::IntegralHelper{Float64,<:SparseERI,AtomicOrbitals})
-    D = D.data
+    D = D
     J .= 0.0
     K .= 0.0
     eri_vals = ints["ERI"].data

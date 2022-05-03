@@ -11,7 +11,6 @@ tol = 1E-8
     include("test_options.jl")
     include("test_output.jl")
     include("test_arrays.jl")
-    include("test_contract.jl")
     include("test_molecule.jl")
     include("test_diis.jl")
     include("test_orbitals.jl")

@@ -12,7 +12,7 @@ function RHF_core_guess(ints::IntegralHelper)
     Ft = Λ*F*Λ'
 
     # Get orbital energies and transformed coefficients
-    _, Ct = diagonalize(Ft, hermitian=true)
+    _, Ct = LinearAlgebra.eigen(Symmetric(Ft), sortby=x->x)
 
     # Reverse transformation to get MO coefficients
     C = Λ*Ct
@@ -31,11 +31,11 @@ function RHF_gwh_guess(ints::IntegralHelper)
     output("Using GWH Guess")
     molecule = ints.molecule
     S = ints["S"]
-    d, U = diagonalize(S, sortby = x->1/abs(x))
-    Λ = FermiMDArray(Hermitian(S.data)^(-1/2))
+    d, U = LinearAlgebra.eigen(Symmetric(S), sortby = x->1/abs(x))
+    Λ = Hermitian(S)^(-1/2) |> Array
     idxs = [abs(d[i]) > 1E-7 for i = eachindex(d)]
 
-    H = real.(ints["T"] + ints["V"])
+    H = ints["T"] + ints["V"]
     ndocc = molecule.Nα
     nvir = size(S,1) - ndocc
     F = similar(S)
@@ -50,7 +50,7 @@ function RHF_gwh_guess(ints::IntegralHelper)
     Ft = Λ'*F*Λ
 
     # Get orbital energies and transformed coefficients
-    _, Ct = diagonalize(Ft, hermitian=true)
+    _, Ct = LinearAlgebra.eigen(Symmetric(Ft), sortby=x->x)
 
     # Reverse transformation to get MO coefficients
     C = Λ*Ct
@@ -59,20 +59,20 @@ function RHF_gwh_guess(ints::IntegralHelper)
 end
 
 """
-    RHFEnergy(D::FermiMDArray{Float64}, H::FermiMDArray{Float64}, F::FermiMDArray{Float64})
+    RHFEnergy(D::Array{Float64}, H::Array{Float64}, F::Array{Float64})
 
 Compute RHF energy given a density matrix `D`, Core Hamiltonian `H` and Fock matrix `F`.
 """
-function RHFEnergy(D::FermiMDArray{Float64}, H::FermiMDArray{Float64}, F::FermiMDArray{Float64})
+function RHFEnergy(D::Array{Float64}, H::Array{Float64}, F::Array{Float64})
     return sum(D .* (H .+ F))
 end
 
 """
-    build_fock!(F::FermiMDArray{Float64}, H::FermiMDArray{Float64}, D::FermiMDArray{Float64}, ERI::FermiMDArray{Float64,4})
+    build_fock!(F::Array{Float64}, H::Array{Float64}, D::Array{Float64}, ERI::Array{Float64,4})
 
 Build a Fock matrix into `F` using the Core Hamiltonian `H`, density matrix `D` and two-electron repulsion integral `ERI`.
 """
-function build_fock!(F::FermiMDArray{Float64}, H::FermiMDArray{Float64}, D::FermiMDArray{Float64}, ints::IntegralHelper{Float64,Chonky,AtomicOrbitals})
+function build_fock!(F::Array{Float64}, H::Array{Float64}, D::Array{Float64}, ints::IntegralHelper{Float64,Chonky,AtomicOrbitals})
     ERI = ints["ERI"]
     F .= H
     @tensor F[m,n] += 2*D[r,s]*ERI[m,n,r,s]
@@ -80,20 +80,20 @@ function build_fock!(F::FermiMDArray{Float64}, H::FermiMDArray{Float64}, D::Ferm
 end
 
 """
-    build_fock!(F::FermiMDArray{Float64,2}, H::FermiMDArray{Float64,2}, D::FermiMDArray{Float64,2}, ints::IntegralHelper{Float64,<:AbstractDFERI,AtomicOrbitals})
+    build_fock!(F::Array{Float64,2}, H::Array{Float64,2}, D::Array{Float64,2}, ints::IntegralHelper{Float64,<:AbstractDFERI,AtomicOrbitals})
 
 Build a Fock matrix into `F` using the Core Hamiltonian `H`, density matrix `D` and two-electron repulsion integral `ERI`
 approximated by density fitting.
 """
-function build_fock!(F::FermiMDArray{Float64,2}, H::FermiMDArray{Float64,2}, D::FermiMDArray{Float64,2}, ints::IntegralHelper{Float64,<:AbstractDFERI,AtomicOrbitals})
+function build_fock!(F::Array{Float64,2}, H::Array{Float64,2}, D::Array{Float64,2}, ints::IntegralHelper{Float64,<:AbstractDFERI,AtomicOrbitals})
     b = ints["ERI"]
     F .= H
     @tensoropt F[m,n] += 2*D[r,s]*b[Q,m,n]*b[Q,r,s]
     @tensoropt F[m,n] -= D[r,s]*b[Q,m,r]*b[Q,n,s]
 end
 
-function build_fock!(F::FermiMDArray{Float64}, H::FermiMDArray{Float64}, D::FermiMDArray{Float64}, ints::IntegralHelper{Float64,SparseERI,AtomicOrbitals})
-    D = D.data
+function build_fock!(F::Array{Float64}, H::Array{Float64}, D::Array{Float64}, ints::IntegralHelper{Float64,SparseERI,AtomicOrbitals})
+    D = D
     F .= H
     eri_vals = ints["ERI"].data
     idxs = ints["ERI"].indexes

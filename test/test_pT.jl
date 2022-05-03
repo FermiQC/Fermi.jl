@@ -1,6 +1,5 @@
 @reset
 @set printstyle none
-@set tblis true
 
 Econv = [
 -76.343819598166903

@@ -3,7 +3,7 @@ using LinearAlgebra
 using Octavian
 
 function RMP2_canonical_energy(ints::IntegralHelper{T,RIFIT,O}, Alg::RMP2b) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}
-    Bvo = permutedims(ints["BOV"].data, (1,3,2))
+    Bvo = permutedims(ints["BOV"], (1,3,2))
     ϵo = ints["Fii"]
     ϵv = ints["Faa"]
 

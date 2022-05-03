@@ -89,7 +89,7 @@ function RMP2(ints::IntegralHelper{<:AbstractFloat,<:AbstractERI,<:AbstractRestr
 end
 
 function RMP2_energy(ints::IntegralHelper{T, <:AbstractDFERI, RHFOrbitals}, Alg::RMP2Algorithm) where T<:AbstractFloat
-    Bvo = permutedims(ints["BOV"].data, (1,3,2))
+    Bvo = permutedims(ints["BOV"], (1,3,2))
     ϵo = ints["Fii"]
     ϵv = ints["Faa"]
 
@@ -180,7 +180,7 @@ function RMP2_energy(ints::IntegralHelper{T, Chonky, <:AbstractRestrictedOrbital
     ϵv = ints["Faa"]
     Vovov = ints["OVOV"]
     newT2 = permutedims(Vovov, (1,3,2,4))
-    invD = FermiMDArray([1.0/(ϵo[i]+ϵo[j]-ϵv[a]-ϵv[b]) for i=eachindex(ϵo), j=eachindex(ϵo), a=eachindex(ϵv), b=eachindex(ϵv)])
+    invD = [1.0/(ϵo[i]+ϵo[j]-ϵv[a]-ϵv[b]) for i=eachindex(ϵo), j=eachindex(ϵo), a=eachindex(ϵv), b=eachindex(ϵv)]
     T2 = similar(newT2)
 
     # Iteration parameters
