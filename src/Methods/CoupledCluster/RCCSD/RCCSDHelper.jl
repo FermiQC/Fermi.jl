@@ -209,8 +209,8 @@ function cc_update_T2_v4_term!(newT2::AbstractArray{T,4}, T1::AbstractArray{T,2}
 
     o_size = size(T1, 1)
     v_size = size(T1, 2)
-    cdb = FermiMDzeros(T, v_size, v_size, v_size)
-    newT2a = FermiMDzeros(T, o_size, o_size, v_size)
+    cdb = zeros(T, v_size, v_size, v_size)
+    newT2a = zeros(T, o_size, o_size, v_size)
     for a = 1:v_size
         Ba = @views Bvv[:,:,a]
         @tensor cdb[c,d,b] = Ba[Q,c]*Bvv[Q,d,b]
@@ -273,7 +273,7 @@ function update_amp!(newT1::AbstractArray{T,2}, newT2::AbstractArray{T,4}, T1::A
         ϵo = Fd[(1+frozen:ndocc)]
         ϵv = Fd[(1+ndocc):end-inac]
 
-        d = FermiMDArray([ϵo[i]-ϵv[a] for i=eachindex(ϵo), a=eachindex(ϵv)])
+        d = [ϵo[i]-ϵv[a] for i=eachindex(ϵo), a=eachindex(ϵv)]
         moints["D1"] = d
     end
 
@@ -287,7 +287,7 @@ function update_amp!(newT1::AbstractArray{T,2}, newT2::AbstractArray{T,4}, T1::A
         ϵo = Fd[(1+frozen:ndocc)]
         ϵv = Fd[(1+ndocc):end-inac]
 
-        D = FermiMDArray([ϵo[i]+ϵo[j]-ϵv[a]-ϵv[b] for i=eachindex(ϵo), j=eachindex(ϵo), a=eachindex(ϵv), b=eachindex(ϵv)])
+        D = [ϵo[i]+ϵo[j]-ϵv[a]-ϵv[b] for i=eachindex(ϵo), j=eachindex(ϵo), a=eachindex(ϵv), b=eachindex(ϵv)]
         moints["D2"] = D
     end
 
@@ -323,7 +323,7 @@ function update_amp!(newT1::AbstractArray{T,2}, newT2::AbstractArray{T,4}, T1::A
         ϵo = Fd[(1+frozen:ndocc)]
         ϵv = Fd[(1+ndocc):end-inac]
 
-        d = FermiMDArray([ϵo[i]-ϵv[a] for i=eachindex(ϵo), a=eachindex(ϵv)])
+        d = [ϵo[i]-ϵv[a] for i=eachindex(ϵo), a=eachindex(ϵv)]
         moints["D1"] = d
     end
 
@@ -337,7 +337,7 @@ function update_amp!(newT1::AbstractArray{T,2}, newT2::AbstractArray{T,4}, T1::A
         ϵo = Fd[(1+frozen:ndocc)]
         ϵv = Fd[(1+ndocc):end-inac]
 
-        D = FermiMDArray([ϵo[i]+ϵo[j]-ϵv[a]-ϵv[b] for i=eachindex(ϵo), j=eachindex(ϵo), a=eachindex(ϵv), b=eachindex(ϵv)])
+        D = [ϵo[i]+ϵo[j]-ϵv[a]-ϵv[b] for i=eachindex(ϵo), j=eachindex(ϵo), a=eachindex(ϵv), b=eachindex(ϵv)]
         moints["D2"] = D
     end
 

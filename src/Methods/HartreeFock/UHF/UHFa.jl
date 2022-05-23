@@ -26,7 +26,7 @@ function UHF(ints::IntegralHelper{Float64}, Alg::UHFa)
 end
 
 
-function UHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, Cα::FermiMDArray{Float64, 2}, Cβ::FermiMDArray{Float64, 2}, Λ::FermiMDArray{Float64, 2}, Alg::UHFa)
+function UHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, Cα::AbstractMatrix, Cβ::AbstractMatrix, Λ::AbstractMatrix, Alg::UHFa)
     molecule = ints.molecule
     output(Fermi.string_repr(molecule))
     
@@ -55,16 +55,16 @@ function UHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, Cα::
     V = ints["V"]
     ERI = ints["ERI"]
     m = size(S)[1]
-    Dα = FermiMDzeros(Float64, (m,m))
-    Dβ = FermiMDzeros(Float64, (m,m))
-    Jα = FermiMDzeros(Float64, (m,m))
-    Jβ = FermiMDzeros(Float64, (m,m))
-    Kα = FermiMDzeros(Float64, (m,m))
-    Kβ = FermiMDzeros(Float64, (m,m))
-    ϵα = FermiMDzeros(Float64, (m))
-    ϵβ = FermiMDzeros(Float64, (m))
-    Fα = FermiMDzeros(Float64, (m,m))
-    Fβ = FermiMDzeros(Float64, (m,m))
+    Dα = zeros(Float64, (m,m))
+    Dβ = zeros(Float64, (m,m))
+    Jα = zeros(Float64, (m,m))
+    Jβ = zeros(Float64, (m,m))
+    Kα = zeros(Float64, (m,m))
+    Kβ = zeros(Float64, (m,m))
+    ϵα = zeros(Float64, (m))
+    ϵβ = zeros(Float64, (m))
+    Fα = zeros(Float64, (m,m))
+    Fβ = zeros(Float64, (m,m))
     Dsα = deepcopy(Dα)
     Dsβ = deepcopy(Dβ)
     Fsα = deepcopy(Fα)
@@ -97,8 +97,8 @@ function UHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, Cα::
             F̃β = Λ*Fβ*Λ
             
             # Solve for eigenvalues and eigenvectors
-            ϵα, C̃α = diagonalize(F̃α)
-            ϵβ, C̃β = diagonalize(F̃β)
+            ϵα, C̃α = LinearAlgebra.eigen(Symmetric(F̃α), sortby=x->x)
+            ϵβ, C̃β = LinearAlgebra.eigen(Symmetric(F̃β), sortby=x->x)
             
             # Transform orbital coefficient matrices to AO basis
             Cα = Λ*C̃α

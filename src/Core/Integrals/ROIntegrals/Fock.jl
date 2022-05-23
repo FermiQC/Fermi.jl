@@ -25,7 +25,7 @@ function compute_F!(I::IntegralHelper{T,Chonky,<:AbstractRestrictedOrbitals}, ao
     # Atomic Fock -> Molecular Fock
     @tensoropt Fmol[p,q] := C[μ,p]*F[μ,ν]*C[ν,q]
 
-    Fd = FermiMDArray(diag(Fmol))
+    Fd = diag(Fmol)
     I["Fd"] = Fd
     I["Fii"] = Fd[o]
     I["Faa"] = Fd[v]
@@ -61,7 +61,7 @@ function compute_F!(I::IntegralHelper{T1,<:AbstractDFERI,<:AbstractRestrictedOrb
     # Atomic Fock -> Molecular Fock
     @tensoropt Fmol[p,q] := C[μ,p]*F[μ,ν]*C[ν,q]
 
-    Fd = FermiMDArray(diag(Fmol))
+    Fd = diag(Fmol)
     I["Fd"] = Fd
     I["Fii"] = Fd[o]
     I["Faa"] = Fd[v]
@@ -92,9 +92,9 @@ function compute_F!(I::IntegralHelper{T, <:AbstractERI, RHFOrbitals}) where T<:A
     I["Fd"] = T.(I.orbitals.eps)
     I["Fii"] = T.(I.orbitals.eps[o])
     I["Faa"] = T.(I.orbitals.eps[v])
-    I["Fia"] = FermiMDzeros(T, No,Nv)
-    I["Fij"] = FermiMDzeros(T, No,No)
-    I["Fab"] = FermiMDzeros(T, Nv,Nv)
+    I["Fia"] = zeros(T, No,Nv)
+    I["Fij"] = zeros(T, No,No)
+    I["Fab"] = zeros(T, Nv,Nv)
 end
 
 function compute_ref_energy(I::IntegralHelper{T,Chonky,O}) where {T<:AbstractFloat, O<:AbstractRestrictedOrbitals}

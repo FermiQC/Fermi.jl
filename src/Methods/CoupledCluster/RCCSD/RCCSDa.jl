@@ -56,7 +56,7 @@ function RCCSD(moints::IntegralHelper{T,E,O}, alg::RCCSDa) where {T<:AbstractFlo
         ϵo = Fd[(1+frozen:ndocc)]
         ϵv = Fd[(1+ndocc):end-inac]
 
-        d = FermiMDArray([ϵo[i]-ϵv[a] for i=eachindex(ϵo), a=eachindex(ϵv)])
+        d = [ϵo[i]-ϵv[a] for i=eachindex(ϵo), a=eachindex(ϵv)]
         moints["D1"] = d
     end
 
@@ -70,7 +70,7 @@ function RCCSD(moints::IntegralHelper{T,E,O}, alg::RCCSDa) where {T<:AbstractFlo
         ϵo = Fd[(1+frozen:ndocc)]
         ϵv = Fd[(1+ndocc):end-inac]
 
-        D = FermiMDArray([ϵo[i]+ϵo[j]-ϵv[a]-ϵv[b] for i=eachindex(ϵo), j=eachindex(ϵo), a=eachindex(ϵv), b=eachindex(ϵv)])
+        D = [ϵo[i]+ϵo[j]-ϵv[a]-ϵv[b] for i=eachindex(ϵo), j=eachindex(ϵo), a=eachindex(ϵv), b=eachindex(ϵv)]
         moints["D2"] = D
     end
 
@@ -124,7 +124,6 @@ function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::
     output("\tDIIS Vectors        {}", (do_diis ? ndiis : 0))
     output("\tDIIS Precision      {}", diis_prec)
     output("\tDamping percentage  {}", dp)
-    output("\tTBLIS               {}", Options.get("tblis"))
     output("\t\tcc_max_iter →  {:3.0d}", cc_max_iter)
     output("\t\tcc_e_conv   →  {:2.0e}", cc_e_conv)
     output("\t\tcc_max_rms  →  {:2.0e}", cc_max_rms)
