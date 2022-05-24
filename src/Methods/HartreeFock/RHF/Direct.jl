@@ -23,7 +23,7 @@ function RHF(ints::IntegralHelper{Float64}, Alg::Direct)
     RHF(ints, C, Λ, Alg)
 end
 
-function RHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, C::FermiMDArray{Float64,2}, Λ::FermiMDArray{Float64,2}, Alg::Direct)
+function RHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, C::Array{Float64,2}, Λ::Array{Float64,2}, Alg::Direct)
 
     output("Using the DIRECT algorithm.")
 
@@ -101,7 +101,7 @@ function RHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, C::Fe
             Ft = Λ'*F*Λ
 
             # Get orbital energies and transformed coefficients
-            eps,Ct = diagonalize(Ft, hermitian=true)
+            eps, Ct = LinearAlgebra.eigen(Symmetric(Ft), sortby=x->x)
 
             # Reverse transformation to get MO coefficients
             C = Λ*Ct

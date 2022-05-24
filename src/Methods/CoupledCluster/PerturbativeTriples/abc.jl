@@ -21,18 +21,18 @@ function RCCSDpT(ccsd::RCCSD, moints::IntegralHelper{T,E,O}, Alg::abc) where {T<
     output("\n   • Perturbative Triples Started\n")
     output("   - Using abc algorithm")
 
-    T1 = ccsd.T1.data
-    T2 = ccsd.T2.data 
+    T1 = ccsd.T1
+    T2 = ccsd.T2 
 
     # Use physicists notation
-    ovvv = permutedims(moints["OVVV"].data, (1,3,2,4))
-    ooov = permutedims(moints["OOOV"].data, (1,3,2,4))
-    oovv = permutedims(moints["OVOV"].data, (1,3,2,4))
+    ovvv = permutedims(moints["OVVV"], (1,3,2,4))
+    ooov = permutedims(moints["OOOV"], (1,3,2,4))
+    oovv = permutedims(moints["OVOV"], (1,3,2,4))
 
     o,v = size(T1)
 
-    fo = moints["Fii"].data
-    fv = moints["Faa"].data
+    fo = moints["Fii"]
+    fv = moints["Faa"]
 
     # Pre-allocate Intermediate arrays
     Ws  = [Array{T}(undef, o,o,o) for _ = 1:Threads.nthreads()] 
@@ -42,7 +42,6 @@ function RCCSDpT(ccsd::RCCSD, moints::IntegralHelper{T,E,O}, Alg::abc) where {T<
     output("Computing energy contribution from occupied orbitals:")
     BLAS_THREADS = BLAS.get_num_threads()
     BLAS.set_num_threads(1)
-    TBLIS_THREADS = TBLIS.set_num_threads(3)
 
     t = @elapsed begin
     Threads.@threads for a in 1:v
@@ -152,7 +151,6 @@ function RCCSDpT(ccsd::RCCSD, moints::IntegralHelper{T,E,O}, Alg::abc) where {T<
     end # time
 
     BLAS.set_num_threads(BLAS_THREADS)
-    TBLIS.set_num_threads(TBLIS_THREADS)
     Et = sum(Evals)
     output("Finished in {:5.5f} s", t)
     output("Final (T) contribution: {:15.10f}", Et)

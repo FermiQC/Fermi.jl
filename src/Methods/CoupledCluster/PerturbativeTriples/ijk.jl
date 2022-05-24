@@ -1,6 +1,5 @@
 using LinearAlgebra
 using LoopVectorization
-using TBLIS
 
 function RCCSDpT(Alg::ijk)
     val = Options.get("return_ints")
@@ -13,22 +12,21 @@ end
 function RCCSDpT(ccsd::RCCSD, moints::IntegralHelper{T,E,O}, Alg::ijk) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
 
     output("\n   • Perturbative Triples Started\n")
-    output("   - Contraction engine: TBLIS")
 
-    T1 = permutedims(ccsd.T1.data, (2,1))
-    T2 = permutedims(ccsd.T2.data, (4,3,2,1))
+    T1 = permutedims(ccsd.T1, (2,1))
+    T2 = permutedims(ccsd.T2, (4,3,2,1))
 
     # Invert order, but retains chemist's notation
-    Vvvvo = permutedims(moints["OVVV"].data, (4,3,2,1))
+    Vvvvo = permutedims(moints["OVVV"], (4,3,2,1))
 
     # Switch to physicist notation for better memory layout
-    Vvooo = permutedims(moints["OOOV"].data, (4,1,2,3))
-    Vvvoo = permutedims(moints["OVOV"].data, (2,4,1,3))
+    Vvooo = permutedims(moints["OOOV"], (4,1,2,3))
+    Vvvoo = permutedims(moints["OVOV"], (2,4,1,3))
 
     v,o = size(T1)
 
-    fo = moints["Fii"].data
-    fv = moints["Faa"].data
+    fo = moints["Fii"]
+    fv = moints["Faa"]
 
     # Pre-allocate Intermediate arrays
     Ws  = [Array{T}(undef, v,v,v) for _ = 1:Threads.nthreads()] 
@@ -38,7 +36,6 @@ function RCCSDpT(ccsd::RCCSD, moints::IntegralHelper{T,E,O}, Alg::ijk) where {T<
     output("Computing energy contribution from occupied orbitals:")
     BLAS_THREADS = BLAS.get_num_threads()
     BLAS.set_num_threads(1)
-    TBLIS_THREADS = TBLIS.set_num_threads(1)
 
     t = @elapsed begin
     Threads.@threads for i in 1:o
@@ -137,7 +134,6 @@ function RCCSDpT(ccsd::RCCSD, moints::IntegralHelper{T,E,O}, Alg::ijk) where {T<
     end # time
 
     BLAS.set_num_threads(BLAS_THREADS)
-    TBLIS.set_num_threads(TBLIS_THREADS)
     Et = sum(Evals)
     output("Finished in {:5.5f} s", t)
     output("Final (T) contribution: {:15.10f}", Et)
