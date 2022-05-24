@@ -42,7 +42,7 @@ These options can be set with `@set <option> <value>`
 | `drop_occ`    | Number of occupied electrons to be dropped | `Int`  | [0]              |
 | `drop_vir`    | Number of virtual electrons to be dropped | `Int`  | [0]              |
 """
-struct RFCI{T} <: AbstractCCWavefunction 
+struct RFCI{T} <: AbstractCIWavefunction 
     energy::Float64
     correlation::T
 end
