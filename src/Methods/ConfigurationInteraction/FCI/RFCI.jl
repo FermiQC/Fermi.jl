@@ -142,10 +142,6 @@ function get_σ1(Is, hp, eri, C)
         
 
         σ1[:,Iidx] .= C*F
-
-                        #println("-"^30)
-                        #println("$pl $pk $((-1)^(pl+pk))")
-                        #println(bitstring(Kβ)[(sz-Nbas):end])
     end # loop over Is
 
     return σ1 + transpose(σ1)
