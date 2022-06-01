@@ -1,8 +1,11 @@
 using Combinatorics
+using KrylovKit
 
 function RFCI(alg::RFCIa)
     aoints = IntegralHelper{Float64}()
     rhf = Fermi.HartreeFock.RHF(aoints)
+
+    ci_header()
 
     if typeof(aoints.eri_type) === JKFIT
         aoints = IntegralHelper(eri_type=RIFIT())
@@ -56,12 +59,47 @@ function RFCI(moints, aoints, alg)
     C0 = zeros(Ns, Ns)
     C0[1,1] = 1.0
 
-    #for iter = 1:10
-    ##    
+    #f(x) = begin 
+    #    @time a = get_σ1(Is, hp, eri, x) 
+    #    @time a += get_σ3(Is, eri, x)
     #end
+    #σ =  f(C0)
+    #println(sum(σ .* C0) + mol.Vnuc)
 
-    σ =  get_σ1(Is, hp, eri, C0) + get_σ3(Is, eri, C0)
-    println(sum(σ .* C0) + mol.Vnuc)
+    #x = eigsolve(f, C0, 1, :LM)
+
+    #x[1][1] + mol.Vnuc
+
+    @time get_σ3(Is, eri, C0)
+    @time begin
+        tree = build_tree(Is, Nelec, Nvir)
+        alt_get_σ3(Is, tree, eri, C0)
+    end
+
+end
+
+function build_tree(Is, no, nv)
+
+    N = length(Is)
+    tree = zeros(Int, N, no*nv+1)
+
+    off = 1
+    for i in 1:N
+        Ia = Is[i]
+        #println("A $(bitstring(Ia)[62:end])")
+
+        for j in 1:N
+            Ib = Is[j]
+            #println("B $(bitstring(Ib)[62:end])")
+
+            if count_ones(Ia ⊻ Ib) < 2
+                tree[i, off] = j
+                off +=1
+            end
+        end
+        off = 1
+    end
+    return tree
 end
 
 function get_σ1(Is, hp, eri, C)
@@ -221,6 +259,82 @@ function get_σ3(Is, eri, C)
                 end # loop over k
             end
         end # loop over l
+    end # loop over Iα
+
+    return σ3
+end
+
+function alt_get_σ3(Is, tree, eri, C)
+
+    σ3 = similar(C)
+    σ3 .= 0.0
+
+    sz = sizeof(eltype(Is))*8
+    Nexc = size(tree, 2) + 1
+
+    Nbas = size(eri, 1)
+    for αidx in 1:length(Is)
+        Iα = Is[αidx]
+
+        # Loop through single excited strings
+        # |Iα⟩ = Ekl|Jα⟩
+        for exc in 1:Nexc
+            Jidx = tree[αidx, exc]
+            Jα = Is[Jidx]
+
+            # find k and l
+            αxor = Iα ⊻ Jα
+            Jαexc = Jα & αxor
+            Iαexc = Iα & αxor
+
+            l = sz - leading_zeros(Jαexc)
+            k = sz - leading_zeros(Iαexc)
+
+            # Get phase
+            p1 = 0
+            x0,xf = minmax(l,k)
+            for x in (x0+1):(xf-1)
+                if Iα & (1 << (x-1)) !== 0 
+                    p1 += 1
+                end
+            end
+
+            for βidx in 1:length(Is)
+                Iβ = Is[βidx]
+
+                # Loop through single excited strings
+                # |Iβ⟩ = Eij|Jβ⟩
+                for exc in 1:Nexc
+                    Jidx = tree[βidx, exc]
+                    Jβ = Is[Jidx]
+
+                    # find k and l
+                    βxor =  Iβ ⊻ Jβ
+                    Jβexc = Jβ & βxor
+                    Iβexc = Iβ & βxor
+
+                    j = sz - leading_zeros(Jβexc)
+                    i = sz - leading_zeros(Iβexc)
+
+                    # Get phase
+                    p2 = 0
+                    x0,xf = minmax(i,j)
+                    for x in (x0+1):(xf-1)
+                        if Iβ & (1 << (x-1)) !== 0 
+                            p2 += 1
+                        end
+                    end
+
+                    if isodd(p1+p2)
+                        # Need special case for diagonals lol
+                        σ3[αidx, βidx] -= eri[i,j,k,l]*C[Jαidx, Jβidx]
+                    else
+                        σ3[αidx, βidx] += eri[i,j,k,l]*C[Jαidx, Jβidx]
+                    end
+
+                end # loop over ij
+            end # loop over Iβ
+        end # loop over kl
     end # loop over Iα
 
     return σ3
