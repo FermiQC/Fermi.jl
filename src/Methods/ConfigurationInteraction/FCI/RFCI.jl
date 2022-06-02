@@ -32,7 +32,7 @@ function get_strings(Nelec, Nvir)
     return Is
 end
 
-function RFCI(moints, aoints, alg)
+function RFCI(moints, aoints, alg::RFCIa)
     mol = moints.molecule
     Nelec = mol.Nα
     Nbas = aoints.orbitals.basisset.nbas
@@ -42,10 +42,16 @@ function RFCI(moints, aoints, alg)
     Is = get_strings(Nelec, Nvir)
     Ns = length(Is)
 
+    output(" • Number of Strings:      {:>5d}", Ns)
+    output(" • Number of Determinants: {:>5d}", Ns^2)
+
     # Get integrals
-    hp  = Fermi.Integrals.compute!(moints, aoints, "T")
-    hp += Fermi.Integrals.compute!(moints, aoints, "V")
-    eri = Fermi.Integrals.compute!(moints, "ERI")
+    output("Transforming integrals... ", ending="")
+    t = @elapsed begin
+        hp  = Fermi.Integrals.compute!(moints, aoints, "T")
+        hp += Fermi.Integrals.compute!(moints, aoints, "V")
+        eri = Fermi.Integrals.compute!(moints, "ERI")
+    end
 
     for l = 1:Nbas
         for j = 1:Nbas
@@ -54,27 +60,27 @@ function RFCI(moints, aoints, alg)
             end
         end
     end
+    output("Done in {:10.5f} seconds.", t)
 
     # Trial vector
     C0 = zeros(Ns, Ns)
     C0[1,1] = 1.0
 
-    #f(x) = begin 
-    #    @time a = get_σ1(Is, hp, eri, x) 
-    #    @time a += get_σ3(Is, eri, x)
-    #end
-    #σ =  f(C0)
-    #println(sum(σ .* C0) + mol.Vnuc)
-
-    #x = eigsolve(f, C0, 1, :LM)
-
-    #x[1][1] + mol.Vnuc
-
-    @time get_σ3(Is, eri, C0)
-    @time begin
+    linmap(x) = begin 
         tree = build_tree(Is, Nelec, Nvir)
-        alt_get_σ3(Is, tree, eri, C0)
+        a = get_σ1(Is, hp, eri, x) 
+        a += get_σ3(Is, tree, eri, x, Nelec)
     end
+    output("\nStarting eigsolve routine\n")
+    x = eigsolve(linmap, C0, 1, :LM; verbosity=2, issymmetric=true, tol=1e-8)
+
+    return x
+
+    #@time get_σ3(Is, eri, C0)
+    #@time tree = build_tree(Is, Nelec, Nvir)
+    #@time get_σ3(Is, tree, eri, C0, Nelec)
+
+    #println(get_σ3(Is, eri, C0) ≈ alt_get_σ3(Is, tree, eri, C0, Nelec))
 
 end
 
@@ -86,13 +92,13 @@ function build_tree(Is, no, nv)
     off = 1
     for i in 1:N
         Ia = Is[i]
-        #println("A $(bitstring(Ia)[62:end])")
+        #println("A $(bitstring(Ia)[55:end])")
 
         for j in 1:N
             Ib = Is[j]
-            #println("B $(bitstring(Ib)[62:end])")
+            #println("B $(bitstring(Ib)[55:end])")
 
-            if count_ones(Ia ⊻ Ib) < 2
+            if count_ones(Ia ⊻ Ib) ≤ 2
                 tree[i, off] = j
                 off +=1
             end
@@ -185,7 +191,7 @@ function get_σ1(Is, hp, eri, C)
     return σ1 + transpose(σ1)
 end
 
-function get_σ3(Is, eri, C)
+function alt_get_σ3(Is, eri, C)
 
     σ3 = similar(C)
     σ3 .= 0.0
@@ -264,14 +270,16 @@ function get_σ3(Is, eri, C)
     return σ3
 end
 
-function alt_get_σ3(Is, tree, eri, C)
+function get_σ3(Is, tree, eri, C, Nelec)
 
     σ3 = similar(C)
     σ3 .= 0.0
 
     sz = sizeof(eltype(Is))*8
-    Nexc = size(tree, 2) + 1
+    Nexc = size(tree, 2)
 
+    αocc_ind = zeros(Int, Nelec)
+    βocc_ind = zeros(Int, Nelec)
     Nbas = size(eri, 1)
     for αidx in 1:length(Is)
         Iα = Is[αidx]
@@ -279,11 +287,24 @@ function alt_get_σ3(Is, tree, eri, C)
         # Loop through single excited strings
         # |Iα⟩ = Ekl|Jα⟩
         for exc in 1:Nexc
-            Jidx = tree[αidx, exc]
-            Jα = Is[Jidx]
+            Jαidx = tree[αidx, exc]
+            Jα = Is[Jαidx]
 
             # find k and l
             αxor = Iα ⊻ Jα
+
+            # If Iα = Jα
+            if αxor == 0
+                n = 1
+                for k = 0:(sz - leading_zeros(Iα) -1)
+                    if isocc(Iα, k)
+                        αocc_ind[n] = k+1
+                        n += 1
+                    end # if it's occ
+                end # look k vals
+            end # Iα = Jα
+
+
             Jαexc = Jα & αxor
             Iαexc = Iα & αxor
 
@@ -305,11 +326,23 @@ function alt_get_σ3(Is, tree, eri, C)
                 # Loop through single excited strings
                 # |Iβ⟩ = Eij|Jβ⟩
                 for exc in 1:Nexc
-                    Jidx = tree[βidx, exc]
-                    Jβ = Is[Jidx]
+                    Jβidx = tree[βidx, exc]
+                    Jβ = Is[Jβidx]
 
                     # find k and l
                     βxor =  Iβ ⊻ Jβ
+
+                    # If Iβ = Jβ
+                    if βxor == 0
+                        n = 1
+                        for i = 0:(sz - leading_zeros(Iβ) -1)
+                            if isocc(Iβ, i)
+                                βocc_ind[n] = i+1
+                                n += 1 
+                            end # if it's occ
+                        end # look i vals
+                    end # Iβ = Jβ
+
                     Jβexc = Jβ & βxor
                     Iβexc = Iβ & βxor
 
@@ -325,13 +358,42 @@ function alt_get_σ3(Is, tree, eri, C)
                         end
                     end
 
-                    if isodd(p1+p2)
-                        # Need special case for diagonals lol
-                        σ3[αidx, βidx] -= eri[i,j,k,l]*C[Jαidx, Jβidx]
+                    if (i != j) & (k != l)
+                        if isodd(p1+p2)
+                            # Need special case for diagonals lol
+                            σ3[αidx, βidx] -= eri[i,j,k,l]*C[Jαidx, Jβidx]
+                        else
+                            σ3[αidx, βidx] += eri[i,j,k,l]*C[Jαidx, Jβidx]
+                        end
+                    elseif (i != j)
+                        if isodd(p2)
+                            # Need special case for diagonals lol
+                            for k = αocc_ind
+                                σ3[αidx, βidx] -= eri[i,j,k,k]*C[Jαidx, Jβidx]
+                            end
+                        else
+                            for k = αocc_ind
+                                σ3[αidx, βidx] += eri[i,j,k,k]*C[Jαidx, Jβidx]
+                            end
+                        end
+                    elseif (k != l)
+                        if isodd(p1)
+                            # Need special case for diagonals lol
+                            for i = βocc_ind
+                                σ3[αidx, βidx] -= eri[i,i,k,l]*C[Jαidx, Jβidx]
+                            end
+                        else
+                            for i = βocc_ind
+                                σ3[αidx, βidx] += eri[i,i,k,l]*C[Jαidx, Jβidx]
+                            end
+                        end
                     else
-                        σ3[αidx, βidx] += eri[i,j,k,l]*C[Jαidx, Jβidx]
+                        for i = βocc_ind
+                            for k = αocc_ind
+                                σ3[αidx, βidx] += eri[i,i,k,k]*C[Jαidx, Jβidx]
+                            end
+                        end
                     end
-
                 end # loop over ij
             end # loop over Iβ
         end # loop over kl
