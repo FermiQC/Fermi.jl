@@ -66,7 +66,6 @@ struct Molecule
     multiplicity::Int
     Nα::Int
     Nβ::Int
-    Vnuc::Float64
 end
 
 function Molecule(;
@@ -81,9 +80,6 @@ function Molecule(;
 end
 
 function Molecule(atoms::Vector{T}, charge::Int, multiplicity::Int) where T <: Atom
-    
-    # Compute Nuclear repulsion
-    Vnuc = Molecules.nuclear_repulsion(atoms)
 
     # Compute number of electrons
     nelec = -charge
@@ -107,7 +103,7 @@ function Molecule(atoms::Vector{T}, charge::Int, multiplicity::Int) where T <: A
 
     Nβ = (nelec - αexcess)/2
     Nα = nelec - Nβ
-    out =  Molecule(atoms, charge, multiplicity, Nα, Nβ, Vnuc)
+    out =  Molecule(atoms, charge, multiplicity, Nα, Nβ)
     return out
 end
 
@@ -123,7 +119,6 @@ function string_repr(M::Molecule)
     out = out*format("\n")
     out = out*format("\nCharge: {}   ", M.charge)
     out = out*format("Multiplicity: {}   \n", M.multiplicity)
-    out = out*format("Nuclear repulsion: {:15.10f}", M.Vnuc)
     return out
 end
 
