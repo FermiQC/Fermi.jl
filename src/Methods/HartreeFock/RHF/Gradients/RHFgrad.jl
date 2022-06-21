@@ -114,7 +114,7 @@ function gradient(wfn::RHF)
         for q in 1:3
             @views vH = ∂H[:,:,q]
             AUX .= P .* vH
-            ∂E[a, q]  = sum(AUX)
+            ∂E[a, q] += sum(AUX)
 
             @views vS = ∂S[:,:,q]
             AUX .= Q .* vS

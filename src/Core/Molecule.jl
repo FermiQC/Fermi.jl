@@ -23,7 +23,6 @@ Object storing information about a molecule (group of atoms).
     multiplicity  Multiplicity ``(2Mₛ + 1)``
     Nα            Number of Alpha electrons
     Nβ            Number of Beta electrons
-    Vnuc          Nuclear repulsion energy
 
 
 # Examples:
@@ -46,7 +45,6 @@ H    0.919788188200    2.458018557000    0.629793883200
 
 
 Charge: 0   Multiplicity: 1   
-Nuclear repulsion:    8.8880641737
 
 julia> Molecule(charge=2, multiplicity=3)
 Molecule:
@@ -57,7 +55,6 @@ H    0.919788188200    2.458018557000    0.629793883200
 
 
 Charge: 2   Multiplicity: 3   
-Nuclear repulsion:    8.8880641737
 ```
 """
 struct Molecule

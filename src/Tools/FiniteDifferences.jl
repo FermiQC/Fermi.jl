@@ -42,7 +42,8 @@ function findif_intgrad(X::String, mol, A, i, h=0.005)
     return g * PhysicalConstants.bohr_to_angstrom
 end
 
-function gradient_test(mol, energy_function, h=0.005)
+function gradient_findif(energy_function, h=1e-5)
+    mol = Molecule()
     N = length(mol.atoms)
     Eplus = zeros(N,3)
     Eminus = zeros(N,3)
@@ -62,7 +63,7 @@ function gradient_test(mol, energy_function, h=0.005)
 
     g = (Eplus - Eminus) ./ (2*h)
 
-    return g
+    return g * PhysicalConstants.bohr_to_angstrom
 end
 
 function opt_test(energy_function; h=0.005, d=0.01)

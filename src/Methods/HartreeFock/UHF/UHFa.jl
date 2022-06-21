@@ -3,6 +3,10 @@ function UHF(Alg::UHFa)
     UHF(ints, Alg)
 end
 
+function UHF(mol::Molecule, Alg::UHFa)
+    UHF(IntegralHelper{Float64}(molecule=mol), Alg)
+end
+
 function UHF(ints::IntegralHelper{Float64}, Alg::UHFa)
     Fermi.HartreeFock.uhf_header()
     output("Collecting necessary integrals...")

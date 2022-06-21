@@ -99,7 +99,8 @@ const Default = Dict{String,Union{Float64,Int,String,Bool}}(
                                   "precision_override" => false,
                                   "eri_cutoff" => 10^-12,
                                   "findif_disp_size" => 0.005,
-                                  "return_ints" => false
+                                  "return_ints" => false,
+                                  "deriv_type" => "analytic"
                                  )
 """
     Fermi.Options.Current
