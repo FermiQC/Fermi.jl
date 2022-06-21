@@ -12,8 +12,7 @@
         length(mol.atoms) == 5 &&
         mol.charge == 0 &&
         mol.multiplicity == 1 &&
-        mol.Nα == mol.Nβ == 5 &&
-        mol.Vnuc ≈ 13.6865180253
+        mol.Nα == mol.Nβ == 5 
     end
 
     molstringB = """
@@ -27,8 +26,7 @@
         mol.charge == 0 &&
         mol.multiplicity == 3 &&
         mol.Nα == 5 &&
-        mol.Nβ == 3 &&
-        mol.Vnuc ≈  6.0160249492
+        mol.Nβ == 3 
     end
 
     # Test wrong charge, mult and unit
@@ -45,7 +43,6 @@
         occursin(r"C\s+?[+-]{0,1}\d+?\.\d+?\s+?[+-]{0,1}\d+?\.\d+?\s+[+-]{0,1}\d+?\.\d+?",x) &&
         occursin(r"H\s+?[+-]{0,1}\d+?\.\d+?\s+?[+-]{0,1}\d+?\.\d+?\s+[+-]{0,1}\d+?\.\d+?",x) &&
         occursin(r"Charge:\s+?0", x)      &&
-        occursin(r"Multiplicity:\s+?", x) &&
-        occursin(r"Nuclear\s+?repulsion:\s+?\d+?\.\d+?", x)
+        occursin(r"Multiplicity:\s+?", x)
     end
 end

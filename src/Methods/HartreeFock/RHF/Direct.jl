@@ -54,7 +54,7 @@ function RHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, C::Ar
         diis_start = Options.get("diis_start")
     end
 
-    # Grab ndocc,nvir
+    # Grab ndocc,nvir,Vnuc
     ndocc = try
         Int((molecule.Nα + molecule.Nβ)/2)
     catch InexactError
@@ -62,7 +62,9 @@ function RHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, C::Ar
     end
     nvir = size(C,2) - ndocc
     nao = size(C,1)
+    Vnuc = Molecules.nuclear_repulsion(molecule.atoms)
 
+    output("Nuclear repulsion: {:15.10f}", Vnuc)
     output(" Number of AOs:                        {:5.0d}", nao)
     output(" Number of Doubly Occupied Orbitals:   {:5.0d}", ndocc)
     output(" Number of Virtual Spatial Orbitals:   {:5.0d}", nvir)
@@ -117,7 +119,7 @@ function RHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, C::Ar
             Eelec = RHFEnergy(D, T + V, F)
 
             # Compute Energy
-            Enew = Eelec + molecule.Vnuc
+            Enew = Eelec + Vnuc
 
             # Store vectors for DIIS
             if do_diis
