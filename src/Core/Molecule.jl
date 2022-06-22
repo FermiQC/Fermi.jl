@@ -24,7 +24,6 @@ Object storing information about a molecule (group of atoms).
     Nα            Number of Alpha electrons
     Nβ            Number of Beta electrons
 
-
 # Examples:
 
 A Molecule object can be created by providing the desired keyworded arguments: 
