@@ -90,6 +90,9 @@ function RMP2(x...)
     end
 end
 
+# Gradient methods
+include("Gradients/RMP2grad.jl")
+
 ## MISCELLANEOUS
 # Pretty printing
 function string_repr(X::RMP2)

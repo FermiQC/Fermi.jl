@@ -98,8 +98,9 @@ const Default = Dict{String,Union{Float64,Int,String,Bool}}(
                                   "min_matrix_elem" => 10^-9,
                                   "precision_override" => false,
                                   "eri_cutoff" => 10^-12,
-                                  "findif_disp_size" => 0.005,
-                                  "return_ints" => false
+                                  "findif_disp_size" => 5e-3,
+                                  "return_ints" => false,
+                                  "deriv_type" => "findif"
                                  )
 """
     Fermi.Options.Current
