@@ -166,6 +166,7 @@ ref_grads = Dict{String, Matrix}(
     end
 
     @testset "Gradients" begin
+        Fermi.Options.set("df", false)
 
         # Test argument error         
         Fermi.Options.set("deriv_type", "Test error")
