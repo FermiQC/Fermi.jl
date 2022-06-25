@@ -101,6 +101,9 @@ function RCCSD(x...)
     end
 end
 
+# Gradient methods
+include("Gradients/RCCSDgrad.jl")
+
 ## MISCELLANEOUS
 # Pretty printing
 function string_repr(X::RCCSD)

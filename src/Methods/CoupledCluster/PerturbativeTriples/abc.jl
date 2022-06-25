@@ -1,6 +1,11 @@
 using LinearAlgebra
 using LoopVectorization
 
+function RCCSDpT(Alg::abc)
+    aoints = IntegralHelper{Float64}()
+    return RCCSDpT(aoints, Alg)
+end
+
 function RCCSDpT(rhf::RHF, Alg::abc)
     aoints = IntegralHelper()
     moints = IntegralHelper(orbitals=rhf.orbitals)
@@ -8,8 +13,12 @@ function RCCSDpT(rhf::RHF, Alg::abc)
     return RCCSDpT(ccsd, moints, Alg)
 end
 
-function RCCSDpT(Alg::abc)
-    aoints = IntegralHelper{Float64}()
+function RCCSDpT(mol::Molecule, Alg::abc)
+    aoints = IntegralHelper{Float64}(molecule=mol)
+    return RCCSDpT(aoints, Alg)
+end
+
+function RCCSDpT(aoints::IntegralHelper, Alg::abc)
     rhf = RHF(aoints)
     moints = IntegralHelper(orbitals=rhf.orbitals)
     ccsd = RCCSD(moints, aoints)

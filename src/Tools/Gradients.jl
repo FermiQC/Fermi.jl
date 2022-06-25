@@ -1,44 +1,49 @@
 export @gradient
 
-gradient_dict = Dict{String, String}(
-    "rhf" => "Fermi.HartreeFock.gradient()",
-    "uhf" => "Fermi.gradient_findif(Fermi.HartreeFock.UHF)",
-    "mp2" => "Fermi.gradient_findif(Fermi.MollerPlesset.RMP2)",
-    "rmp2" => "Fermi.gradient_findif(Fermi.MollerPlesset.RMP2)",
-    "ccsd" => "Fermi.gradient_findif(Fermi.CoupledCluster.RCCSD)",
-    "rccsd" => "Fermi.gradient_findif(Fermi.CoupledCluster.RCCSD)",
-    "ccsd(t)"=> "Fermi.gradient_findif(Fermi.CoupledCluster.RCCSDpT)",
-    "rccsd(t)"=> "Fermi.gradient_findif(Fermi.CoupledCluster.RCCSDpT)"
+g_dict = Dict{String, String}(
+    "rhf" => "Fermi.HartreeFock.RHFgrad()",
+    "uhf" => "Fermi.HartreeFock.UHFgrad()",
+    "mp2" => "Fermi.MollerPlesset.RMP2grad()",
+    "rmp2" => "Fermi.MollerPlesset.RMP2grad()",
+    "ccsd" => "Fermi.CoupledCluster.RCCSDgrad()",
+    "rccsd" => "Fermi.CoupledCluster.RCCSDgrad()",
+    "ccsd(t)"=> "Fermi.CoupledCluster.RCCSDpTgrad()",
+    "rccsd(t)"=> "Fermi.CoupledCluster.RCCSDpTgrad()"
 )
 
 """
-    Fermi.@energy
+    Fermi.@gradient
 
-Macro to call functions to compute energy given current options. Arguments may be passed
-using "=>" or "<="
+Macro to call functions to compute gradients given current options. Arguments may be passed
+using "=>" or "<=" for analytic gradients. The derivative type (analytic, findif, autodif) 
+can be set with `@set deriv_type <kw>`.
 
 # Examples
 
-Generating a RHF wave function
+Generating a RHF gradient
 ```
-rhf = @energy rhf
+@gradient rhf
 ```
 
-Using this wave function in a CCSD computations
+By default, gradients are calculated using the current `molstring`, but `Molecule` objects 
+can also be passed to the gradients
 ```
-@energy rhf => CCSD
+mol = Molecule(molstring=mymol)
+@energy mol => rhf
 ```
 or
 ```
-@energy CCSD <= rhf
+@energy rhf <= mol
 ```
 
 # Implemented methods:
-    RHF            Restricted Hartree-Fock.
-    UHF            Unrestricted Hartree-Fock
-    RMP2           Restricted Moller-Plesset PT order 2.
-    CCSD           Restricted Coupled-Cluster with Single and Double substitutions
-    CCSD(T)        Restricted Coupled-Cluster with Single and Double substitutions and perturbative triples.
+    Method   Type      Description
+    ------   ----      -----------
+    RHF      AN,FD     Restricted Hartree-Fock.
+    UHF      FD        Unrestricted Hartree-Fock
+    RMP2     FD        Restricted Moller-Plesset PT order 2.
+    CCSD     FD        Restricted Coupled-Cluster with Single and Double substitutions
+    CCSD(T)  FD        Restricted Coupled-Cluster with Single and Double substitutions and perturbative triples.
 """
 macro gradient(comm)
     # Clean spaces and colon from string
@@ -64,12 +69,12 @@ macro gradient(comm)
 
     method = lowercase(String(method))
     arg = String(arg)   # Make sure arg is not a substring
-
+    
     out = ""
     try
-         out = replace(energy_dict[method], "()" => "("*arg*")")
+        out = replace(g_dict[method], "()" => "("*arg*")")
     catch KeyError
-        throw(FermiException("Invalid method for energy computation: \"$A\""))
+        throw(FermiException("Invalid or unsupported method for gradient computation: \"$A\""))
     end
 
     expr_out = Meta.parse(out)
