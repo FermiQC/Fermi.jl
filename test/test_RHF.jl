@@ -165,9 +165,9 @@ ref_grads = Dict{String, Matrix}(
         end
     end
 
+    @reset
+    @set printstyle none
     @testset "Gradients" begin
-        @reset
-        @set printstyle none
 
         # Test argument error         
         Fermi.Options.set("deriv_type", "Test error")
@@ -176,7 +176,7 @@ ref_grads = Dict{String, Matrix}(
         Fermi.Options.set("deriv_type", "analytic")
 
         # Default gradient call
-        for i = 1:10
+        for i = eachindex(molecules)
             # Read molecule
             path = joinpath(@__DIR__, "xyz/"*molecules[i]*".xyz")
             mol = open(f->read(f,String), path)
