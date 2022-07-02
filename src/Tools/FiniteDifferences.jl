@@ -1,7 +1,10 @@
 function create_displacement(mol, A::Int, i::Int, h)
 
+    disp = zeros(3)
+    disp[i] += h
     new_mol = deepcopy(mol)
-    new_mol.atoms[A].xyz[i] += h
+    a = mol.atoms[A]
+    new_mol.atoms[A] = Atom(a.Z, a.mass, a.xyz + disp)
 
     return new_mol
 end
