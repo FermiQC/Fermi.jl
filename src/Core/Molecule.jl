@@ -23,8 +23,6 @@ Object storing information about a molecule (group of atoms).
     multiplicity  Multiplicity ``(2Mₛ + 1)``
     Nα            Number of Alpha electrons
     Nβ            Number of Beta electrons
-    Vnuc          Nuclear repulsion energy
-
 
 # Examples:
 
@@ -46,7 +44,6 @@ H    0.919788188200    2.458018557000    0.629793883200
 
 
 Charge: 0   Multiplicity: 1   
-Nuclear repulsion:    8.8880641737
 
 julia> Molecule(charge=2, multiplicity=3)
 Molecule:
@@ -57,7 +54,6 @@ H    0.919788188200    2.458018557000    0.629793883200
 
 
 Charge: 2   Multiplicity: 3   
-Nuclear repulsion:    8.8880641737
 ```
 """
 struct Molecule
@@ -66,7 +62,6 @@ struct Molecule
     multiplicity::Int
     Nα::Int
     Nβ::Int
-    Vnuc::Float64
 end
 
 function Molecule(;
@@ -81,9 +76,6 @@ function Molecule(;
 end
 
 function Molecule(atoms::Vector{T}, charge::Int, multiplicity::Int) where T <: Atom
-    
-    # Compute Nuclear repulsion
-    Vnuc = Molecules.nuclear_repulsion(atoms)
 
     # Compute number of electrons
     nelec = -charge
@@ -107,7 +99,7 @@ function Molecule(atoms::Vector{T}, charge::Int, multiplicity::Int) where T <: A
 
     Nβ = (nelec - αexcess)/2
     Nα = nelec - Nβ
-    out =  Molecule(atoms, charge, multiplicity, Nα, Nβ, Vnuc)
+    out =  Molecule(atoms, charge, multiplicity, Nα, Nβ)
     return out
 end
 
@@ -123,7 +115,6 @@ function string_repr(M::Molecule)
     out = out*format("\n")
     out = out*format("\nCharge: {}   ", M.charge)
     out = out*format("Multiplicity: {}   \n", M.multiplicity)
-    out = out*format("Nuclear repulsion: {:15.10f}", M.Vnuc)
     return out
 end
 
