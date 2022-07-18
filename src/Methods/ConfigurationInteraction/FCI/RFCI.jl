@@ -1,5 +1,10 @@
+using LinearAlgebra
 using Combinatorics
 using KrylovKit
+
+function detstring(I, n = 7)
+    return reverse(bitstring(I))[1:n]
+end
 
 function RFCI(alg::RFCIa)
     aoints = IntegralHelper{Float64}()
@@ -16,8 +21,9 @@ function RFCI(alg::RFCIa)
     RFCI(moints, aoints, alg)
 end
 
-function get_strings(Nelec, Nvir)
+function get_strings(Nelec, Nvir, frozen)
 
+    core = "1"^frozen
     I0 = "0"^Nvir*"1"^Nelec
 
     perms = multiset_permutations(I0, Nvir+Nelec)
@@ -25,7 +31,7 @@ function get_strings(Nelec, Nvir)
     Is = zeros(Int, length(perms))
     i = 1
     for p in perms
-        Is[i] = parse(Int, join(p), base=2)
+        Is[i] = parse(Int, join(p)*core, base=2)
         i += 1
     end
 
@@ -33,15 +39,26 @@ function get_strings(Nelec, Nvir)
 end
 
 function RFCI(moints, aoints, alg::RFCIa)
+    Eref = moints.orbitals.sd_energy
     mol = moints.molecule
     Nelec = mol.Nα
     Nbas = aoints.orbitals.basisset.nbas
     Nvir = Nbas - Nelec
 
+    Nfrozen = Options.get("drop_occ")
+    Ninac = Options.get("drop_vir")
+    Nactive = Nbas - Nfrozen - Ninac
+
     # Get I strings
-    Is = get_strings(Nelec, Nvir)
+    Is = get_strings(Nelec - Nfrozen, Nvir - Ninac, Nfrozen)
     Ns = length(Is)
 
+    output(" => Active Space Information ({:d}e, {:d}o)", Nelec-Nfrozen, Nactive)
+    output(" • Number of Electrons:      {:>5d}", Nelec)
+    output(" • Active Electrons:         {:>5d}", Nelec - Nfrozen)
+    output(" • Number of Orbitals:       {:>5d}", Nbas)
+    output(" • Active Orbitals:          {:>5d}", Nactive)
+    output("\n => CI dimension")
     output(" • Number of Strings:      {:>5d}", Ns)
     output(" • Number of Determinants: {:>5d}", Ns^2)
 
@@ -54,7 +71,7 @@ function RFCI(moints, aoints, alg::RFCIa)
     end
 
     for l = 1:Nbas
-        for j = 1:Nbas
+        for j = 1:(Nbas-Ninac)
             for k = 1:Nbas
                 hp[k,l] -= 0.5*eri[k,j,j,l]
             end
@@ -66,22 +83,21 @@ function RFCI(moints, aoints, alg::RFCIa)
     C0 = zeros(Ns, Ns)
     C0[1,1] = 1.0
 
+    tree = build_tree(Is, Nelec - Nfrozen, Nvir - Ninac)
+    
     linmap(x) = begin 
-        tree = build_tree(Is, Nelec, Nvir)
-        a = get_σ1(Is, hp, eri, x) 
+        a = get_σ1(Is, hp, eri, x, tree, Nelec)
         a += get_σ3(Is, tree, eri, x, Nelec)
     end
     output("\nStarting eigsolve routine\n")
-    x = eigsolve(linmap, C0, 1, :LM; verbosity=2, issymmetric=true, tol=1e-8)
+    klv = eigsolve(linmap, C0, 1, :LM; verbosity=2, issymmetric=true, tol=1e-8)
 
-    return x
+    output("\nKrylov Solver Summary:\n {}", string(klv[3]))
 
-    #@time get_σ3(Is, eri, C0)
-    #@time tree = build_tree(Is, Nelec, Nvir)
-    #@time get_σ3(Is, tree, eri, C0, Nelec)
+    Efci = klv[1][1] + mol.Vnuc
+    output("Final FCI Energy: {:15.10f}", Efci)
 
-    #println(get_σ3(Is, eri, C0) ≈ alt_get_σ3(Is, tree, eri, C0, Nelec))
-
+    return RFCI(Efci, Efci - Eref)
 end
 
 function build_tree(Is, no, nv)
@@ -92,11 +108,9 @@ function build_tree(Is, no, nv)
     off = 1
     for i in 1:N
         Ia = Is[i]
-        #println("A $(bitstring(Ia)[55:end])")
 
         for j in 1:N
             Ib = Is[j]
-            #println("B $(bitstring(Ib)[55:end])")
 
             if count_ones(Ia ⊻ Ib) ≤ 2
                 tree[i, off] = j
@@ -108,24 +122,161 @@ function build_tree(Is, no, nv)
     return tree
 end
 
-function get_σ1(Is, hp, eri, C)
+function get_σ1(Is, hp, eri, C, tree, Nelec)
+
+    σ1 = similar(C)
+    σ1 .= 0.0
+
+    Nexc = size(tree, 2)
+    sz = sizeof(eltype(Is))*8
+    F = zeros(length(Is))
+    Iocc_ind = zeros(Int, Nelec)
+    Kocc_ind = zeros(Int, Nelec)
+
+    # Loop over Iβ
+    for Iidx in 1:length(Is)
+
+        F .= 0.0      # Set array F(Jβ) = 0
+        I = Is[Iidx]
+
+        # Loop over excitations Ekl from Iβ
+        for exc in 1:Nexc
+
+            # Get K = Ekl|Iβ⟩
+            Kidx = tree[Iidx, exc]
+            K = Is[Kidx]
+
+            # find k and l
+            IKxor = I ⊻ K
+
+            # If I == K
+            if IKxor == 0
+                n = 1
+                for k = 1:(sz - leading_zeros(I))
+                    if isocc(I, k-1)
+                        F[Kidx] += hp[k,k]
+                        Iocc_ind[n] = k
+                        n += 1
+                    end # if it's occ
+                end # look k vals
+            else
+                Kexc = K & IKxor
+                Iexc = I & IKxor
+
+                l = sz - leading_zeros(Iexc)
+                k = sz - leading_zeros(Kexc)
+                
+                # Get phase
+                p1 = 0
+                x0,xf = minmax(l,k)
+                for x in (x0+1):(xf-1)
+                    if I & (1 << (x-1)) !== 0 
+                        p1 += 1
+                    end
+                end
+
+                if isodd(p1)
+                    F[Kidx] -= hp[k,l]
+                else
+                    F[Kidx] += hp[k,l]
+                end
+            end # I = K
+
+            # Loop over excitations Eij from K
+            for exc2 in 1:Nexc
+
+                # Get J = Ekl|K⟩
+                Jidx = tree[Kidx, exc2]
+                J = Is[Jidx]
+
+                # find i and j
+                KJxor = K ⊻ J
+
+                # If J == K
+                if KJxor == 0
+                    n = 1
+                    for k = 1:(sz - leading_zeros(K))
+                        if isocc(K, k-1)
+                            Kocc_ind[n] = k
+                            n += 1
+                        end # if it's occ
+                    end # look k vals
+                else
+                    Jexc = J & KJxor
+                    Kexc = K & KJxor
+
+                    j = sz - leading_zeros(Kexc)
+                    i = sz - leading_zeros(Jexc)
+
+                    # Get phase
+                    p2 = 0
+                    x0,xf = minmax(i,j)
+                    for x in (x0+1):(xf-1)
+                        if K & (1 << (x-1)) !== 0 
+                            p2 += 1
+                        end
+                    end
+                end # J == K
+
+                # F(J) += 0.5 * sign *[ij|kl]
+                if I != K != J
+                    if isodd(p1+p2)
+                        F[Jidx] -= 0.5*eri[i,j,k,l]
+                    else
+                        F[Jidx] += 0.5*eri[i,j,k,l]
+                    end
+                elseif K != J
+                    if isodd(p2)
+                        for k = Iocc_ind
+                            F[Jidx] -= 0.5*eri[i,j,k,k]
+                        end
+                    else
+                        for k = Iocc_ind
+                            F[Jidx] += 0.5*eri[i,j,k,k]
+                        end
+                    end
+                elseif I != K
+                    if isodd(p1)
+                        for i = Kocc_ind
+                            F[Jidx] -= 0.5*eri[i,i,k,l]
+                        end
+                    else
+                        for i = Kocc_ind
+                            F[Jidx] += 0.5*eri[i,i,k,l]
+                        end
+                    end
+                else
+                    for i = Iocc_ind
+                        for k = Kocc_ind
+                            F[Jidx] += 0.5*eri[i,i,k,k]
+                        end
+                    end
+                end # F(J) += 0.5 * sign *[ij|kl]
+            end # Loop over excitations Eij from K
+        end # Loop over excitations Ekl from Iβ
+        σ1[:,Iidx] .= C*F
+    end # Loop over I 
+
+    return σ1 + transpose(σ1)
+end
+
+function alt_get_σ1(Is, hp, eri, C, Nfrozen, Ninac)
 
     σ1 = similar(C)
     σ1 .= 0.0
 
     sz = sizeof(eltype(Is))*8
-    Nbas = size(hp, 1)
+    Nbas = size(hp, 1) - Ninac
     F = zeros(length(Is))
 
     for Iidx = 1:length(Is)
         Iβ = Is[Iidx]
-        #println(bitstring(Iβ)[(sz-Nbas):end])
         F .= 0.0
 
         # Phase associated with annihilating electron l
         pl = -1 
         # loop through l, occ indexes
-        for l = 0:(sz - leading_zeros(Iβ) -1)
+        for l = (0+Nfrozen):(sz - leading_zeros(Iβ) -1)
             if isocc(Iβ,l)
                 pl += 1
 
@@ -134,7 +285,7 @@ function get_σ1(Is, hp, eri, C)
 
                 # Occupied index l found. Now search for an unocupied index k
                 pk = 0
-                for k = 0:(Nbas - 1)
+                for k = (0+Nfrozen):(Nbas - 1)
                     if isocc(alIβ, k)
                         pk += 1
                     else
@@ -152,7 +303,7 @@ function get_σ1(Is, hp, eri, C)
                         # Phase associated with annihilating electron j
                         pj = -1 
                         # loop through j, occ indexes
-                        for j = 0:(sz - leading_zeros(Kβ) -1)
+                        for j = (0+Nfrozen):(sz - leading_zeros(Kβ) -1)
                             if isocc(Kβ,j)
                                 pj += 1
 
@@ -161,7 +312,7 @@ function get_σ1(Is, hp, eri, C)
 
                                 # Occupied index j found. Now search for an unocupied index i
                                 pi_ = 0
-                                for i = 0:(Nbas - 1)
+                                for i = (0+Nfrozen):(Nbas - 1)
                                     if isocc(ajKβ, i)
                                         pi_ += 1
                                     else
@@ -280,7 +431,7 @@ function get_σ3(Is, tree, eri, C, Nelec)
 
     αocc_ind = zeros(Int, Nelec)
     βocc_ind = zeros(Int, Nelec)
-    Nbas = size(eri, 1)
+
     for αidx in 1:length(Is)
         Iα = Is[αidx]
 
@@ -360,14 +511,12 @@ function get_σ3(Is, tree, eri, C, Nelec)
 
                     if (i != j) & (k != l)
                         if isodd(p1+p2)
-                            # Need special case for diagonals lol
                             σ3[αidx, βidx] -= eri[i,j,k,l]*C[Jαidx, Jβidx]
                         else
                             σ3[αidx, βidx] += eri[i,j,k,l]*C[Jαidx, Jβidx]
                         end
                     elseif (i != j)
                         if isodd(p2)
-                            # Need special case for diagonals lol
                             for k = αocc_ind
                                 σ3[αidx, βidx] -= eri[i,j,k,k]*C[Jαidx, Jβidx]
                             end
@@ -378,7 +527,6 @@ function get_σ3(Is, tree, eri, C, Nelec)
                         end
                     elseif (k != l)
                         if isodd(p1)
-                            # Need special case for diagonals lol
                             for i = βocc_ind
                                 σ3[αidx, βidx] -= eri[i,i,k,l]*C[Jαidx, Jβidx]
                             end
