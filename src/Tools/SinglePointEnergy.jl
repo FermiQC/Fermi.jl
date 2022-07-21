@@ -9,6 +9,8 @@ energy_dict = Dict{String, String}(
     "rccsd" => "Fermi.CoupledCluster.RCCSD()",
     "ccsd(t)"=> "Fermi.CoupledCluster.RCCSDpT()",
     "rccsd(t)"=> "Fermi.CoupledCluster.RCCSDpT()",
+    "fci"=>"Fermi.ConfigurationInteraction.RFCI()",
+    "rfci"=>"Fermi.ConfigurationInteraction.RFCI()"
 )
 
 """
