@@ -50,6 +50,7 @@ function UHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, Cα::
     
     Nα = molecule.Nα
     Nβ = molecule.Nβ
+    Vnuc = Molecules.nuclear_repulsion(molecule.atoms)
     S = ints["S"]
     T = ints["T"]
     V = ints["V"]
@@ -80,7 +81,7 @@ function UHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, Cα::
 
 
     build_fock!(Fα, Fβ, Jα, Jβ, Kα, Kβ, Dα, Dβ, ints)
-    output(" Guess Energy {:20.14f}", UHFEnergy(H, Dα, Dβ, Fα, Fβ, molecule.Vnuc))
+    output(" Guess Energy {:20.14f}", UHFEnergy(H, Dα, Dβ, Fα, Fβ, Vnuc))
  
     output("\n Iter.   {:>15} {:>10} {:>10} {:>8} {:>8} {:>8}", "E[UHF]", "ΔE", "Dᵣₘₛ", "t", "DIIS", "damp")
     output(repeat("-",80))
@@ -112,7 +113,7 @@ function UHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, Cα::
             build_fock!(Fα, Fβ, Jα, Jβ, Kα, Kβ, Dα, Dβ, ints)
             
             # Calculate energy
-            E = UHFEnergy(H, Dα, Dβ, Fα, Fβ, molecule.Vnuc)
+            E = UHFEnergy(H, Dα, Dβ, Fα, Fβ, Vnuc)
             
             # Store vectors for DIIS
             if do_diis
