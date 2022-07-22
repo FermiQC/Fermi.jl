@@ -2,6 +2,12 @@ using LinearAlgebra
 using Combinatorics
 using KrylovKit
 
+# Given a string I, check if the orbital i is occupied
+# NOTE: FIRST ORBITAL INDEX = 0
+@inline function isocc(I, i)
+    return I & (1 << i) != 0
+end
+
 function detstring(I, n = 7)
     return reverse(bitstring(I))[1:n]
 end
@@ -260,166 +266,6 @@ function get_σ1(Is, hp, eri, C, tree, Nelec)
     return σ1 + transpose(σ1)
 end
 
-function alt_get_σ1(Is, hp, eri, C, Nfrozen, Ninac)
-
-    σ1 = similar(C)
-    σ1 .= 0.0
-
-    sz = sizeof(eltype(Is))*8
-    Nbas = size(hp, 1) - Ninac
-    F = zeros(length(Is))
-
-    for Iidx = 1:length(Is)
-        Iβ = Is[Iidx]
-        F .= 0.0
-
-        # Phase associated with annihilating electron l
-        pl = -1 
-        # loop through l, occ indexes
-        for l = (0+Nfrozen):(sz - leading_zeros(Iβ) -1)
-            if isocc(Iβ,l)
-                pl += 1
-
-                # Create new string with l annihilated aₗ|Iβ⟩
-                alIβ = Iβ ⊻ (1 << l) # May recycle the bit shift used in isocc
-
-                # Occupied index l found. Now search for an unocupied index k
-                pk = 0
-                for k = (0+Nfrozen):(Nbas - 1)
-                    if isocc(alIβ, k)
-                        pk += 1
-                    else
-                        # unoccupied index k found.
-                        # Create new string a†ₖaₗ|Iβ⟩   
-                        Kβ = alIβ ⊻ (1 << k)
-
-                        Kβidx = findfirst(x->x==Kβ, Is)
-                        if isodd(pk+pl)
-                            F[Kβidx] -= hp[k+1, l+1]
-                        else
-                            F[Kβidx] += hp[k+1, l+1]
-                        end
-
-                        # Phase associated with annihilating electron j
-                        pj = -1 
-                        # loop through j, occ indexes
-                        for j = (0+Nfrozen):(sz - leading_zeros(Kβ) -1)
-                            if isocc(Kβ,j)
-                                pj += 1
-
-                                # Create new string with j annihilated aⱼ|Kβ⟩
-                                ajKβ = Kβ ⊻ (1 << j) # May recycle the bit shift used in isocc
-
-                                # Occupied index j found. Now search for an unocupied index i
-                                pi_ = 0
-                                for i = (0+Nfrozen):(Nbas - 1)
-                                    if isocc(ajKβ, i)
-                                        pi_ += 1
-                                    else
-                                        # unoccupied index k found.
-                                        # Create new string a†ₖaₗ|Iβ⟩   
-                                        Jβ = ajKβ ⊻ (1 << i)
-
-                                        Jβidx = findfirst(x->x==Jβ, Is)
-                                        if isodd(pk+pl+pi_+pj)
-                                            F[Jβidx] -= 0.5*eri[i+1, j+1, k+1, l+1]
-                                        else
-                                            F[Jβidx] += 0.5*eri[i+1, j+1, k+1, l+1]
-                                        end
-                                    end 
-                                end # loop over i
-                            end
-                        end # loop over j
-                    end
-                end # loop over k
-            end
-        end # loop over l
-        
-
-        σ1[:,Iidx] .= C*F
-    end # loop over Is
-
-    return σ1 + transpose(σ1)
-end
-
-function alt_get_σ3(Is, eri, C)
-
-    σ3 = similar(C)
-    σ3 .= 0.0
-
-    sz = sizeof(eltype(Is))*8
-
-    Nbas = size(eri, 1)
-    for αidx in 1:length(Is)
-        Iα = Is[αidx]
-
-        ## Loop through l,k to construct Jα string
-        # Phase associated with annihilating electron l
-        pl = -1 
-        # loop through l, occ indexes
-        for l = 0:(sz - leading_zeros(Iα) -1)
-            if isocc(Iα,l)
-                pl += 1
-
-                # Create new string with l annihilated aₗ|Iα⟩
-                alIα = Iα ⊻ (1 << l) # May recycle the bit shift used in isocc
-
-                # Occupied index l found. Now search for an unocupied index k
-                pk = 0
-                for k = 0:(Nbas - 1)
-                    if isocc(alIα, k)
-                        pk += 1
-                    else
-                        # unoccupied index k found.
-                        # Create new string a†ₖaₗ|Iα⟩   
-                        Jα = alIα ⊻ (1 << k)
-
-                        Jαidx = findfirst(x->x==Jα, Is)
-                        for βidx in 1:length(Is)
-                            Iβ = Is[βidx]
-
-                            ## Loop through i,j to construct Jβ string
-                            # Phase associated with annihilating electron j
-                            pj = -1 
-                            # loop through j, occ indexes
-                            for j = 0:(sz - leading_zeros(Iβ) -1)
-                                if isocc(Iβ,j)
-                                    pj += 1
-
-                                    # Create new string with l annihilated aₗ|Iα⟩
-                                    ajIβ = Iβ ⊻ (1 << j) # May recycle the bit shift used in isocc
-
-                                    # Occupied index jl found. Now search for an unocupied index i
-                                    pi_ = 0
-                                    for i = 0:(Nbas - 1)
-                                        if isocc(ajIβ, i)
-                                            pi_ += 1
-                                        else
-                                            # unoccupied index i found.
-                                            # Create new string a†ᵢaⱼ|Iβ⟩   
-                                            Jβ = ajIβ ⊻ (1 << i)
-
-                                            Jβidx = findfirst(x->x==Jβ, Is)
-
-                                            if isodd(pi_+pj+pl+pk)
-                                                σ3[αidx, βidx] -= eri[i+1,j+1,k+1,l+1]*C[Jαidx, Jβidx]
-                                            else
-                                                σ3[αidx, βidx] += eri[i+1,j+1,k+1,l+1]*C[Jαidx, Jβidx]
-                                            end
-
-                                        end
-                                    end # loop over i
-                                end
-                            end # loop over j
-                        end # loop over Iβ
-                    end
-                end # loop over k
-            end
-        end # loop over l
-    end # loop over Iα
-
-    return σ3
-end
 
 function get_σ3(Is, tree, eri, C, Nelec)
 
@@ -550,8 +396,164 @@ function get_σ3(Is, tree, eri, C, Nelec)
     return σ3
 end
 
-# Given a string I, check if the orbital i is occupied
-# NOTE: FIRST ORBITAL INDEX = 0
-@inline function isocc(I, i)
-    return I & (1 << i) != 0
-end
+#function alt_get_σ1(Is, hp, eri, C, Nfrozen, Ninac)
+#
+#    σ1 = similar(C)
+#    σ1 .= 0.0
+#
+#    sz = sizeof(eltype(Is))*8
+#    Nbas = size(hp, 1) - Ninac
+#    F = zeros(length(Is))
+#
+#    for Iidx = 1:length(Is)
+#        Iβ = Is[Iidx]
+#        F .= 0.0
+#
+#        # Phase associated with annihilating electron l
+#        pl = -1 
+#        # loop through l, occ indexes
+#        for l = (0+Nfrozen):(sz - leading_zeros(Iβ) -1)
+#            if isocc(Iβ,l)
+#                pl += 1
+#
+#                # Create new string with l annihilated aₗ|Iβ⟩
+#                alIβ = Iβ ⊻ (1 << l) # May recycle the bit shift used in isocc
+#
+#                # Occupied index l found. Now search for an unocupied index k
+#                pk = 0
+#                for k = (0+Nfrozen):(Nbas - 1)
+#                    if isocc(alIβ, k)
+#                        pk += 1
+#                    else
+#                        # unoccupied index k found.
+#                        # Create new string a†ₖaₗ|Iβ⟩   
+#                        Kβ = alIβ ⊻ (1 << k)
+#
+#                        Kβidx = findfirst(x->x==Kβ, Is)
+#                        if isodd(pk+pl)
+#                            F[Kβidx] -= hp[k+1, l+1]
+#                        else
+#                            F[Kβidx] += hp[k+1, l+1]
+#                        end
+#
+#                        # Phase associated with annihilating electron j
+#                        pj = -1 
+#                        # loop through j, occ indexes
+#                        for j = (0+Nfrozen):(sz - leading_zeros(Kβ) -1)
+#                            if isocc(Kβ,j)
+#                                pj += 1
+#
+#                                # Create new string with j annihilated aⱼ|Kβ⟩
+#                                ajKβ = Kβ ⊻ (1 << j) # May recycle the bit shift used in isocc
+#
+#                                # Occupied index j found. Now search for an unocupied index i
+#                                pi_ = 0
+#                                for i = (0+Nfrozen):(Nbas - 1)
+#                                    if isocc(ajKβ, i)
+#                                        pi_ += 1
+#                                    else
+#                                        # unoccupied index k found.
+#                                        # Create new string a†ₖaₗ|Iβ⟩   
+#                                        Jβ = ajKβ ⊻ (1 << i)
+#
+#                                        Jβidx = findfirst(x->x==Jβ, Is)
+#                                        if isodd(pk+pl+pi_+pj)
+#                                            F[Jβidx] -= 0.5*eri[i+1, j+1, k+1, l+1]
+#                                        else
+#                                            F[Jβidx] += 0.5*eri[i+1, j+1, k+1, l+1]
+#                                        end
+#                                    end 
+#                                end # loop over i
+#                            end
+#                        end # loop over j
+#                    end
+#                end # loop over k
+#            end
+#        end # loop over l
+#        
+#
+#        σ1[:,Iidx] .= C*F
+#    end # loop over Is
+#
+#    return σ1 + transpose(σ1)
+#end
+#
+#function alt_get_σ3(Is, eri, C)
+#
+#    σ3 = similar(C)
+#    σ3 .= 0.0
+#
+#    sz = sizeof(eltype(Is))*8
+#
+#    Nbas = size(eri, 1)
+#    for αidx in 1:length(Is)
+#        Iα = Is[αidx]
+#
+#        ## Loop through l,k to construct Jα string
+#        # Phase associated with annihilating electron l
+#        pl = -1 
+#        # loop through l, occ indexes
+#        for l = 0:(sz - leading_zeros(Iα) -1)
+#            if isocc(Iα,l)
+#                pl += 1
+#
+#                # Create new string with l annihilated aₗ|Iα⟩
+#                alIα = Iα ⊻ (1 << l) # May recycle the bit shift used in isocc
+#
+#                # Occupied index l found. Now search for an unocupied index k
+#                pk = 0
+#                for k = 0:(Nbas - 1)
+#                    if isocc(alIα, k)
+#                        pk += 1
+#                    else
+#                        # unoccupied index k found.
+#                        # Create new string a†ₖaₗ|Iα⟩   
+#                        Jα = alIα ⊻ (1 << k)
+#
+#                        Jαidx = findfirst(x->x==Jα, Is)
+#                        for βidx in 1:length(Is)
+#                            Iβ = Is[βidx]
+#
+#                            ## Loop through i,j to construct Jβ string
+#                            # Phase associated with annihilating electron j
+#                            pj = -1 
+#                            # loop through j, occ indexes
+#                            for j = 0:(sz - leading_zeros(Iβ) -1)
+#                                if isocc(Iβ,j)
+#                                    pj += 1
+#
+#                                    # Create new string with l annihilated aₗ|Iα⟩
+#                                    ajIβ = Iβ ⊻ (1 << j) # May recycle the bit shift used in isocc
+#
+#                                    # Occupied index jl found. Now search for an unocupied index i
+#                                    pi_ = 0
+#                                    for i = 0:(Nbas - 1)
+#                                        if isocc(ajIβ, i)
+#                                            pi_ += 1
+#                                        else
+#                                            # unoccupied index i found.
+#                                            # Create new string a†ᵢaⱼ|Iβ⟩   
+#                                            Jβ = ajIβ ⊻ (1 << i)
+#
+#                                            Jβidx = findfirst(x->x==Jβ, Is)
+#
+#                                            if isodd(pi_+pj+pl+pk)
+#                                                σ3[αidx, βidx] -= eri[i+1,j+1,k+1,l+1]*C[Jαidx, Jβidx]
+#                                            else
+#                                                σ3[αidx, βidx] += eri[i+1,j+1,k+1,l+1]*C[Jαidx, Jβidx]
+#                                            end
+#
+#                                        end
+#                                    end # loop over i
+#                                end
+#                            end # loop over j
+#                        end # loop over Iβ
+#                    end
+#                end # loop over k
+#            end
+#        end # loop over l
+#    end # loop over Iα
+#
+#    return σ3
+#end
+
