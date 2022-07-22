@@ -1,6 +1,7 @@
 using LinearAlgebra
 using Combinatorics
 using KrylovKit
+using Molecules
 
 # Given a string I, check if the orbital i is occupied
 # NOTE: FIRST ORBITAL INDEX = 0
@@ -96,11 +97,11 @@ function RFCI(moints, aoints, alg::RFCIa)
         a += get_σ3(Is, tree, eri, x, Nelec)
     end
     output("\nStarting eigsolve routine\n")
-    klv = eigsolve(linmap, C0, 1, :LM; verbosity=2, issymmetric=true, tol=1e-8)
+    klv = eigsolve(linmap, C0, 1, :LM; issymmetric=true, tol=1e-8)
 
     output("\nKrylov Solver Summary:\n {}", string(klv[3]))
 
-    Efci = klv[1][1] + mol.Vnuc
+    Efci = klv[1][1] + Molecules.nuclear_repulsion(mol.atoms)
     output("Final FCI Energy: {:15.10f}", Efci)
 
     return RFCI(Efci, Efci - Eref)
