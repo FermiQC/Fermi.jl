@@ -15,4 +15,5 @@ deps/libcint*
 coverage.jl
 *.info
 deps/lib/README.txt
+*.ipynb
 
