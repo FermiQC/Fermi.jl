@@ -15,25 +15,25 @@ end
 
 function compute_S!(I::IntegralHelper{T, E, AtomicOrbitals}) where {T<:AbstractFloat, E<:AbstractERI}
     bs = I.orbitals.basisset
-    I.cache["S"] = overlap(bs, T)
+    I.cache["S"] = T.(overlap(bs))
 end
 
 function compute_T!(I::IntegralHelper{T, E, AtomicOrbitals}) where {T<:AbstractFloat, E<:AbstractERI}
     bs = I.orbitals.basisset
-    I.cache["T"] = kinetic(bs, T)
+    I.cache["T"] = T.(kinetic(bs))
 end
 
 function compute_V!(I::IntegralHelper{T, E, AtomicOrbitals}) where {T<:AbstractFloat, E<:AbstractERI}
     bs = I.orbitals.basisset
-    I.cache["V"] = nuclear(bs, T)
+    I.cache["V"] = T.(nuclear(bs))
 end
 
 function compute_ERI!(I::IntegralHelper{T, E, AtomicOrbitals}) where {T<:AbstractFloat, E<:AbstractDFERI}
 
     bs = I.orbitals.basisset
     auxbs = I.eri_type.basisset
-    J = ERI_2e2c(auxbs, T)
-    Pqp = ERI_2e3c(bs, auxbs, T)
+    J = T.(ERI_2e2c(auxbs))
+    Pqp = T.(ERI_2e3c(bs, auxbs))
     Jh = similar(J)
     Jh .= Array(real(J^(-1/2)))
     @tensor b[Q,p,q] := Pqp[p,q,P]*Jh[P,Q]
@@ -42,10 +42,11 @@ end
 
 function compute_ERI!(I::IntegralHelper{T, Chonky, AtomicOrbitals}) where T<:AbstractFloat
     bs = I.orbitals.basisset
-    I.cache["ERI"] = ERI_2e4c(bs, T)
+    I.cache["ERI"] = T.(ERI_2e4c(bs))
 end
 
 function compute_ERI!(I::IntegralHelper{T, SparseERI, AtomicOrbitals}) where T<:AbstractFloat
     bs = I.orbitals.basisset
-    I.cache["ERI"] = Fermi.FermiSparse(sparseERI_2e4c(bs, T)...)
+    ### WONT WORK FOR SINGLE PRECISION
+    I.cache["ERI"] = Fermi.FermiSparse(sparseERI_2e4c(bs)...)
 end

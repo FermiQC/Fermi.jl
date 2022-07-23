@@ -5,8 +5,13 @@ function coulumb_to_fock!(F, D, J, b1::BasisSet, b2::BasisSet)
     # we separate auxiliar basis from regular ones. The first N atoms hold the regular basis functions
     # whereas the final N atoms hold auxiliar fitting functions (for a total of 2N atoms).
 
-    b3 = GaussianBasis.BasisSet(b1, b2)
-    Nvals = [GaussianBasis.Libcint.CINTcgtos_spheric(i-1, b3.lc_bas) for i = 1:b3.nshells]
+    atoms = unique(vcat(b1.atoms, b2.atoms))
+    basis = vcat(b1.basis, b2.basis)
+    b3 = GaussianBasis.BasisSet("$(b1.name*b2.name)", atoms, basis)
+    Nvals = GaussianBasis.num_basis.(b3.basis)
+
+    #b3 = GaussianBasis.BasisSet(b1, b2)
+    #Nvals = [GaussianBasis.Libcint.CINTcgtos_spheric(i-1, b3.lc_bas) for i = 1:b3.nshells]
     ao_offset = [sum(Nvals[1:(i-1)]) for i = 1:b3.nshells]
     bufs = [zeros(Cdouble, maximum(Nvals)^3) for _ = 1:Threads.nthreads()]
 
@@ -26,7 +31,7 @@ function coulumb_to_fock!(F, D, J, b1::BasisSet, b2::BasisSet)
                     f = μ != ν ? 2.0 : 1.0
 
                     # Compute integral for the (μ,ν,A) triplet shell
-                    GaussianBasis.cint3c2e_sph!(buf, [μ, ν, A], b3)
+                    GaussianBasis.ERI_2e3c!(buf, b3, μ, ν, A)
 
                     for Am in 1:Nα
                         for νm in 1:Nν
@@ -61,7 +66,7 @@ function coulumb_to_fock!(F, D, J, b1::BasisSet, b2::BasisSet)
                     Nα = Nvals[A]                  # Number of basis in the A shell
                     Aoff = ao_offset[A] - b1.nbas  # Number of basis set before the A shell
                     # Compute integral for the (μ,ν,A) triplet shell
-                    GaussianBasis.cint3c2e_sph!(buf, Cint.([μ-1, ν-1, A-1]), b3.lc_atoms, b3.natoms, b3.lc_bas, b3.nbas, b3.lc_env)
+                    GaussianBasis.ERI_2e3c!(buf, b3, μ, ν, A)
 
                     for Am in 1:Nα
                         for νm in 1:Nν
@@ -93,8 +98,10 @@ function exchange_to_fock!(F, C, J, ndocc, b1::BasisSet, b2::BasisSet)
     # we separate auxiliar basis from regular ones. The first N atoms hold the regular basis functions
     # whereas the final N atoms hold auxiliar fitting functions (for a total of 2N atoms).
 
-    b3 = GaussianBasis.BasisSet(b1, b2)
-    Nvals = [GaussianBasis.Libcint.CINTcgtos_spheric(i-1, b3.lc_bas) for i = 1:b3.nshells]
+    atoms = unique(vcat(b1.atoms, b2.atoms))
+    basis = vcat(b1.basis, b2.basis)
+    b3 = GaussianBasis.BasisSet("$(b1.name*b2.name)", atoms, basis)
+    Nvals = GaussianBasis.num_basis.(b3.basis)
     ao_offset = [sum(Nvals[1:(i-1)]) for i = 1:b3.nshells]
     bufs = [zeros(Cdouble, maximum(Nvals)^3) for _ = 1:Threads.nthreads()]
 
@@ -113,7 +120,7 @@ function exchange_to_fock!(F, C, J, ndocc, b1::BasisSet, b2::BasisSet)
                     νoff = ao_offset[ν]    # Number of basis set before the ν shell
 
                     # Compute integral for the (μ,ν,A) triplet shell
-                    GaussianBasis.cint3c2e_sph!(buf, [μ, ν, A], b3)
+                    GaussianBasis.ERI_2e3c!(buf, b3, μ, ν, A)
 
                     for Am in 1:Nα
                         _A = Aoff + Am
