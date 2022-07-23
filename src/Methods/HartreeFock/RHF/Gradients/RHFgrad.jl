@@ -138,7 +138,7 @@ function RHFgrad(wfn::RHF)
             ∇q = xyz[q]
 
             for i in eachindex(idx)
-                μ,ν,λ,σ = idx[i] .+ 1
+                μ,ν,λ,σ = idx[i]
                 ∇k = ∇q[i]
 
                 if abs(∇k) < 1e-12
