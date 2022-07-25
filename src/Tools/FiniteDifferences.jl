@@ -1,4 +1,4 @@
-function create_displacement(mol, A::Int, i::Int, h)
+function create_displacement(mol::Molecule, A::Int, i::Int, h::Real)
 
     disp = zeros(3)
     disp[i] += h
@@ -50,7 +50,7 @@ function gradient_findif(energy_function)
     gradient_findif(energy_function, Molecule(), h)
 end
 
-function gradient_findif(energy_function, mol, h=0.005)
+function gradient_findif(energy_function, mol::Molecule, h=0.005)
     N = length(mol.atoms)
     Eplus = zeros(N,3)
     Eminus = zeros(N,3)

@@ -63,5 +63,18 @@ Edf = [
             @test isapprox(wf.energy, Edf[i], rtol=tol) # Energy from Psi4
         end
     end
+
+    @reset
+    @set printstyle none
+    @testset "Gradients" begin
+
+        # Test argument error         
+        Fermi.Options.set("deriv_type", "Test error")
+        @test_throws Fermi.Options.FermiException Fermi.MollerPlesset.RMP2grad()
+
+        Fermi.Options.set("deriv_type", "analytic")
+        @test_throws Fermi.Options.FermiException Fermi.MollerPlesset.RMP2grad()
+
+    end
 end
 
