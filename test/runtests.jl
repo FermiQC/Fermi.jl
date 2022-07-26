@@ -21,5 +21,6 @@ tol = 1E-8
     include("test_MP.jl")
     include("test_pT.jl")
     include("test_fci.jl")
+    include("test_tools.jl")
     @reset
 end

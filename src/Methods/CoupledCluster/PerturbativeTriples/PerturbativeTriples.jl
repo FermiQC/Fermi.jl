@@ -62,3 +62,5 @@ function RCCSDpT(x...)
     end
 end
 
+# Gradient methods
+include("Gradients/RCCSDpTgrad.jl")

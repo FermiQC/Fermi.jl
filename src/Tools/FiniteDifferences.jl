@@ -1,7 +1,10 @@
-function create_displacement(mol, A::Int, i::Int, h)
+function create_displacement(mol::Molecule, A::Int, i::Int, h::Real)
 
+    disp = zeros(3)
+    disp[i] += h
     new_mol = deepcopy(mol)
-    new_mol.atoms[A].xyz[i] += h
+    a = mol.atoms[A]
+    new_mol.atoms[A] = Atom(a.Z, a.mass, a.xyz + disp)
 
     return new_mol
 end
@@ -42,7 +45,12 @@ function findif_intgrad(X::String, mol, A, i, h=0.005)
     return g * PhysicalConstants.bohr_to_angstrom
 end
 
-function gradient_test(mol, energy_function, h=0.005)
+function gradient_findif(energy_function)
+    h = Options.get("findif_disp_size")
+    gradient_findif(energy_function, Molecule(), h)
+end
+
+function gradient_findif(energy_function, mol::Molecule, h=0.005)
     N = length(mol.atoms)
     Eplus = zeros(N,3)
     Eminus = zeros(N,3)
@@ -62,7 +70,7 @@ function gradient_test(mol, energy_function, h=0.005)
 
     g = (Eplus - Eminus) ./ (2*h)
 
-    return g
+    return g * PhysicalConstants.bohr_to_angstrom
 end
 
 function opt_test(energy_function; h=0.005, d=0.01)

@@ -34,5 +34,6 @@ include("Methods/ConfigurationInteraction/ConfigurationInteraction.jl")
 
 include("Tools/SinglePointEnergy.jl")
 include("Tools/FiniteDifferences.jl")
+include("Tools/Gradients.jl")
 
 end # module

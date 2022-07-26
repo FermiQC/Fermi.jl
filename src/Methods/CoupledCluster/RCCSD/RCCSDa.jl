@@ -4,6 +4,15 @@ include("RCCSDHelper.jl")
 
 function RCCSD(alg::RCCSDa)
     aoints = IntegralHelper{Float64}()
+    RCCSD(aoints, alg)
+end
+
+function RCCSD(mol::Molecule, alg::RCCSDa)
+    aoints = IntegralHelper{Float64}(molecule=mol)
+    RCCSD(aoints, alg)
+end
+
+function RCCSD(aoints::IntegralHelper, alg::RCCSDa)
     rhf = RHF(aoints)
 
     if typeof(aoints.eri_type) === JKFIT || Options.get("precision") == "single"

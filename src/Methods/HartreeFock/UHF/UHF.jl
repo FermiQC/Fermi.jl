@@ -52,6 +52,9 @@ include("UHFHelper.jl")
 # And a number is assigned to the implementation
 get_uhf_alg(x::Val{1}) = UHFa()
 
+# Gradient methods
+include("Gradients/UHFgrad.jl")
+
 function string_repr(X::UHF)
     out = ""
     out = out*" ⇒ Fermi Unrestricted Hartree--Fock Wave function\n"
