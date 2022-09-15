@@ -1,7 +1,7 @@
 name = "Fermi"
 uuid = "9237668d-08c8-4784-b8dd-383aa52fcf74"
 authors = ["gustavojra <gustavo.aroeira@gmail.com>"]
-version = "0.4.0"
+version = "0.5.0"
 
 [deps]
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
