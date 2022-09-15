@@ -2,7 +2,22 @@ using GaussianBasis
 using Molecules
 using TensorOperations
 
-function gradient(wfn::RHF, eri_type::Fermi.Integrals.Chonky)
+function RHFgrad(x...)
+    RHFgrad(Molecule(), x...)
+end
+
+function RHFgrad(mol::Molecule, x...)
+    dtype = Options.get("deriv_type")
+    if dtype == "analytic"
+        RHFgrad(RHF(mol), x...)
+    elseif dtype == "findif"
+        Fermi.gradient_findif(Fermi.HartreeFock.RHF, mol, x...)
+    else
+        throw(FermiException("Invalid or unsupported derivative type: \"$dtype\""))
+    end
+end
+
+function RHFgrad(wfn::RHF, eri_type::Fermi.Integrals.Chonky)
 
     # Following eq. on C.3. Szabo & Ostlund
     atoms = wfn.molecule.atoms
@@ -50,7 +65,7 @@ function gradient(wfn::RHF, eri_type::Fermi.Integrals.Chonky)
         for q in 1:3
             @views vH = ∂H[:,:,q]
             AUX .= P .* vH
-            ∂E[a, q]  = sum(AUX)
+            ∂E[a, q] += sum(AUX)
 
             @views vS = ∂S[:,:,q]
             AUX .= Q .* vS
@@ -69,7 +84,7 @@ function gradient(wfn::RHF, eri_type::Fermi.Integrals.Chonky)
     return ∂E
 end
 
-function gradient(wfn::RHF)
+function RHFgrad(wfn::RHF)
 
     # Following eq. on C.3. Szabo & Ostlund
     atoms = wfn.molecule.atoms
@@ -114,7 +129,7 @@ function gradient(wfn::RHF)
         for q in 1:3
             @views vH = ∂H[:,:,q]
             AUX .= P .* vH
-            ∂E[a, q]  = sum(AUX)
+            ∂E[a, q] += sum(AUX)
 
             @views vS = ∂S[:,:,q]
             AUX .= Q .* vS
@@ -123,7 +138,7 @@ function gradient(wfn::RHF)
             ∇q = xyz[q]
 
             for i in eachindex(idx)
-                μ,ν,λ,σ = idx[i] .+ 1
+                μ,ν,λ,σ = idx[i]
                 ∇k = ∇q[i]
 
                 if abs(∇k) < 1e-12

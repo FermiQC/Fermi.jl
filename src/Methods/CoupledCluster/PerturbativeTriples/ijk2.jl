@@ -10,6 +10,14 @@ function RCCSDpT(Alg::ijk2)
     return RCCSDpT(ccsd, moints, Alg)
 end
 
+function RCCSDpT(mol::Molecule, Alg::ijk2)
+    val = Options.get("return_ints")
+    Options.set("return_ints", true)
+    ccsd, moints = RCCSD(mol)
+    Options.set("return_ints", val)
+    return RCCSDpT(ccsd, moints, Alg)
+end
+
 function RCCSDpT(ccsd::RCCSD, moints::IntegralHelper{T,E,O}, Alg::ijk2) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
 
     output("\n   • Perturbative Triples Started\n")

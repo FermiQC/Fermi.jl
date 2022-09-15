@@ -58,6 +58,8 @@ const Default = Dict{String,Union{Float64,Int,String,Bool}}(
                                   "rhf_alg" => 1,
                                   "uhf_alg" => 1,
                                   "mp2_alg" => 1,
+                                  "ci_alg" => 1,
+                                  "cc_alg" => 1,
                                   "df" => false, 
                                   "oda" => true,
                                   "oda_cutoff" => 1E-1,
@@ -65,8 +67,6 @@ const Default = Dict{String,Union{Float64,Int,String,Bool}}(
                                   "scf_guess" => "gwh",
                                   "quiet" => true,
                                   "precision" => "double",
-                                  "cc_alg" => 1,
-                                  "ci_alg" => "aci",
                                   "det_size" => 64,
                                   "σ"      => 0.001,
                                   "γ"      => 1.0,
@@ -98,8 +98,9 @@ const Default = Dict{String,Union{Float64,Int,String,Bool}}(
                                   "min_matrix_elem" => 10^-9,
                                   "precision_override" => false,
                                   "eri_cutoff" => 10^-12,
-                                  "findif_disp_size" => 0.005,
-                                  "return_ints" => false
+                                  "findif_disp_size" => 5e-3,
+                                  "return_ints" => false,
+                                  "deriv_type" => "findif"
                                  )
 """
     Fermi.Options.Current

@@ -36,7 +36,7 @@
   </tr>
 </table>
 
-Fermi is a quantum chemistry framework written in pure Julia. This code is developed at
+Fermi.jl is a quantum chemistry framework written in pure Julia. This code is developed at
 the [Center for Computational Quantum Chemistry](https://github.com/CCQC) at the University of Georgia under the supervision 
 of [Dr. Justin M. Turney](https://github.com/jturney) and Prof. Henry F. Schaefer.
 

@@ -30,8 +30,10 @@ include("Core/Integrals/IntegralHelper.jl")
 include("Methods/HartreeFock/HartreeFock.jl")
 include("Methods/MollerPlesset/MollerPlesset.jl")
 include("Methods/CoupledCluster/CoupledCluster.jl")
+include("Methods/ConfigurationInteraction/ConfigurationInteraction.jl")
 
 include("Tools/SinglePointEnergy.jl")
 include("Tools/FiniteDifferences.jl")
+include("Tools/Gradients.jl")
 
 end # module
