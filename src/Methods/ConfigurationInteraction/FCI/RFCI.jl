@@ -16,7 +16,10 @@ end
 function RFCI(alg::RFCIa)
     aoints = IntegralHelper{Float64}()
     rhf = Fermi.HartreeFock.RHF(aoints)
+    RFCI(aoints, rhf, alg)
+end
 
+function RFCI(aoints::IntegralHelper, rhf::Fermi.HartreeFock.RHF, alg::RFCIa)
     ci_header()
 
     if typeof(aoints.eri_type) === JKFIT
