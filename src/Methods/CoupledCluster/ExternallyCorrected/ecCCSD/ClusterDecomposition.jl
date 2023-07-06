@@ -1,6 +1,91 @@
-import Fermi.ConfigurationInteraction: Determinant
+using Fermi.ConfigurationInteraction.DetOperations
 
-function get_casT1!(T1::Array{Float64,2}, Ccas::Array{Float64,1}, dets::Vector{Determinant}, ref::Determinant, frozen::Int, ndocc::Int)
+function process_cas(cas::Fermi.ConfigurationInteraction.RFCI)
+    
+    # This function process the CAS wave function to return a dictionary with C coefficients 
+    # organized by excitation level, along with the corresponding determinant
+    # CI coefficients are intermediate normalized.
+    # The reference determinant is taken as the HF one.
+
+    det_size = 
+    if Fermi.Options.get("det_size") == 64
+        Int64
+    elseif Fermi.Options.get("det_size") == 128
+        Int128
+    else
+        throw(Fermi.ArgumentError("Invalid determinant representation $(Fermi.Options.get("det_size"))"))
+    end
+
+    dets = cas.dets
+    Ccas = cas.coef
+
+    ref = dets[1]
+    C0 = Ccas[1]
+    ndocc = count_ones(ref.α)
+    zeroth = repeat('1', ndocc)
+    hf = Determinant(zeroth, zeroth; precision=det_size)
+    if dets[1] == hf
+        output("Dominant configuration is the RHF determinant.\n")
+    elseif dets[2] == hf
+        output("Second most important configuration is the RHF determinant.\n")
+        ref = dets[2]
+        C0 = Ccas[2]
+    else
+        error("Dominant determinant is not the RHF.")
+    end
+
+    output("   • CAS Composition")
+    output("Excitation      N of dets")
+    z = 0
+    acf = 0
+    while acf < length(dets)
+        x = count(d->excitation_level(ref,d)==z, dets)
+        output("{}           {}", z, x)
+        z += 1
+        acf += x
+    end
+
+    # Intermediate Normalization
+    Ccas = Ccas ./ C0
+
+    # Split the Cas data into excitation level
+    Casdata = Dict{String,Array}()
+
+    Casdata["C1"] = Float64[]
+    Casdata["C2"] = Float64[]
+    Casdata["C3"] = Float64[]
+    Casdata["C4"] = Float64[]
+
+    Casdata["C1dets"] = Determinant{det_size}[]
+    Casdata["C2dets"] = Determinant{det_size}[]
+    Casdata["C3dets"] = Determinant{det_size}[]
+    Casdata["C4dets"] = Determinant{det_size}[]
+
+    for i in eachindex(dets)
+
+        exc = excitation_level(ref, dets[i])
+
+        if exc == 1 
+            push!(Casdata["C1"], Ccas[i])
+            push!(Casdata["C1dets"], dets[i])
+
+        elseif exc == 2
+            push!(Casdata["C2"], Ccas[i])
+            push!(Casdata["C2dets"], dets[i])
+
+        elseif  exc == 3
+            push!(Casdata["C3"], Ccas[i])
+            push!(Casdata["C3dets"], dets[i])
+
+        elseif  exc == 4
+            push!(Casdata["C4"], Ccas[i])
+            push!(Casdata["C4dets"], dets[i])
+        end
+    end
+    return ref, Casdata
+end
+
+function get_casT1!(T1::Array{Float64,2}, Ccas::Array{Float64,1}, dets::Vector{Determinant{T}}, ref::Determinant, frozen::Int, ndocc::Int) where T <: Integer
 
     for id in eachindex(dets)
 
@@ -54,7 +139,7 @@ function get_casT2!(T1::Array{Float64,2}, T2::Array{Float64,4}, Ccas::Array{Floa
     end
 end
 
-function get_casT3(idx::NTuple{6,Int}, Coef::Float64, frozen::Int, ndocc::Int, T1::Array{Float64,2}, T2::Array{Float64,4}, ref::Determinant)
+function get_casT3(idx::NTuple{6,Int}, Coef::Float64, frozen::Int, ndocc::Int, T1::Array{Float64,2}, T2::Array{Float64,4}, ref::Determinant{T}) where T <: Integer
 
     i,j,k,a,b,c = idx
 
@@ -93,7 +178,7 @@ function get_casT3(idx::NTuple{6,Int}, Coef::Float64, frozen::Int, ndocc::Int, T
     return T3
 end
 
-function find_casT3(ridx::NTuple{6,Int}, C3coef::Array{Float64,1}, C3dets::Vector{Determinant}, ref::Determinant, frozen::Int, ndocc::Int, T1::Array{Float64,2}, T2::Array{Float64,4})
+function find_casT3(ridx::NTuple{6,Int}, C3coef::Array{Float64,1}, C3dets::Vector{Determinant{T}}, ref::Determinant{T}, frozen::Int, ndocc::Int, T1::Array{Float64,2}, T2::Array{Float64,4}) where T <: Integer
 
     i,j,k,a,b,c = ridx
     # Change indexes to absolute
@@ -142,8 +227,8 @@ function find_casT3(ridx::NTuple{6,Int}, C3coef::Array{Float64,1}, C3dets::Vecto
     return T3
 end
 
-function get_casT4αβ(idx::NTuple{8,Int}, Coef::Float64, C3coef::Array{Float64,1}, C3dets::Vector{Determinant}, 
-                   ref::Determinant, frozen::Int, ndocc::Int, T1::Array{Float64,2}, T2::Array{Float64,4})
+function get_casT4αβ(idx::NTuple{8,Int}, Coef::Float64, C3coef::Array{Float64,1}, C3dets::Vector{Determinant{T}}, 
+                   ref::Determinant{T}, frozen::Int, ndocc::Int, T1::Array{Float64,2}, T2::Array{Float64,4}) where T <: Integer
 
     i,j,k,l,a,b,c,d = idx
 
@@ -235,8 +320,8 @@ function get_casT4αβ(idx::NTuple{8,Int}, Coef::Float64, C3coef::Array{Float64,
     return T4
 end
 
-function get_casT4αα(idx::NTuple{8,Int}, Coef::Float64, C3coef::Array{Float64,1}, C3dets::Vector{Determinant}, 
-                    ref::Determinant, frozen::Int, ndocc::Int, T1::Array{Float64,2}, T2::Array{Float64,4})
+function get_casT4αα(idx::NTuple{8,Int}, Coef::Float64, C3coef::Array{Float64,1}, C3dets::Vector{Determinant{T}}, 
+                    ref::Determinant{T}, frozen::Int, ndocc::Int, T1::Array{Float64,2}, T2::Array{Float64,4}) where T <: Integer
     
     i,j,k,l,a,b,c,d = idx
 
@@ -426,24 +511,24 @@ function ec_T4ααonT2!(ridx::NTuple{8,Int}, T4::Float64, ecT2::Array{Float64,4}
     ecT2[j,i,b,a] += ec
 end
 
-function cas_decomposition(ref::Determinant, Casdata::Dict{String,Array}, ndocc::Int, frozen::Int, fov::Array{Float64,2}, Voovv::Array{Float64,4}, Vovvv::Array{Float64,4}, Vooov::Array{Float64,4})
+function cas_decomposition(ref::Determinant{T}, Casdata::Dict{String,Array}, ndocc::Int, frozen::Int, fov::Array{Float64,2}, Voovv::Array{Float64,4}, Vovvv::Array{Float64,4}, Vooov::Array{Float64,4}) where T <: Integer
 
     # Get T1 and T2
     T1 = zeros(size(fov))
     T2 = zeros(size(Voovv))
-    output( "→ Getting T1...")
+    output("→ Getting T1...")
     get_casT1!(T1, Casdata["C1"], Casdata["C1dets"], ref, frozen, ndocc)
     get_casT1!(T1, Casdata["C1"], Casdata["C1dets"], ref, frozen, ndocc)
-    output( " Done.\n")
-    output( "→ Getting T2...")
+    output(" Done.\n")
+    output("→ Getting T2...")
     get_casT2!(T1, T2, Casdata["C2"], Casdata["C2dets"], ref, frozen, ndocc)
-    output( " Done.\n")
+    output(" Done.\n")
 
     # Initialize arrays
     ecT1 = zeros(size(fov))
     ecT2 = zeros(size(Voovv))
 
-    output( "→ Computing external correction from T3...")
+    output("→ Computing external correction from T3...")
     # Compute External Correction from T3
     for n in eachindex(Casdata["C3"])
         D = Casdata["C3dets"][n]
@@ -482,10 +567,10 @@ function cas_decomposition(ref::Determinant, Casdata::Dict{String,Array}, ndocc:
         ec_T3onT2!((i,j,k,c,b,a),-T3, ecT2, T1, fov, Voovv, Vovvv, Vooov)
         ec_T3onT2!((k,j,i,c,b,a), T3, ecT2, T1, fov, Voovv, Vovvv, Vooov)
     end
-    output( "Done\n")
+    output("Done\n")
 
     # Compute External Correction from T4
-    output( "→ Computing external correction from T4...")
+    output("→ Computing external correction from T4...")
     for n in eachindex(Casdata["C4"])
         D = Casdata["C4dets"][n]
         C = Casdata["C4"][n]
