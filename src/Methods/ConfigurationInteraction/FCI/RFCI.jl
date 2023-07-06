@@ -9,9 +9,9 @@ using Molecules
     return I & (1 << i) != 0
 end
 
-function detstring(I, n = 7)
-    return reverse(bitstring(I))[1:n]
-end
+#function detstring(I, n = 7)
+#    return reverse(bitstring(I))[1:n]
+#end
 
 function RFCI(alg::RFCIa)
     aoints = IntegralHelper{Float64}()

@@ -1,4 +1,12 @@
+module DetOperations
+
+using Fermi
 using LoopVectorization
+using Combinatorics
+
+export Determinant, get_determinants, αexcitation_level, βexcitation_level, phase, first_αexclusive, first_βexclusive
+export αlist, βlist, αindex!, βindex!, second_αexclusive, second_βexclusive, detstring
+export αocc!, βocc!, αvir!, βvir!, excitation_level, αexclusive, βexclusive, annihilate, create
 
 """
     Fermi.ConfigurationInteraction.DetOperations.Determinant
@@ -579,3 +587,4 @@ function detstring(D::Determinant,l::Int=64)
 
     return "$str     $αstr     $βstr"
 end
+end #Module

@@ -1,9 +1,9 @@
 using Fermi
 using Fermi.Integrals
 using TensorOperations
-using Combinatorics
 using SparseArrays
 using ArnoldiMethod
+using Fermi.ConfigurationInteraction.DetOperations
 
 function RFCI(alg::SparseHamiltonian)
     aoints = IntegralHelper{Float64}()

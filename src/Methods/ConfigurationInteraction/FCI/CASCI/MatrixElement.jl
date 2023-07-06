@@ -1,3 +1,4 @@
+using Fermi.ConfigurationInteraction.DetOperations
 using LoopVectorization
 
 function Hd0(αindex::Array{Int64,1}, βindex::Array{Int64,1}, h::Array{T, 2}, V::Array{T, 4}) where T <: AbstractFloat

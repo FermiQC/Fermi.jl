@@ -1,3 +1,5 @@
+using Fermi.ConfigurationInteraction.DetOperations
+
 function RFCI(alg::ACI)
     aoints = IntegralHelper{Float64}()
     rhf = Fermi.HartreeFock.RHF(aoints)
@@ -5,9 +7,6 @@ function RFCI(alg::ACI)
 end
 
 function RFCI(aoints::IntegralHelper, rhf::Fermi.HartreeFock.RHF, alg::ACI)
-
-    aoints = IntegralHelper{Float64}()
-    rhf = Fermi.HartreeFock.RHF(aoints)
 
     ci_header()
 
