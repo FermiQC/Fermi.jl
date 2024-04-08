@@ -48,7 +48,7 @@ struct RFCI{T} <: AbstractCIWavefunction
 end
 
 """
-    Fermi.CoupledCluster.get_rfci_alg
+    Fermi.ConfigurationInteraction.get_rfci_alg
 
 Returns a singleton type corresponding to a RFCI implementation based on the options.
 """

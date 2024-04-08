@@ -141,7 +141,7 @@ function get_σ1(Is, hp, eri, C, tree, Nelec)
     Kocc_ind = zeros(Int, Nelec)
 
     # Loop over Iβ
-    for Iidx in 1:length(Is)
+    for Iidx in eachindex(Is)
 
         F .= 0.0      # Set array F(Jβ) = 0
         I = Is[Iidx]
@@ -279,7 +279,7 @@ function get_σ3(Is, tree, eri, C, Nelec)
     αocc_ind = zeros(Int, Nelec)
     βocc_ind = zeros(Int, Nelec)
 
-    for αidx in 1:length(Is)
+    for αidx in eachindex(Is)
         Iα = Is[αidx]
 
         # Loop through single excited strings
@@ -318,7 +318,7 @@ function get_σ3(Is, tree, eri, C, Nelec)
                 end
             end
 
-            for βidx in 1:length(Is)
+            for βidx in eachindex(Is)
                 Iβ = Is[βidx]
 
                 # Loop through single excited strings
@@ -406,7 +406,7 @@ end
 #    Nbas = size(hp, 1) - Ninac
 #    F = zeros(length(Is))
 #
-#    for Iidx = 1:length(Is)
+#    for Iidx = eachindex(Is)
 #        Iβ = Is[Iidx]
 #        F .= 0.0
 #
@@ -487,7 +487,7 @@ end
 #    sz = sizeof(eltype(Is))*8
 #
 #    Nbas = size(eri, 1)
-#    for αidx in 1:length(Is)
+#    for αidx in eachindex(Is)
 #        Iα = Is[αidx]
 #
 #        ## Loop through l,k to construct Jα string
@@ -512,7 +512,7 @@ end
 #                        Jα = alIα ⊻ (1 << k)
 #
 #                        Jαidx = findfirst(x->x==Jα, Is)
-#                        for βidx in 1:length(Is)
+#                        for βidx in eachindex(Is)
 #                            Iβ = Is[βidx]
 #
 #                            ## Loop through i,j to construct Jβ string
