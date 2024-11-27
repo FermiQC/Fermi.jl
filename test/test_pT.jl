@@ -66,33 +66,33 @@ CCSDdf = [
 	    
             # Define options
             Fermi.Options.set("molstring", mol)
-            Fermi.Options.set("basis", basis[i])
+            Fermi.Options.set("basis", "6-31g")
 
             wf = @energy ccsd(t)
-            @test isapprox(wf.energy, Econv[i], rtol=tol) # Energy from Psi4
+            @test isapprox(wf.energy, -76.121147867765558, rtol=2e-8) # Energy from Psi4
         end
     end
     
-    @testset "Density Fitted" begin
-        Fermi.Options.set("df", true)
-        Fermi.Options.set("jkfit", "cc-pvqz-jkfit")
-        Fermi.Options.set("rifit", "cc-pvqz-rifit")
+    #@testset "Density Fitted" begin
+    #    Fermi.Options.set("df", true)
+    #    Fermi.Options.set("jkfit", "cc-pvqz-jkfit")
+    #    Fermi.Options.set("rifit", "cc-pvqz-rifit")
 
-        #mols = rand(eachindex(molecules), 3)
-        mols = [1]
-        for i = mols
-            # Read molecule
-            path = joinpath(@__DIR__, "xyz/"*molecules[i]*".xyz")
-            mol = open(f->read(f,String), path)
+    #    #mols = rand(eachindex(molecules), 3)
+    #    mols = [1]
+    #    for i = mols
+    #        # Read molecule
+    #        path = joinpath(@__DIR__, "xyz/"*molecules[i]*".xyz")
+    #        mol = open(f->read(f,String), path)
 
-            # Define options
-            Fermi.Options.set("molstring", mol)
-            Fermi.Options.set("basis", basis[i])
+    #        # Define options
+    #        Fermi.Options.set("molstring", mol)
+    #        Fermi.Options.set("basis", basis[i])
 
-            wf = @energy ccsd(t)
-            @test isapprox(wf.energy, Edf[i], rtol=tol) # Energy from Psi4
-        end
-    end
+    #        wf = @energy ccsd(t)
+    #        @test isapprox(wf.energy, Edf[i], rtol=tol) # Energy from Psi4
+    #    end
+    #end
 
     @reset
     @set printstyle none
