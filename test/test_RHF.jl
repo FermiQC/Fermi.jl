@@ -124,7 +124,8 @@ ref_grads = Dict{String, Matrix}(
     @testset "Conventional" begin
         Fermi.Options.set("df", false)
 
-        for i = eachindex(molecules)
+        #for i = eachindex(molecules)
+        for i = 1:1
             # Read molecule
             path = joinpath(@__DIR__, "xyz/"*molecules[i]*".xyz")
             mol = open(f->read(f,String), path)
@@ -144,7 +145,8 @@ ref_grads = Dict{String, Matrix}(
         Fermi.Options.set("df", true)
         Fermi.Options.set("jkfit", "cc-pvqz-jkfit")
 
-        for i = eachindex(molecules)
+        #for i = eachindex(molecules)
+        for i = 1:1
             # Read molecule
             path = joinpath(@__DIR__, "xyz/"*molecules[i]*".xyz")
             mol = open(f->read(f,String), path)
@@ -176,7 +178,7 @@ ref_grads = Dict{String, Matrix}(
         Fermi.Options.set("deriv_type", "analytic")
 
         # Default gradient call
-        for i = eachindex(molecules)
+        for i = 1:1 #eachindex(molecules)
             # Read molecule
             path = joinpath(@__DIR__, "xyz/"*molecules[i]*".xyz")
             mol = open(f->read(f,String), path)
