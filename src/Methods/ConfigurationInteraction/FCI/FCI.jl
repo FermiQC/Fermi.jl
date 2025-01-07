@@ -42,10 +42,13 @@ These options can be set with `@set <option> <value>`
 | `drop_occ`    | Number of occupied electrons to be dropped | `Int`  | [0]              |
 | `drop_vir`    | Number of virtual electrons to be dropped | `Int`  | [0]              |
 """
-struct RFCI{T} <: AbstractCIWavefunction 
+struct RFCI{T,C,D} <: AbstractCIWavefunction 
     energy::Float64
     correlation::T
+    coef::C
+    dets::D
 end
+RFCI(e::Float64, c::AbstractFloat) = RFCI(e, c, nothing, nothing)
 
 """
     Fermi.CoupledCluster.get_rfci_alg
@@ -65,6 +68,18 @@ struct RFCIa <: FCIAlgorithm end
 include("RFCI.jl")
 # And a number is assigned to the implementation
 get_rfci_alg(x::Val{1}) = RFCIa()
+
+# SparseHamiltonian implementation
+struct SparseHamiltonian <: FCIAlgorithm end
+include("CASCI/DetOperations.jl")
+include("CASCI/MatrixElement.jl")
+include("CASCI/SparseHamiltonian.jl")
+get_rfci_alg(x::Val{2}) = SparseHamiltonian()
+
+# ACI
+struct ACI <: FCIAlgorithm end
+include("CASCI/ACI.jl")
+get_rfci_alg(x::Val{3}) = ACI()
 
 function RFCI(x...)
     if !any(i-> i isa FCIAlgorithm, x)

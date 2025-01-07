@@ -14,7 +14,7 @@ function ER_localize(orbs::AbstractRestrictedOrbitals, ints, mix_range)
 
     N = length(mix_range)
 
-    println("Number of mixing pairs: $N")
+    println("Number of mixing orbitals: $N")
     # Create a list of pairs to be rotated
     Npairs = N*(N-1) ÷ 2
     Δvals = zeros(Npairs)
@@ -32,54 +32,16 @@ function ER_localize(orbs::AbstractRestrictedOrbitals, ints, mix_range)
         end
     end
 
-    #@views Co = newC[:, o]
-    #self = zeros(No)
-    #J = zeros(No, No)
-    #K = zeros(No, No)
-    #L = zeros(No, No)
-    #for p = o
-    #    @views C1 = newC[:,p]
-    #    @tensoropt A = C1[μ]*C1[ν]*C1[λ]*C1[σ]*eri[μ, ν, λ, σ]
-    #    self[p] = A
-    #    for q = o
-    #        @views C2 = newC[:,q]
-    #        @tensoropt B = C1[μ]*C1[ν]*C2[λ]*C2[σ]*eri[μ, ν, λ, σ]
-    #        @tensoropt C = C1[μ]*C2[ν]*C1[λ]*C2[σ]*eri[μ, ν, λ, σ]
-    #        @tensoropt D = C1[μ]*C1[ν]*C1[λ]*C2[σ]*eri[μ, ν, λ, σ]
-
-    #        J[p,q] = B
-    #        K[p,q] = C
-    #        L[p,q] = D
-    #    end
-    #end
-
     println("Self repulsion: $(selfrepulsion(newC, mix_range, ints))")
 
     ite = 1
     for idx in eachindex(ij_vals)
         (i,j) = ij_vals[idx]
-
-        #iiii = self[i]
-        #jjjj = self[j]
-
-        #iiij = L[i,j]
-        #jjij = L[j,i]
-
-        #iijj = J[i,j]
-        #ijij = K[i,j]
-
-        #B = iiij - jjij
-        #A = ijij + 0.5*iijj - 0.25*(iiii + jjjj)
-        #θ = 0.25 * atan(-B / A)
-
-        #Δvals[idx] = A*(1 - cos(4θ)) + B*sin(4θ)
-        #θvals[idx] = θ
-
         θvals[idx], Δvals[idx] = ER_rotation_angle(newC, i,j, ints["ERI"])
     end
 
     while true
-        if ite > 30
+        if ite > 300
             println("Ops did not converge")
             break
         end

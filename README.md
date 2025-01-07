@@ -58,6 +58,8 @@ Currently, we have implementations of:
 | RMP2      |  Y    |  Y |
 | RCCSD     |  Y    |  Y |
 | RCCSD(T)  |  Y    |  Y |
+| RCCSD(T)  |  Y    |  Y |
+| FCI       |  Y    |  N |
 
 ## Install
 Install Fermi by running,

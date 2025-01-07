@@ -1,8 +1,11 @@
 
 function UHFEnergy(H, Dα, Dβ, Fα, Fβ, Vnuc)
     # Calculate energy
-    @tensoropt A[:] := 0.5 * (H[i,j] * (Dα[i,j] + Dβ[i,j]) + Fα[i,j] * Dα[i,j] + Fβ[i,j] * Dβ[i,j])
-    Ee = A[1]
+    out = Dα .+ Dβ
+    out .*= H
+    out .+= Fα .* Dα
+    out .+= Fβ .* Dβ
+    Ee = 0.5*sum(out)
     return(Ee+Vnuc)
 end
 

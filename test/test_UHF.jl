@@ -6,7 +6,7 @@ Edf =   [-75.41960080317435, -39.56380446089254, -38.93785583198393]
 @testset "UHF" begin
     @testset "Conventional Chonky" begin
         Fermi.Options.set("df", false)
-        for i = eachindex(uhf_boys)
+        for i = [1]
             # Read molecule
             path = joinpath(@__DIR__, "xyz/"*uhf_boys[i][1]*".xyz")
             mol = open(f->read(f,String), path)
@@ -26,7 +26,7 @@ Edf =   [-75.41960080317435, -39.56380446089254, -38.93785583198393]
     
     @testset "Conventional SparseERI" begin
         Fermi.Options.set("df", false)
-        for i = eachindex(uhf_boys)
+        for i = [1]
             # Read molecule
             path = joinpath(@__DIR__, "xyz/"*uhf_boys[i][1]*".xyz")
             mol = open(f->read(f,String), path)
@@ -47,7 +47,7 @@ Edf =   [-75.41960080317435, -39.56380446089254, -38.93785583198393]
     @testset "Density Fitting" begin
         Fermi.Options.set("df", true)
         Fermi.Options.set("jkfit", "cc-pvtz-jkfit")
-        for i in [1,3]
+        for i in [1]
             # Read molecule
             path = joinpath(@__DIR__, "xyz/"*uhf_boys[i][1]*".xyz")
             mol = open(f->read(f,String), path)

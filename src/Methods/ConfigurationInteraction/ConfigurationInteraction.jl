@@ -15,7 +15,7 @@ function ci_header()
 raw"""
 ================================================================================
 //                       Configuration Interaction                            \\     
-//                        Module by G.J.R. Aroeira                            \\       
+//                 Module by G.J.R. Aroeira and M. M. Davis                   \\       
 ================================================================================
 """
     output(banner)

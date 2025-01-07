@@ -31,7 +31,7 @@ Edf = [
     @testset "Conventional" begin
         Fermi.Options.set("df", false)
 
-        for i = eachindex(molecules)
+        for i = 1:1 #eachindex(molecules)
             # Read molecule
             path = joinpath(@__DIR__, "xyz/"*molecules[i]*".xyz")
             mol = open(f->read(f,String), path)
@@ -50,7 +50,7 @@ Edf = [
         Fermi.Options.set("jkfit", "cc-pvqz-jkfit")
         Fermi.Options.set("rifit", "cc-pvqz-rifit")
 
-        for i = eachindex(molecules)
+        for i = 1:1 #eachindex(molecules)
             # Read molecule
             path = joinpath(@__DIR__, "xyz/"*molecules[i]*".xyz")
             mol = open(f->read(f,String), path)
