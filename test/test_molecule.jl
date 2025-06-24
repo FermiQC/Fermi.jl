@@ -30,8 +30,8 @@
     end
 
     # Test wrong charge, mult and unit
-    @test_throws Fermi.Options.FermiException Fermi.Molecule(molstring=molstringA, charge=10)
-    @test_throws Fermi.Options.FermiException Fermi.Molecule(molstring=molstringA, charge=0, multiplicity=2)
+    @test_throws DomainError Fermi.Molecule(molstring=molstringA, charge=10)
+    @test_throws DomainError Fermi.Molecule(molstring=molstringA, charge=0, multiplicity=2)
 
     # Test print molecule
     mol = Fermi.Molecule(molstring=molstringB, unit=:bohr, charge=0, multiplicity=3)
