@@ -1,5 +1,5 @@
 using Molecules
-import Molecules: Atom
+import Molecules: Atom, Molecule
 
 export Molecule, Atom
 
@@ -14,7 +14,8 @@ import Base: show
 """
     Fermi.Molecule
 
-Object storing information about a molecule (group of atoms).
+Construct an object storing information about a molecule (group of atoms).
+Note that this object is imported from the `Molecules` package, which is a dependency of Fermi.
 
 # Fields
     
@@ -56,14 +57,6 @@ H    0.919788188200    2.458018557000    0.629793883200
 Charge: 2   Multiplicity: 3   
 ```
 """
-struct Molecule
-    atoms::Vector{Atom}
-    charge::Int
-    multiplicity::Int
-    Nα::Int
-    Nβ::Int
-end
-
 function Molecule(;
     molstring = Options.get("molstring"),
     unit = Symbol(Options.get("unit")),
@@ -73,34 +66,6 @@ function Molecule(;
 
     atoms = Molecules.parse_string(molstring, unit=unit)
     Molecule(atoms, charge, multiplicity)
-end
-
-function Molecule(atoms::Vector{T}, charge::Int, multiplicity::Int) where T <: Atom
-
-    # Compute number of electrons
-    nelec = -charge
-    for i in eachindex(atoms)
-        nelec += atoms[i].Z
-    end
-
-    # If the number of electrons turns out negative returns an error
-    if nelec ≤ 0
-        throw(FermiException("Invalid charge ($charge) for given molecule"))
-    end
-
-    # Mult = 2Ms + 1 thus the number of unpaired electrons (taken as α) is Mult-1 = 2Ms
-    αexcess = multiplicity-1
-
-    # The number of β electrons must be equal the number of doubly occupied orbitals (Ndo)
-    # Ndo = (nelec - n_of_unpaired_elec)/2 this must be an integer
-    if isodd(nelec) != isodd(αexcess)
-        throw(FermiException("Incompatible charge $(charge) and multiplicity $(multiplicity)"))
-    end
-
-    Nβ = (nelec - αexcess)/2
-    Nα = nelec - Nβ
-    out =  Molecule(atoms, charge, multiplicity, Nα, Nβ)
-    return out
 end
 
 """
