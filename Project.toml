@@ -1,7 +1,7 @@
 name = "Fermi"
 uuid = "9237668d-08c8-4784-b8dd-383aa52fcf74"
 authors = ["gustavojra <gustavo.aroeira@gmail.com>"]
-version = "0.5.0"
+version = "0.5.1"
 
 [deps]
 ArnoldiMethod = "ec485272-7323-5ecc-a04f-4719b315124d"
@@ -23,7 +23,7 @@ Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 [compat]
 Combinatorics = "^1"
 Formatting = "^0.4.1"
-GaussianBasis = "^0.4"
+GaussianBasis = "0.4, 0.5"
 LoopVectorization = "0.12"
 Molecules = "0.3"
 Octavian = "0.3"

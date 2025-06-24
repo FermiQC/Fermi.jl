@@ -34,7 +34,7 @@ function RCCSD(moints::IntegralHelper{T,<:AbstractERI,<:AbstractRestrictedOrbita
     RCCSD(moints, alg)
 end
 
-function RCCSD(moints::IntegralHelper{T,E1,<:AbstractRestrictedOrbitals}, aoints::IntegralHelper{T,E2,AtomicOrbitals}, alg::RCCSDa) where {T<:AbstractFloat,T2<:AbstractFloat,
+function RCCSD(moints::IntegralHelper{T,E1,<:AbstractRestrictedOrbitals}, aoints::IntegralHelper{T,E2,AtomicOrbitals}, alg::RCCSDa) where {T<:AbstractFloat,
                                                                                 E1<:AbstractDFERI,E2<:AbstractDFERI}
     Fermi.Integrals.compute!(moints, aoints, "F")
     Fermi.Integrals.compute!(moints, aoints, "BOO")
