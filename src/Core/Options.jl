@@ -101,7 +101,8 @@ const Default = Dict{String,Union{Float64,Int,String,Bool}}(
                                   "findif_disp_size" => 5e-3,
                                   "return_ints" => false,
                                   "deriv_type" => "findif"
-                                 )
+                                  "population_analysis" => true
+                                  )
 """
     Fermi.Options.Current
 

@@ -205,6 +205,69 @@ function build_fock!(F::Array{Float64}, H::Array{Float64}, D::Array{Float64}, in
     return F
 end
 
+"""
+    shell_to_atom_index(bset, sh)
+
+Map a basis 'shell' object `sh` to the 1-based atom index in the given
+`bset` (GaussianBasis.BasisSet). The function accepts several common
+representations that shell objects use to indicate their owning atom:
+
+- an integer index (already 1-based or 0-based depending on provider)
+- a field named `:atom` or `:atom_index` containing a numeric index
+- a field named `:center` containing either an Atom-like object or a
+  coordinate vector
+
+"""
+function shell_to_atom_index(bset, sh)
+    fn = fieldnames(typeof(sh))
+    if :atom in fn
+        val = getfield(sh, :atom)
+    elseif :atom_index in fn
+        val = getfield(sh, :atom_index)
+    elseif :center in fn
+        val = getfield(sh, :center)
+    else
+        throw(ErrorException("Cannot determine shell->atom mapping. Shell fields: $(fn)"))
+    end
+
+    # If value is already an integer index, return it
+    if isa(val, Integer)
+        return Int(val)
+    end
+
+    # If value is an Atom-like object, try to find its index in bset.atoms
+    for (i,a) in enumerate(bset.atoms)
+        try
+            if a === val
+                return i
+            end
+            if hasfield(typeof(a), :Z) && hasfield(typeof(val), :Z)
+                if getfield(a, :Z) == getfield(val, :Z) && isapprox(getfield(a, :xyz), getfield(val, :xyz); atol=1e-8)
+                    return i
+                end
+            end
+            if hasfield(typeof(a), :AtomicSymbol) && hasfield(typeof(val), :AtomicSymbol)
+                if getfield(a, :AtomicSymbol) == getfield(val, :AtomicSymbol) && isapprox(getfield(a, :xyz), getfield(val, :xyz); atol=1e-8)
+                    return i
+                end
+            end
+        catch
+            # ignore and continue
+        end
+    end
+
+    # If the value is a coordinate vector, match by coordinates
+    if isa(val, AbstractVector)
+        for (i,a) in enumerate(bset.atoms)
+            if isapprox(getfield(a, :xyz), val; atol=1e-8)
+                return i
+            end
+        end
+    end
+
+    throw(ErrorException("Failed to map shell to atom index for shell value: $(val)"))
+end
+
 ## This is the old version of build_fock! that uses threaded accumulation into thread-specific arrays, 
 # which is no longer recommended. Left here a token of admiraton for the times where threading was simpler to implement and understand RIP.
 function old_build_fock!(F::Array{Float64}, H::Array{Float64}, D::Array{Float64}, ints::IntegralHelper{Float64,SparseERI,AtomicOrbitals})

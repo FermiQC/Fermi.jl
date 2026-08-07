@@ -47,20 +47,21 @@ Computes RHF using information from `Fermi.Options.Current`
 
 These options can be set with `@set <option> <value>`
 
-| Option         | What it does                      | Type      | choices [default]     |
-|----------------|-----------------------------------|-----------|-----------------------|
-| `rhf_alg`      | Picks RHF algorithm               | `Int`     | [1]                   |
-| `scf_max_rms`  | RMS density convergence criterion | `Float64` | [10^-9]               |
-| `scf_max_iter` | Max number of iterations          | `Int`     | [50]                  |
-| `scf_e_conv`   | Energy convergence criterion      | `Float64` | [10^-10]              |
-| `basis`        | What basis set to use             | `String`  | ["sto-3g"]            |
-| `df`           | Whether to use density fitting    | `Bool`    | `true` [`false`]      |
-| `jkfit`        | What aux. basis set to use for JK | `String`  | ["auto"]              |
-| `diis`         | Whether to use DIIS               | `Bool`    | [`true`] `false`      |
-| `oda`          | Whether to use ODA                | `Bool`    | [`true`] `false`      |
-| `oda_cutoff`   | When to turn ODA off (RMS)        | `Float64` | [1E-1]                |
-| `oda_shutoff`  | When to turn ODA off (iter)       | `Int`     | [20]                  |
-| `scf_guess`    | Which guess density to use        | `String`  | "core" ["gwh"]        |
+| Option               | What it does                      | Type      | choices [default]     |
+|----------------------|-----------------------------------|-----------|-----------------------|
+| `rhf_alg`            | Picks RHF algorithm               | `Int`     | [1]                   |
+| `scf_max_rms`        | RMS density convergence criterion | `Float64` | [10^-9]               |
+| `scf_max_iter`       | Max number of iterations          | `Int`     | [50]                  |
+| `scf_e_conv`         | Energy convergence criterion      | `Float64` | [10^-10]              |
+| `basis`              | What basis set to use             | `String`  | ["sto-3g"]            |
+| `df`                 | Whether to use density fitting    | `Bool`    | `true` [`false`]      |
+| `jkfit`              | What aux. basis set to use for JK | `String`  | ["auto"]              |
+| `diis`               | Whether to use DIIS               | `Bool`    | [`true`] `false`      |
+| `oda`                | Whether to use ODA                | `Bool`    | [`true`] `false`      |
+| `oda_cutoff`         | When to turn ODA off (RMS)        | `Float64` | [1E-1]                |
+| `oda_shutoff`        | When to turn ODA off (iter)       | `Int`     | [20]                  |
+| `scf_guess`          | Which guess density to use        | `String`  | "core" ["gwh"]        |
+| `population_analysis`| Whether to do population analysis | `Bool`    | [`true`] `false`      |
 
 # Struct tree
 

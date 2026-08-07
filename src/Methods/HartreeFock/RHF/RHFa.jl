@@ -76,6 +76,7 @@ function RHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, C::Ab
     oda = Options.get("oda")
     oda_cutoff = Options.get("oda_cutoff")
     oda_shutoff = Options.get("oda_shutoff")
+    population_analysis = Options.get("population_analysis")
 
     # Variables that will get updated iteration-to-iteration
     ite = 1
@@ -217,6 +218,49 @@ function RHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, C::Ab
         output("❗ SCF Equations did not converge in {:>5} iterations ❗", maxit)
     end
     output(repeat("-",80))
+
+    # Do population analysis?
+    if population_analysis
+        Co = C[:,1:ndocc]
+        @tensor D[u,v] := Co[u,m]*Co[v,m]
+        S = ints["S"]
+
+        bset = ints.orbitals.basisset
+        Nbasis = GaussianBasis.num_basis.(bset.basis)
+        ao_offset = cumsum([0; Nbasis[1:end-1]])
+
+        # Build shell->atom index mapping 
+        shell_atom = [try shell_to_atom_index(bset, sh) catch e; nothing end for sh in bset.basis]
+
+        # Build atom->AO mapping 
+        atom_to_ao = [Int[] for _ = 1:length(bset.atoms)]
+        for sh in 1:bset.nshells
+            idxs = (ao_offset[sh]+1):(ao_offset[sh]+Nbasis[sh])
+            atom_idx = shell_atom[sh]
+            if atom_idx === nothing
+                throw(ErrorException("Failed to obtain atom index for shell $sh"))
+            end
+            ai = Int(atom_idx)
+            append!(atom_to_ao[ai], collect(idxs))
+        end
+        # --- Mulliken population analysis ---
+        pop=D*S
+        popsm = [sum(2*pop[μ,μ] for μ in atom_to_ao[A]) for A in 1:length(atom_to_ao)]
+        # popsm = [sum(2*D[μ,ν]*S[μ,ν] for μ in atom_to_ao[A], ν in 1:nao) for A in 1:length(atom_to_ao)]
+
+        output("\n   • Mulliken population analysis")
+        output(" {:>4} {:>4} {:>12} {:>12}", "Idx", "At", "Population", "Charge")
+        for A in 1:length(popsm)
+            Z = getfield(bset.atoms[A], :Z)
+            sym = hasfield(typeof(bset.atoms[A]), :AtomicSymbol) ? getfield(bset.atoms[A], :AtomicSymbol) : string(Z)
+            output(" {:>4} {:>4} {:12.8f} {:12.8f}", A, sym, popsm[A], Z - popsm[A])
+        end
+        total_mulliken = sum(popsm)
+        nel = molecule.Nα + molecule.Nβ
+        # output(" Mulliken total population: {:12.8f}  Electrons: {:12.8f}  Error: {:12.8f}", total_mulliken, nel, total_mulliken - nel)
+        output(" Mulliken total population: {:12.8f}  Electrons: {:12.8f}  ", total_mulliken, nel)
+
+    end ## population analysis
 
     Orbitals = RHFOrbitals(molecule, ints.basis, eps, E, C)
 
