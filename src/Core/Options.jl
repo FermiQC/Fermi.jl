@@ -100,7 +100,7 @@ const Default = Dict{String,Union{Float64,Int,String,Bool}}(
                                   "eri_cutoff" => 10^-12,
                                   "findif_disp_size" => 5e-3,
                                   "return_ints" => false,
-                                  "deriv_type" => "findif"
+                                  "deriv_type" => "findif",
                                   "population_analysis" => true
                                   )
 """
