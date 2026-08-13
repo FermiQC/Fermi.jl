@@ -5,13 +5,6 @@ import Base: show
 export RCCSD
 
 """
-    Fermi.CoupledCluster.RCCSDAlgorithm
-
-Abstract type for RCCSD implementations.
-"""
-abstract type RCCSDAlgorithm end
-
-"""
     Fermi.CoupledCluster.RCCSD
 
 Wave function object for Restricted Coupled Cluster Singles and Doubles.
@@ -43,7 +36,6 @@ These options can be set with `@set <option> <value>`
 
 | Option         | What it does                      | Type      | choices [default]     |
 |----------------|-----------------------------------|-----------|-----------------------|
-| `cc_alg`      | Picks RCCSD algorithm              | `Int`     | [1]                   |
 | `cc_e_conv`   | Energy convergence criterion           | `Float64` | [10^-10]              |
 | `cc_max_rms`    | Amplitudes RMS convergence criterion   | `Float64` | [10^-10]              |
 | `cc_max_iter`   | Max number of CC iterations   | `Int` | [50]              |
@@ -68,38 +60,7 @@ struct RCCSD{T} <: AbstractCCWavefunction
     t_conv::T
 end
 
-"""
-    Fermi.CoupledCluster.get_rccsd_alg
-
-Returns a singleton type corresponding to a RCCSD implementation based on the options.
-"""
-function get_rccsd_alg(N::Int = Options.get("cc_alg"))
-    try 
-        return get_rccsd_alg(Val(N))
-    catch MethodError
-        throw(FermiException("implementation number $N not available for RCCSD."))
-    end
-end
-
-# For each implementation a singleton type must be create
-struct RCCSDa <: RCCSDAlgorithm end
 include("RCCSDa.jl")
-# And a number is assigned to the implementation
-get_rccsd_alg(x::Val{1}) = RCCSDa()
-
-function RCCSD(x...)
-    if !any(i-> i isa RCCSDAlgorithm, x)
-        RCCSD(x..., get_rccsd_alg())
-    else
-        # Print the type of arguments given for a better feedback
-        args = "("
-        for a in x[1:end-1]
-            args *= "$(typeof(a)), "
-        end
-        args = args[1:end-2]*")"
-        throw(FermiException("invalid arguments for RCCSD method: $args"))
-    end
-end
 
 # Gradient methods
 include("Gradients/RCCSDgrad.jl")

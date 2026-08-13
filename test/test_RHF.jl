@@ -1,3 +1,5 @@
+using Molecules
+
 @reset
 @set printstyle none
 
@@ -205,6 +207,57 @@ ref_grads = Dict{String, Matrix}(
             g = @gradient rhf <= Fermi.Integrals.Chonky()
             Δg = g - ref_grads["water"]
             @test √(sum(Δg.^2)/length(g)) < tol # Gradient from Psi4
+        end
+
+        # Density-fitted gradient: no Psi4/exact-ERI reference is expected to
+        # match here (DF is itself an approximation to the ERI), so this
+        # validates against finite difference of the DF energy instead.
+        @testset "Density Fitted" begin
+            @reset
+            @set printstyle none
+            Fermi.Options.set("molstring", """
+            O   0.000000000000   0.000000000000  -0.143225816552
+            H   0.000000000000   1.638036840407   1.136548822547
+            H   0.000000000000  -1.638036840407   1.136548822547
+            """)
+            Fermi.Options.set("unit", "bohr")
+            Fermi.Options.set("basis", "cc-pvdz")
+            Fermi.Options.set("df", true)
+
+            aoints = Fermi.Integrals.IntegralHelper(eri_type=Fermi.Integrals.RIFIT())
+            wf = @energy aoints => rhf
+            g = Fermi.HartreeFock.RHFgrad(aoints, wf)
+
+            atoms = wf.molecule.atoms
+            natm = length(atoms)
+
+            function df_energy(atoms_)
+                # atoms_[i].xyz is stored in angstrom (Molecule's internal
+                # canonical unit) regardless of what unit the original
+                # molstring was given in -- must re-declare "angstrom" here,
+                # not the "bohr" the initial parse above used.
+                molstring = join(["$(Int(a.Z))   $(a.xyz[1])   $(a.xyz[2])   $(a.xyz[3])" for a in atoms_], "\n")
+                Fermi.Options.set("molstring", molstring)
+                Fermi.Options.set("unit", "angstrom")
+                ints_ = Fermi.Integrals.IntegralHelper(eri_type=Fermi.Integrals.RIFIT())
+                wf_ = Fermi.HartreeFock.RHF(ints_, Fermi.HartreeFock.get_rhf_alg())
+                return wf_.energy
+            end
+
+            # h displaces .xyz, which is in angstrom -- the resulting finite
+            # difference approximates dE/d(angstrom), so it's rescaled by
+            # bohr_to_angstrom to match RHFgrad's Hartree/bohr convention
+            # (same rescaling test_hessian.jl's own findif checks use).
+            h = 1e-4
+            B2A = Molecules.bohr_to_angstrom
+            g_fd = zeros(natm, 3)
+            for iA in 1:natm, k in 1:3
+                ap = deepcopy(atoms); xp = collect(ap[iA].xyz); xp[k] += h; ap[iA] = Molecules.Atom(ap[iA].Z, ap[iA].mass, xp)
+                am = deepcopy(atoms); xm = collect(am[iA].xyz); xm[k] -= h; am[iA] = Molecules.Atom(am[iA].Z, am[iA].mass, xm)
+                g_fd[iA, k] = (df_energy(ap) - df_energy(am)) / (2h) * B2A
+            end
+
+            @test g ≈ g_fd atol=1e-6
         end
     end
 end

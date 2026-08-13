@@ -2,27 +2,27 @@ using TensorOperations
 
 include("RCCSDHelper.jl")
 
-function RCCSD(alg::RCCSDa)
+function RCCSD()
     aoints = IntegralHelper{Float64}()
-    RCCSD(aoints, alg)
+    RCCSD(aoints)
 end
 
-function RCCSD(mol::Molecule, alg::RCCSDa)
+function RCCSD(mol::Molecule)
     aoints = IntegralHelper{Float64}(molecule=mol)
-    RCCSD(aoints, alg)
+    RCCSD(aoints)
 end
 
-function RCCSD(aoints::IntegralHelper, alg::RCCSDa)
+function RCCSD(aoints::IntegralHelper)
     rhf = RHF(aoints)
 
     if typeof(aoints.eri_type) === JKFIT || Options.get("precision") == "single"
         aoints = IntegralHelper(eri_type=RIFIT())
     end
     moints = IntegralHelper(orbitals=rhf.orbitals)
-    RCCSD(moints, aoints, alg)
+    RCCSD(moints, aoints)
 end
 
-function RCCSD(moints::IntegralHelper{T,<:AbstractERI,<:AbstractRestrictedOrbitals}, aoints::IntegralHelper{T,<:AbstractERI,AtomicOrbitals}, alg::RCCSDa) where T<:AbstractFloat
+function RCCSD(moints::IntegralHelper{T,<:AbstractERI,<:AbstractRestrictedOrbitals}, aoints::IntegralHelper{T,<:AbstractERI,AtomicOrbitals}) where T<:AbstractFloat
 
     Fermi.Integrals.compute!(moints, aoints, "F")
     Fermi.Integrals.compute!(moints, aoints, "OOOO")
@@ -31,19 +31,19 @@ function RCCSD(moints::IntegralHelper{T,<:AbstractERI,<:AbstractRestrictedOrbita
     Fermi.Integrals.compute!(moints, aoints, "OVOV")
     Fermi.Integrals.compute!(moints, aoints, "OVVV")
     Fermi.Integrals.compute!(moints, aoints, "VVVV")
-    RCCSD(moints, alg)
+    RCCSD(moints)
 end
 
-function RCCSD(moints::IntegralHelper{T,E1,<:AbstractRestrictedOrbitals}, aoints::IntegralHelper{T,E2,AtomicOrbitals}, alg::RCCSDa) where {T<:AbstractFloat,
+function RCCSD(moints::IntegralHelper{T,E1,<:AbstractRestrictedOrbitals}, aoints::IntegralHelper{T,E2,AtomicOrbitals}) where {T<:AbstractFloat,
                                                                                 E1<:AbstractDFERI,E2<:AbstractDFERI}
     Fermi.Integrals.compute!(moints, aoints, "F")
     Fermi.Integrals.compute!(moints, aoints, "BOO")
     Fermi.Integrals.compute!(moints, aoints, "BOV")
     Fermi.Integrals.compute!(moints, aoints, "BVV")
-    RCCSD(moints, alg)
+    RCCSD(moints)
 end
 
-function RCCSD(moints::IntegralHelper{T,E,O}, alg::RCCSDa) where {T<:AbstractFloat,E<:AbstractERI,O<:AbstractRestrictedOrbitals}
+function RCCSD(moints::IntegralHelper{T,E,O}) where {T<:AbstractFloat,E<:AbstractERI,O<:AbstractRestrictedOrbitals}
 
     # Create zeroed guesses for amplitudes
 
@@ -86,12 +86,11 @@ function RCCSD(moints::IntegralHelper{T,E,O}, alg::RCCSDa) where {T<:AbstractFlo
     T1guess ./= d
     T2guess ./= D
 
-    RCCSD(moints, T1guess, T2guess, alg)
+    RCCSD(moints, T1guess, T2guess)
 end
 
-function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::AbstractArray{T,4}, 
-                    alg::RCCSDa) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
- 
+function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::AbstractArray{T,4}) where {T<:AbstractFloat, E<:AbstractERI, O<:AbstractRestrictedOrbitals}
+
     # Print intro
     cc_header()
     Eref = moints.orbitals.sd_energy
@@ -106,7 +105,7 @@ function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::
     if inac ≥ nvir
         throw(FermiException("invalid number of inactive virtual orbitals ($inac) for $nvir total virtual orbitals"))
     end
-    
+
     # Get relevant Options
     cc_max_iter = Options.get("cc_max_iter")
     cc_e_conv = Options.get("cc_e_conv")
@@ -157,9 +156,9 @@ function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::
     output(repeat("-", 80))
 
     # Compute Guess Energy
-    Ecc = cc_update_energy(newT1, newT2, moints, alg)
+    Ecc = cc_update_energy(newT1, newT2, moints)
     Eguess = Ecc + Eref
-    
+
     output("\tGuess Correlation Energy:   {:15.10f}", Ecc)
     output("\tGuess Total Energy:         {:15.10f}\n", Eguess)
     output("    Starting CC Iterations\n")
@@ -187,9 +186,9 @@ function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::
             oldE = Ecc
 
             #debug
-            update_amp!(newT1, newT2, T1, T2, moints, alg)
+            update_amp!(newT1, newT2, T1, T2, moints)
 
-            # Compute residues 
+            # Compute residues
             r1 = sqrt(sum((newT1 .- T1).^2)/length(T1))
             r2 = sqrt(sum((newT2 .- T2).^2)/length(T2))
 
@@ -198,8 +197,8 @@ function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::
                 # Update DIIS vector
                 e1 = (newT1 - T1)
                 e2 = (newT2 - T2)
-                push!(DM_T1,newT1,e1) 
-                push!(DM_T2,newT2,e2) 
+                push!(DM_T1,newT1,e1)
+                push!(DM_T2,newT2,e2)
                 # Using DIIS at every iteration is BAD! So do it every three steps
                 if ite ≥ diis_start && ite % diis_relax == 0
                     # Get new extrapolated amplitudes from DIIS
@@ -215,7 +214,7 @@ function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::
                 newT2 .= (1-dp)*newT2 .+ dp*T2
             end
 
-            Ecc = cc_update_energy(newT1, newT2, moints, alg)
+            Ecc = cc_update_energy(newT1, newT2, moints)
         end
         rms = max(r1,r2)
         dE = Ecc - oldE
@@ -228,7 +227,7 @@ function RCCSD(moints::IntegralHelper{T,E,O}, newT1::AbstractArray{T,2}, newT2::
 
     # Converged?
     conv = false
-    if abs(dE) < cc_e_conv && rms < cc_max_rms 
+    if abs(dE) < cc_e_conv && rms < cc_max_rms
         output("\n 🍾 Equations Converged!")
         conv = true
     end

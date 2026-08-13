@@ -16,7 +16,7 @@ import Fermi: string_repr
 import Base: getindex, setindex!, delete!, show
 import GaussianBasis: BasisSet
 
-export IntegralHelper, delete!, mo_from_ao!
+export IntegralHelper, delete!, mo_from_ao!, warn_no_aoints
 export BasisSet, BasisFunction
 
 # Expand BasisSet methods to handle molecules.
@@ -51,8 +51,9 @@ struct IntegralHelper{T<:AbstractFloat,E<:AbstractERI,O<:AbstractOrbitals}
     molecule::Molecule
     orbitals::O
     basis::String
-    cache::Dict{String,AbstractArray{T}} 
+    cache::Dict{String,AbstractArray{T}}
     eri_type::E
+    aoints::Base.RefValue{Any} # Lazily-built AtomicOrbitals IntegralHelper, shared across single-arg compute! calls
 end
 
 function IntegralHelper(x...;k...)
@@ -89,8 +90,8 @@ function IntegralHelper{T}(;molecule = Molecule(), orbitals = nothing,
         eri_type = orbitals isa AtomicOrbitals ? SparseERI() : Chonky()
     end
 
-    cache = Dict{String, AbstractArray{T}}() 
-    IntegralHelper(molecule, orbitals, basis, cache, eri_type)
+    cache = Dict{String, AbstractArray{T}}()
+    IntegralHelper(molecule, orbitals, basis, cache, eri_type, Ref{Any}(nothing))
 end
 
 function IntegralHelper{T}(bset::BasisSet, eri_type=nothing) where T<:AbstractFloat
@@ -115,6 +116,24 @@ function getindex(I::IntegralHelper, entry::String)
         compute!(I, entry)
         return I.cache[entry]
     end
+end
+
+"""
+    warn_no_aoints()
+
+Conspicuous warning printed by RHF/RHFgrad/RHFhess's aoints-free entry points
+right before they build a throwaway `IntegralHelper` internally -- build one
+yourself and thread it through (e.g. `aoints => rhf`, `aoints, wfn => rhf`)
+to avoid recomputing atomic integrals across chained `@energy`/`@gradient`/
+`@hessian` calls at the same geometry.
+"""
+function warn_no_aoints()
+    output("\n ⚠️  Atomic integrals not supplied -- computing them from scratch.")
+    output("    To reuse them across @energy/@gradient/@hessian calls, build one")
+    output("    yourself and pass it through, e.g.:")
+    output("      aoints = Fermi.Integrals.IntegralHelper()")
+    output("      wfn    = @energy aoints => rhf")
+    output("      grad   = @gradient aoints, wfn => rhf\n")
 end
 
 function setindex!(I::IntegralHelper, A::AbstractArray, key::String)

@@ -10,7 +10,7 @@ function RMP2grad(mol::Molecule, x...)
     dtype = Options.get("deriv_type")
     if dtype == "analytic"
         throw(FermiException("Invalid or unsupported derivative type for RMP2: \"$dtype\""))
-    elseif dtype == "findif"
+    elseif dtype == "findif" || dtype == "auto"
         Fermi.gradient_findif(Fermi.MollerPlesset.RMP2, mol, x...)
     else
         throw(FermiException("Invalid or unsupported derivative type: \"$dtype\""))

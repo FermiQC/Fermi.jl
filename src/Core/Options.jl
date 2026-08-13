@@ -100,7 +100,15 @@ const Default = Dict{String,Union{Float64,Int,String,Bool}}(
                                   "eri_cutoff" => 10^-12,
                                   "findif_disp_size" => 5e-3,
                                   "return_ints" => false,
-                                  "deriv_type" => "findif"
+                                  "deriv_type" => "auto",
+                                  "geom_max_iter" => 50,
+                                  "geom_e_conv" => 1e-6,
+                                  "cphf_max_iter" => 50,
+                                  "cphf_conv" => 10^-8,
+                                  "geom_grms_conv" => 3e-4,
+                                  "geom_gmax_conv" => 4.5e-4,
+                                  "geom_drms_conv" => 1.2e-3,
+                                  "geom_dmax_conv" => 1.8e-3
                                  )
 """
     Fermi.Options.Current

@@ -99,6 +99,33 @@ Finally, run a computation
 @energy ccsd;
 ```
 
+## Gradients, Hessians, and vibrational frequencies
+
+RHF gradients and Hessians are available analytically (other methods fall back to finite differences). A typical geometry-optimization + frequency-analysis workflow:
+```julia
+using Fermi
+
+@molecule {
+  O        1.2091536548      1.7664118189     -0.0171613972
+  H        2.1984800075      1.7977100627      0.0121161719
+  H        0.9197881882      2.4580185570      0.6297938830
+}
+
+@set basis sto-3g
+
+# Gradient at the current geometry
+wfn = @energy rhf
+grad = @gradient wfn => rhf
+
+# Optimize to a stationary point, then get the Hessian and frequencies there
+wfn_opt = @optimize rhf
+hess = @hessian wfn_opt => rhf
+freqs, modes = vibrational_analysis(hess, wfn_opt.molecule)
+```
+`vibrational_analysis` mass-weights the Hessian, projects out the translational/rotational zero modes, and returns harmonic frequencies in cm⁻¹ (plus their normal modes). See the [Hartree-Fock docs](https://FermiQC.github.io/Fermi.jl/dev/hartreefock/) for more detail.
+
+> ⚠️ Vibrational analysis via simple projection is only meaningful at a stationary point (zero gradient) -- always `@optimize` first.
+
 ## Fermi Ecosystem 
 
 [Molecules.jl](https://github.com/FermiQC/Molecules.jl): A package that deals with `Atom` objects. It can parse XYZ files and compute properties related to the position of nuclei.
@@ -120,10 +147,8 @@ work so that we can avoid duplication of efforts. Besides browsing our issues fo
   * Excited States
 
 **2. Properties**
-  * Dipole Moments
   * Polarizability
   * IR intensities
-  * Harmonic Frequencies
   * Anharmonic Frequencies
 
 **3. Computational schemes**

@@ -1,11 +1,13 @@
 using GaussianBasis
 
 function RHF(Alg::A) where A <: RHFAlgorithm
+    warn_no_aoints()
     ints = IntegralHelper{Float64}()
     RHF(ints, Alg)
 end
 
 function RHF(mol::Molecule, Alg::A) where A <: RHFAlgorithm
+    warn_no_aoints()
     RHF(IntegralHelper{Float64}(molecule=mol), Alg)
 end
 
@@ -42,6 +44,7 @@ function RHF(wfn::RHF, Alg::A) where A <: RHFAlgorithm
     output("Using {} wave function as initial guess", wfn.orbitals.basis)
 
     # B = target basis set
+    warn_no_aoints()
     intsB = IntegralHelper{Float64}()
 
     # Assert both A and B have the same molecule.
@@ -62,6 +65,35 @@ function RHF(wfn::RHF, Alg::A) where A <: RHFAlgorithm
     Cb = real.(Cb)
 
     RHF(intsB, Cb, Λ, Alg)
+end
+
+"""
+    RHF(wfn::RHF, target_ints::IntegralHelper, Alg::A) where A <: RHFAlgorithm
+
+Same basis/geometry-projection guess as `RHF(wfn::RHF, Alg)` (Werner 2004), but
+takes the target `IntegralHelper` explicitly instead of building one from the
+current `molstring`/`basis` options -- useful for callers (e.g. the geometry
+optimizer) that need to warm-start SCF at a specific, programmatically built
+geometry without mutating global options every call.
+"""
+function RHF(wfn::RHF, target_ints::IntegralHelper{Float64}, Alg::A) where A <: RHFAlgorithm
+
+    Fermi.HartreeFock.hf_header()
+    output("Using {} wave function as initial guess", wfn.orbitals.basis)
+
+    Sbb = target_ints["S"]
+    Λ = Array(Sbb^(-1/2))
+
+    Ca = wfn.orbitals.C
+    bsA = GaussianBasis.BasisSet(wfn.orbitals.basis, wfn.molecule.atoms)
+    bsB = GaussianBasis.BasisSet(target_ints.basis, target_ints.molecule.atoms)
+    Sab = GaussianBasis.overlap(bsA, bsB)
+
+    T = transpose(Ca)*Sab*(Sbb^-1.0)*transpose(Sab)*Ca
+    Cb = (Sbb^-1.0)*transpose(Sab)*Ca*T^(-1/2)
+    Cb = real.(Cb)
+
+    RHF(target_ints, Cb, Λ, Alg)
 end
 
 function RHF(ints::IntegralHelper{Float64, <:AbstractERI, AtomicOrbitals}, C::AbstractMatrix, Λ::AbstractMatrix, Alg::RHFa)

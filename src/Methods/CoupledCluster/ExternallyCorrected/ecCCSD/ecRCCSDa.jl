@@ -113,7 +113,7 @@ function ecRCCSD(moints::IntegralHelper{T,E,O}, T1, T2, ecT1, ecT2, alg::ecRCCSD
     output(repeat("-", 80))
 
     # Compute Guess Energy
-    Ecc = cc_update_energy(newT1, newT2, moints, RCCSDa())
+    Ecc = cc_update_energy(newT1, newT2, moints)
     Eguess = Ecc + Eref
     
     output("\tGuess Correlation Energy:   {:15.10f}", Ecc)
@@ -170,7 +170,7 @@ function ecRCCSD(moints::IntegralHelper{T,E,O}, T1, T2, ecT1, ecT2, alg::ecRCCSD
                 newT2 .= (1-dp)*newT2 .+ dp*T2
             end
 
-            Ecc = cc_update_energy(newT1, newT2, moints, RCCSDa())
+            Ecc = cc_update_energy(newT1, newT2, moints)
         end
         rms = max(r1,r2)
         dE = Ecc - oldE
@@ -207,8 +207,8 @@ function update_amp!(newT1::AbstractArray{T,2}, newT2::AbstractArray{T,4}, T1::A
     fill!(newT2, 0.0)
 
     # Get new amplitudes
-    cc_update_T1!(newT1, T1, T2, moints, RCCSDa())
-    cc_update_T2!(newT2, T1, T2, moints, RCCSDa())
+    cc_update_T1!(newT1, T1, T2, moints)
+    cc_update_T2!(newT2, T1, T2, moints)
 
     # Add external correction
     newT1 .+= ecT1

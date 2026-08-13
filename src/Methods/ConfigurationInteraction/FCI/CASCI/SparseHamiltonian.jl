@@ -88,7 +88,7 @@ function RFCI(aoints::IntegralHelper, rhf::Fermi.HartreeFock.RHF, alg::SparseHam
     output("Hamiltonian Matrix size: {:10.3f} Mb\n", Base.summarysize(H)/10^6)
     output("Diagonalizing Hamiltonian for {:3d} eigenvalues...", nroot)
     t = @elapsed begin
-        decomp, history = partialschur(H, nev=nroot, tol=10^-12, which=LM())
+        decomp, history = partialschur(H, nev=nroot, tol=10^-12, which=ArnoldiMethod.LM())
         λ, ϕ = partialeigen(decomp)
     end
     output(" done in {:5.5f} seconds.\n", t)
@@ -117,17 +117,34 @@ function get_sparse_hamiltonian_matrix(dets::Vector{Determinant{D}}, h::Array{T,
     Nα = sum(αlist(dets[1]))
     Nβ = sum(αlist(dets[1]))
 
-    αind = [Array{Int64,1}(undef,Nα) for i = 1:Threads.nthreads()]
-    βind = [Array{Int64,1}(undef,Nβ) for i = 1:Threads.nthreads()]
-    vals = [T[] for i = 1:Threads.nthreads()]
-    ivals = [Int64[] for i = 1:Threads.nthreads()]
-    jvals = [Int64[] for i = 1:Threads.nthreads()]
+    # Streaming worker-pool: each task keeps its own local scratch buffers and
+    # growing (vals, ivals, jvals) triplet lists, pulling determinant indices
+    # off a shared queue, instead of indexing per-thread arrays by
+    # Threads.threadid() (unsafe under task migration / dynamic scheduling,
+    # and worse here since it's a concurrent push! rather than a scalar/array
+    # write). The workload per `i` is triangular (inner loop runs over i:Ndets),
+    # so a dynamic queue also balances load better than a static split.
+    ntasks = Threads.nthreads()
+    requests = Channel{Int}(Ndets)
+    for i in 1:Ndets
+        put!(requests, i)
+    end
+    close(requests)
 
-    @sync for i in 1:Ndets
+    results = Channel{Tuple{Vector{T},Vector{Int64},Vector{Int64}}}(ntasks)
+
+    @sync for _ in 1:ntasks
         Threads.@spawn begin
+        αind = Array{Int64,1}(undef,Nα)
+        βind = Array{Int64,1}(undef,Nβ)
+        local_vals = T[]
+        local_ivals = Int64[]
+        local_jvals = Int64[]
+
+        for i in requests
         D1 = dets[i]
-        αindex!(D1, αind[Threads.threadid()])
-        βindex!(D1, βind[Threads.threadid()])
+        αindex!(D1, αind)
+        βindex!(D1, βind)
         elem = 0.0
         for j in i:Ndets
             D2 = dets[j]
@@ -135,26 +152,34 @@ function get_sparse_hamiltonian_matrix(dets::Vector{Determinant{D}}, h::Array{T,
             βexc = βexcitation_level(D1,D2)
             el = αexc + βexc
             if el > 2
-                continue 
+                continue
             elseif el == 2
                 elem = Hd2(D1, D2, V, αexc)
             elseif el == 1
-                elem = Hd1(αind[Threads.threadid()], βind[Threads.threadid()], D1, D2, h, V, αexc)
+                elem = Hd1(αind, βind, D1, D2, h, V, αexc)
             else
-                elem = Hd0(αind[Threads.threadid()], βind[Threads.threadid()], h, V)
+                elem = Hd0(αind, βind, h, V)
             end
             if abs(elem) > tol
-                push!(vals[Threads.threadid()], elem)
-                push!(ivals[Threads.threadid()], i)
-                push!(jvals[Threads.threadid()], j)
+                push!(local_vals, elem)
+                push!(local_ivals, i)
+                push!(local_jvals, j)
             end
         end
-    end #Threads.@spawn
+        end
+        put!(results, (local_vals, local_ivals, local_jvals))
+        end #Threads.@spawn
     end
 
-    ivals = vcat(ivals...)
-    jvals = vcat(jvals...)
-    vals  = vcat(vals...)
+    vals  = T[]
+    ivals = Int64[]
+    jvals = Int64[]
+    for _ in 1:ntasks
+        v, iv, jv = take!(results)
+        append!(vals, v)
+        append!(ivals, iv)
+        append!(jvals, jv)
+    end
     return Symmetric(sparse(ivals, jvals, vals))
 end
 

@@ -112,3 +112,66 @@ The computation returns a wave function object `Fermi.HartreeFock.RHF` which con
 ```@docs
 Fermi.HartreeFock.RHF
 ```
+
+## Analytic Gradients
+
+The energy gradient (first derivative of the energy w.r.t. nuclear Cartesian coordinates) is available through `@gradient`, using the same molecule/method syntax as `@energy`. It can be called directly, or with a previously computed wave function passed in with `=>`:
+
+```julia
+using Fermi
+
+@molecule {
+    O        1.2091536548      1.7664118189     -0.0171613972
+    H        2.1984800075      1.7977100627      0.0121161719
+    H        0.9197881882      2.4580185570      0.6297938832
+}
+
+@set basis sto-3g
+
+wfn = @energy rhf
+grad = @gradient wfn => rhf
+```
+`grad` is a `Natoms x 3` matrix, in Hartree/bohr. RHF gradients are computed analytically; other methods currently fall back to finite differences (`@set deriv_type findif`, the default when no analytic gradient exists for the requested method).
+
+## Geometry Optimization
+
+`@optimize` repeatedly evaluates the energy and gradient to find a nearby stationary point:
+
+```julia
+wfn = @optimize rhf
+```
+Convergence criteria and iteration limits are controlled with `@set geom_e_conv`, `@set geom_gmax_conv`, `@set geom_max_iter`, etc. This step matters for what follows: harmonic vibrational analysis is only rigorously defined at a stationary point (zero gradient) -- computing frequencies away from one will contaminate the low-frequency modes and produce nonsense results, even though the Hessian itself is still computed correctly.
+
+## Analytic Hessians and Vibrational Frequencies
+
+`@hessian` computes the full `3*Natoms x 3*Natoms` Cartesian Hessian matrix (atomic units), analytically for RHF (integral second derivatives plus a CPHF solve for the orbital/density response -- no finite differences involved). It requires a converged wave function, most usefully one already sitting at a stationary point:
+
+```julia
+wfn = @optimize rhf
+hess = @hessian wfn => rhf
+
+freqs, modes = vibrational_analysis(hess, wfn.molecule)
+```
+`vibrational_analysis` mass-weights the Hessian, projects out the 6 translational/rotational zero modes (5 for a linear molecule), diagonalizes, and prints a frequency table:
+```
+   • Harmonic Vibrational Frequencies
+
+   Mode          ν̃ (cm⁻¹)
+      1           -0.0043
+      2           -0.0021
+      3           -0.0000
+      4            0.0000
+      5            0.0000
+      6            0.0042
+      7         2169.8586
+      8         4139.6423
+      9         4390.6736
+```
+It returns `freqs` (a length-`3*Natoms` vector of wavenumbers, sorted ascending -- imaginary/unstable modes are reported as negative) and `modes` (the corresponding mass-weighted Cartesian eigenvectors). The leading near-zero entries are the projected-out translations/rotations; the rest are the genuine vibrational modes. Set `project=false` to skip the translation/rotation projection.
+
+> ⚠️ `@hessian` currently only implements RHF.
+
+```@docs
+Fermi.HartreeFock.RHFhess
+Fermi.vibrational_analysis
+```

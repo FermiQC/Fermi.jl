@@ -1,10 +1,43 @@
-function UHF(Alg::UHFa)
+function UHF(Alg::A) where A <: UHFAlgorithm
     ints = IntegralHelper{Float64}()
     UHF(ints, Alg)
 end
 
-function UHF(mol::Molecule, Alg::UHFa)
+function UHF(mol::Molecule, Alg::A) where A <: UHFAlgorithm
     UHF(IntegralHelper{Float64}(molecule=mol), Alg)
+end
+
+"""
+    UHF(wfn::UHF, target_ints::IntegralHelper, Alg::A) where A <: UHFAlgorithm
+
+Basis/geometry-projection guess (Werner 2004, same math as
+`RHF(wfn::RHF, target_ints, Alg)` in RHFa.jl), applied separately to the alpha and
+beta orbitals. Takes the target `IntegralHelper` explicitly so callers (e.g. the
+geometry optimizer) can warm-start UHF SCF at a specific geometry without
+mutating global options.
+"""
+function UHF(wfn::UHF, target_ints::IntegralHelper{Float64}, Alg::A) where A <: UHFAlgorithm
+
+    Fermi.HartreeFock.uhf_header()
+    output("Using {} wave function as initial guess", wfn.orbitals.basis)
+
+    Sbb = target_ints["S"]
+    Λ = Array(Sbb^(-1/2))
+
+    bsA = GaussianBasis.BasisSet(wfn.orbitals.basis, wfn.molecule.atoms)
+    bsB = GaussianBasis.BasisSet(target_ints.basis, target_ints.molecule.atoms)
+    Sab = GaussianBasis.overlap(bsA, bsB)
+
+    function project(Ca)
+        T = transpose(Ca)*Sab*(Sbb^-1.0)*transpose(Sab)*Ca
+        Cb = (Sbb^-1.0)*transpose(Sab)*Ca*T^(-1/2)
+        return real.(Cb)
+    end
+
+    Cα = project(wfn.orbitals.Cα)
+    Cβ = project(wfn.orbitals.Cβ)
+
+    UHF(target_ints, Cα, Cβ, Λ, Alg)
 end
 
 function UHF(ints::IntegralHelper{Float64}, Alg::UHFa)

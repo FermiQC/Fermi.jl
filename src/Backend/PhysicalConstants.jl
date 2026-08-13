@@ -62,6 +62,16 @@ Source: CODATA 2018 [NIST](https://physics.nist.gov/cgi-bin/cuu/Value?hrminv)
 const hartree_to_cm = 2.1947463136320e7 / 100 # Value in 1/meter * (1/100) meter/cm
 
 """
+    Fermi.PhysicalConstants.amu_to_me
+
+Float64 object with the conversion factor from unified atomic mass units (amu,
+as tabulated for Atom.mass) to electron masses (the mass unit implicit in
+Hartree atomic units).
+Source: CODATA 2018 [NIST](https://physics.nist.gov/cgi-bin/cuu/Value?ukg)
+"""
+const amu_to_me = 1822.888486209
+
+"""
     Fermi.PhysicalConstants.hartree_to_eV
 
 Float64 object with the conversion factor from Hartree energy to eV.

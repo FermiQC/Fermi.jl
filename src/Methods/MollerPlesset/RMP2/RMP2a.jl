@@ -2,7 +2,7 @@ using LoopVectorization
 using LinearAlgebra
 using TensorOperations
 
-function RMP2(Alg::RMP2Algorithm)
+function RMP2()
     aoints = IntegralHelper{Float64}()
     rhf = RHF(aoints)
 
@@ -10,49 +10,49 @@ function RMP2(Alg::RMP2Algorithm)
         aoints = IntegralHelper(eri_type=RIFIT())
     end
     moints = IntegralHelper(orbitals=rhf.orbitals)
-    RMP2(moints, aoints, Alg)
+    RMP2(moints, aoints)
 end
 
-function RMP2(aoints::IntegralHelper{Float64,E,AtomicOrbitals}, Alg::RMP2Algorithm) where E <: AbstractERI
+function RMP2(aoints::IntegralHelper{Float64,E,AtomicOrbitals}) where E <: AbstractERI
     rhf = RHF(aoints)
     moints = IntegralHelper(orbitals=rhf.orbitals)
-    RMP2(moints, aoints, Alg)
+    RMP2(moints, aoints)
 end
 
-function RMP2(O::AbstractRestrictedOrbitals, Alg::RMP2Algorithm)
+function RMP2(O::AbstractRestrictedOrbitals)
     moints = IntegralHelper(orbitals=O)
     aoints = IntegralHelper(eri_type=moints.eri_type)
-    RMP2(moints, aoints, Alg)
+    RMP2(moints, aoints)
 end
 
-function RMP2(rhf::RHF, Alg::RMP2Algorithm)
+function RMP2(rhf::RHF)
     moints = IntegralHelper(orbitals=rhf.orbitals)
     aoints = IntegralHelper(eri_type=moints.eri_type)
-    RMP2(moints, aoints, Alg)
+    RMP2(moints, aoints)
 end
 
-function RMP2(M::Molecule, Alg::RMP2Algorithm)
+function RMP2(M::Molecule)
     aoints = IntegralHelper{Float64}(molecule = M, eri_type=SparseERI)
     rhf = RHF(aoints)
     moints = IntegralHelper(molecule = M, orbitals=rhf.orbitals)
-    RMP2(moints, aoints, Alg)
+    RMP2(moints, aoints)
 end
 
-function RMP2(moints::IntegralHelper{T,Chonky,<:AbstractRestrictedOrbitals}, aoints::IntegralHelper{T,<:AbstractERI,AtomicOrbitals}, Alg::RMP2Algorithm) where T<:AbstractFloat
+function RMP2(moints::IntegralHelper{T,Chonky,<:AbstractRestrictedOrbitals}, aoints::IntegralHelper{T,<:AbstractERI,AtomicOrbitals}) where T<:AbstractFloat
     mp_header()
     Fermi.Integrals.compute!(moints, aoints, "OVOV")
     Fermi.Integrals.compute!(moints, aoints, "F")
-    RMP2(moints, Alg)
+    RMP2(moints)
 end
 
-function RMP2(moints::IntegralHelper{T,E,<:AbstractRestrictedOrbitals}, aoints::IntegralHelper{T,E,AtomicOrbitals}, Alg::RMP2Algorithm) where {T<:AbstractFloat, E<:AbstractDFERI}
+function RMP2(moints::IntegralHelper{T,E,<:AbstractRestrictedOrbitals}, aoints::IntegralHelper{T,E,AtomicOrbitals}) where {T<:AbstractFloat, E<:AbstractDFERI}
     mp_header()
     Fermi.Integrals.compute!(moints, aoints, "BOV")
     Fermi.Integrals.compute!(moints, aoints, "F")
-    RMP2(moints, Alg)
+    RMP2(moints)
 end
 
-function RMP2(ints::IntegralHelper{<:AbstractFloat,<:AbstractERI,<:AbstractRestrictedOrbitals}, Alg::RMP2Algorithm)
+function RMP2(ints::IntegralHelper{<:AbstractFloat,<:AbstractERI,<:AbstractRestrictedOrbitals})
 
     # Check frozen core and inactive virtual
     ndocc = ints.molecule.Nα
@@ -77,7 +77,7 @@ function RMP2(ints::IntegralHelper{<:AbstractFloat,<:AbstractERI,<:AbstractRestr
     output(repeat("-",80))
 
     # Compute MP2 energy
-    Emp2 = RMP2_energy(ints, Alg)
+    Emp2 = RMP2_energy(ints)
     Eref = ints.orbitals.sd_energy
 
     output("   @Final RMP2 Correlation Energy {:>20.12f} Eₕ", Emp2)
@@ -88,7 +88,7 @@ function RMP2(ints::IntegralHelper{<:AbstractFloat,<:AbstractERI,<:AbstractRestr
     RMP2(Emp2, Emp2+Eref)
 end
 
-function RMP2_energy(ints::IntegralHelper{T, <:AbstractDFERI, RHFOrbitals}, Alg::RMP2Algorithm) where T<:AbstractFloat
+function RMP2_energy(ints::IntegralHelper{T, <:AbstractDFERI, RHFOrbitals}) where T<:AbstractFloat
     Bvo = permutedims(ints["BOV"], (1,3,2))
     ϵo = ints["Fii"]
     ϵv = ints["Faa"]
@@ -159,7 +159,7 @@ function RMP2_energy(ints::IntegralHelper{T, <:AbstractDFERI, RHFOrbitals}, Alg:
     return Emp2
 end
 
-function RMP2_energy(ints::IntegralHelper{T, Chonky, RHFOrbitals}, Alg::RMP2Algorithm) where T<:AbstractFloat
+function RMP2_energy(ints::IntegralHelper{T, Chonky, RHFOrbitals}) where T<:AbstractFloat
     output(" Computing MP2 Energy... ", ending="")
     ovov = ints["OVOV"]
     ϵo = ints["Fii"]
@@ -207,7 +207,7 @@ function RMP2_energy(ints::IntegralHelper{T, Chonky, RHFOrbitals}, Alg::RMP2Algo
     return Emp2
 end
 
-function RMP2_energy(ints::IntegralHelper{T, Chonky, <:AbstractRestrictedOrbitals}, Alg::RMP2Algorithm) where T<:AbstractFloat
+function RMP2_energy(ints::IntegralHelper{T, Chonky, <:AbstractRestrictedOrbitals}) where T<:AbstractFloat
     output(" Computing Iterative MP2 Energy")
 
     foo = ints["Fij"]
@@ -225,7 +225,7 @@ function RMP2_energy(ints::IntegralHelper{T, Chonky, <:AbstractRestrictedOrbital
     oldE = 0.0
     dE = 1.0
     rms = 1.0
-    main_time = 0.0 
+    main_time = 0.0
 
     e_conv = Options.get("cc_e_conv")
     max_iter = Options.get("cc_max_iter")
@@ -248,7 +248,7 @@ function RMP2_energy(ints::IntegralHelper{T, Chonky, <:AbstractRestrictedOrbital
             end
             newT2 .+= permutedims(newT2, (2,1,4,3))
             newT2 .+= permutedims(Vovov, (1,3,2,4))
-            newT2 .*= invD 
+            newT2 .*= invD
 
             @tensor begin
                 #Energy
@@ -257,7 +257,7 @@ function RMP2_energy(ints::IntegralHelper{T, Chonky, <:AbstractRestrictedOrbital
                 Emp2 = B[l,c,k,d]*Vovov[k,c,l,d]
             end
 
-            # Compute residues 
+            # Compute residues
             rms = sqrt(sum((newT2 .- T2).^2)/length(T2))
         end
         dE = Emp2 - oldE
@@ -270,7 +270,7 @@ function RMP2_energy(ints::IntegralHelper{T, Chonky, <:AbstractRestrictedOrbital
 
     # Converged?
     conv = false
-    if abs(dE) < e_conv && rms < max_rms 
+    if abs(dE) < e_conv && rms < max_rms
         output("\n 🍾 Equations Converged!")
         conv = true
     end

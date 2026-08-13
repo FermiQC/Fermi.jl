@@ -51,21 +51,40 @@ function get_determinants(Ne::Int, No::Int, nfrozen::Int)
 
     zeroth = repeat('1', Nae)*repeat('0', No-Nae)
 
-    perms = multiset_permutations(zeroth, length(zeroth))
+    strings = collect(multiset_permutations(zeroth, length(zeroth)))
 
-    dets = [Determinant{det_size}[] for i = 1:Threads.nthreads()]
-    @sync for αstring in perms
+    # Streaming worker-pool: each task keeps its own local determinant list and
+    # pulls αstrings off a shared queue, instead of indexing a per-thread array
+    # by Threads.threadid() (unsafe under task migration / dynamic scheduling,
+    # and worse here since it's a concurrent push! rather than a scalar/array
+    # write).
+    ntasks = Threads.nthreads()
+    requests = Channel{eltype(strings)}(length(strings))
+    for s in strings
+        put!(requests, s)
+    end
+    close(requests)
+
+    results = Channel{Vector{Determinant{det_size}}}(ntasks)
+
+    @sync for _ in 1:ntasks
         Threads.@spawn begin
-        for βstring in perms
+        local_dets = Determinant{det_size}[]
+        for αstring in requests
             α = occ_string*join(αstring)
-            β = occ_string*join(βstring)
-            _det = Determinant(α, β;precision=det_size)
-            push!(dets[Threads.threadid()], _det)
+            for βstring in strings
+                β = occ_string*join(βstring)
+                push!(local_dets, Determinant(α, β; precision=det_size))
+            end
         end
+        put!(results, local_dets)
         end #Threads.@spawn
     end
 
-    dets = vcat(dets...)
+    dets = Determinant{det_size}[]
+    for _ in 1:ntasks
+        append!(dets, take!(results))
+    end
     # Determinant list is sorted by its excitation level w.r.t the first determinant (normally HF)
     #sort!(dets, by=d->excitation_level(dets[1], d))
 

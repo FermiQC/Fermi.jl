@@ -18,9 +18,12 @@ tol = 1E-8
     #include("test_integrals.jl")
     include("test_RHF.jl")
     include("test_UHF.jl")
+    include("test_dipole.jl")
+    include("test_optimizer.jl")
     include("test_MP.jl")
     #include("test_pT.jl")
     include("test_fci.jl")
     include("test_tools.jl")
+    include("test_hessian.jl")
     @reset
 end

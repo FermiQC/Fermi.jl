@@ -1,7 +1,7 @@
 name = "Fermi"
 uuid = "9237668d-08c8-4784-b8dd-383aa52fcf74"
-authors = ["gustavojra <gustavo.aroeira@gmail.com>"]
 version = "0.6.0"
+authors = ["gustavojra <gustavo.aroeira@gmail.com>"]
 
 [deps]
 ArnoldiMethod = "ec485272-7323-5ecc-a04f-4719b315124d"
@@ -13,6 +13,7 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 LoopVectorization = "bdcacae8-1622-11e9-2a5c-532679323890"
 Molecules = "5de6a177-b489-40a9-b2f4-524242b9b679"
 Octavian = "6fd5a793-0b7e-452c-907f-f8bfe9c57db4"
+Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 PrettyTables = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 Strided = "5e0ebb24-38b0-5f93-81fe-25c709ecae67"
@@ -21,16 +22,17 @@ TensorOperations = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [compat]
+ArnoldiMethod = "^0.4"
 Combinatorics = "^1"
 Format = "1"
 GaussianBasis = "^0.6"
+KrylovKit = "0.9, 0.10"
 LoopVectorization = "0.12"
 Molecules = "0.3"
 Octavian = "0.3"
+Optim = "2.2.1"
 PrettyTables = "3"
 Strided = "1, 2"
 Suppressor = "0.2"
 TensorOperations = "3, 5"
 julia = "^1.12"
-ArnoldiMethod = "^0.4"
-KrylovKit = "0.9, 0.10"

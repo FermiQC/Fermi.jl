@@ -2,6 +2,7 @@ using Fermi.DIIS
 
 using TensorOperations
 using LinearAlgebra
+using KrylovKit
 using Format
 import Base: show
 
@@ -119,6 +120,13 @@ get_rhf_alg(x::Val{2}) = Direct()
 
 # Gradient methods
 include("Gradients/RHFgrad.jl")
+include("Gradients/DFgrad.jl")
+
+# Hessian methods
+include("Hessians/TwoElectronHess.jl")
+include("Hessians/CPHF.jl")
+include("Hessians/RHFhess.jl")
+include("Hessians/DFHess.jl")
 
 ### MISCELLANEOUS
 # Pretty printing

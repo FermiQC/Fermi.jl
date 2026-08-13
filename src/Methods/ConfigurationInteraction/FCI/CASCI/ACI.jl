@@ -197,32 +197,41 @@ end
 
     one = typeof(dets[1].α)(1)
     # Ns must be > 1
-    # Preallocate array for the position of occupied orbitals
-    αoccs = [zeros(Int,Nα) for i=1:Threads.nthreads()]
-    βoccs = [zeros(Int,Nβ) for i=1:Threads.nthreads()]
-    # Preallocate array for the position of unoccupied orbitals
-    αunos = [zeros(Int,length(act_range)-Nα) for i=1:Threads.nthreads()]
-    βunos = [zeros(Int,length(act_range)-Nβ) for i=1:Threads.nthreads()]
+    Nαvir = length(act_range)-Nα
+    Nβvir = length(act_range)-Nβ
 
     # Estimate FOIS per det
-    lf_per_det = (length(αoccs[1])^2*length(αunos[1])^2 + length(αoccs[1])*length(αunos[1])
-                       + length(βoccs[1])^2*length(βunos[1])^2 + length(βoccs[1])*length(βunos[1])
-                       + length(αoccs[1])*length(αunos[1])*length(βoccs[1])*length(βunos[1]))
+    lf_per_det = (Nα^2*Nαvir^2 + Nα*Nαvir
+                       + Nβ^2*Nβvir^2 + Nβ*Nβvir
+                       + Nα*Nαvir*Nβ*Nβvir)
     # Estimated total number of determinants (FOIS per det * ndets)
     lf_crit = Int(round(length(dets)*lf_per_det))
     # Preallocate array to hold dummy dets
     fois = [Determinant(0,0) for i=1:lf_crit]
-    @sync for _DI in eachindex(dets)
-    #for _DI in eachindex(dets)
+
+    # Streaming worker-pool: each task keeps its own local scratch buffers
+    # (αocc/βocc/αuno/βuno), pulling determinant indices off a shared queue,
+    # instead of indexing per-thread arrays by Threads.threadid() (unsafe
+    # under task migration / dynamic scheduling). Writes into `fois` are
+    # already safe on their own: each _DI owns a disjoint offset range,
+    # independent of which task/thread processes it.
+    ntasks = Threads.nthreads()
+    requests = Channel{Int}(length(dets))
+    for _DI in eachindex(dets)
+        put!(requests, _DI)
+    end
+    close(requests)
+
+    @sync for _ in 1:ntasks
         Threads.@spawn begin
+            αocc = zeros(Int,Nα)
+            βocc = zeros(Int,Nβ)
+            αuno = zeros(Int,Nαvir)
+            βuno = zeros(Int,Nβvir)
+            for _DI in requests
             d = dets[_DI]
             DI = (_DI-1)*lf_per_det + 1
             ct = 0
-            id = Threads.threadid()
-            αocc = αoccs[id]
-            βocc = βoccs[id]
-            αuno = αunos[id]
-            βuno = βunos[id]
             αocc!(d, act_range, αocc)
             βocc!(d, act_range, βocc)
             αvir!(d, act_range, αuno)
@@ -287,7 +296,8 @@ end
                     end
                 end
             end
-        end #Threads.@spawn 
+            end # for _DI in requests
+        end #Threads.@spawn
     end
     fois = filter((x)->x != Determinant(0,0), fois)
     fois = Set(fois)
@@ -299,14 +309,28 @@ end
 function ϵI(Fdets, P::Vector{Determinant{D}}, Pcoef::Vector{Float64}, Ep::T, h::Array{T,2}, V::Array{T,4}) where {T <: AbstractFloat, D <: Integer}
     Fe = zeros(length(Fdets))
     N = sum(αlist(P[1]))
-    αinds = [Array{Int64,1}(undef,N) for i=1:Threads.nthreads()]
-    βinds = [Array{Int64,1}(undef,N) for i=1:Threads.nthreads()]
-    @sync for i in eachindex(Fdets)
-        begin
+
+    # Streaming worker-pool: each task keeps its own local αind/βind scratch
+    # buffers, pulling determinant indices off a shared queue. Writes into Fe
+    # are inherently safe (each `i` is an independent, disjoint write), so
+    # unlike the other fixes in this file this needs no results-merging step
+    # -- it only ever needed local scratch buffers instead of indexing a
+    # shared per-thread array by Threads.threadid(). (This loop was also
+    # missing its Threads.@spawn call entirely -- it ran serially despite
+    # looking parallel; restored here.)
+    ntasks = Threads.nthreads()
+    requests = Channel{Int}(length(Fdets))
+    for i in eachindex(Fdets)
+        put!(requests, i)
+    end
+    close(requests)
+
+    @sync for _ in 1:ntasks
+        Threads.@spawn begin
+        αind = Array{Int64,1}(undef,N)
+        βind = Array{Int64,1}(undef,N)
+        for i in requests
         D1 = Fdets[i]
-        id = Threads.threadid()
-        αind = αinds[id]
-        βind = βinds[id]
         αindex!(D1, αind)
         βindex!(D1, βind)
         Ei = Hd0(αind, βind, h, V)
@@ -318,18 +342,19 @@ function ϵI(Fdets, P::Vector{Determinant{D}}, Pcoef::Vector{Float64}, Ep::T, h:
             βexc = βexcitation_level(D1,D2)
             el = αexc + βexc
             if el > 2
-                continue 
+                continue
             elseif el == 2
                 Vint += Pcoef[j]*Hd2(D1, D2, V, αexc)
             elseif el == 1
                 Vint += Pcoef[j]*Hd1(αind, βind, D1, D2, h, V, αexc)
             end
         end
-        
+
         @fastmath Fe[i] = Δ/2 - √((Δ^2)/4 + Vint^2)
+        end
         end #Threads.@spawn
     end
-    
+
     return Fe
 end
 
@@ -341,7 +366,7 @@ function update_model_space(M::Vector{Determinant{D}}, h::Array{T,2}, V::Array{T
     H = get_sparse_hamiltonian_matrix(M, h, V, Fermi.Options.get("cas_cutoff"))
 
     output("Diagonalizing Hamiltonian...")
-    decomp, history = partialschur(H, nev=1, tol=10^-12, which=LM())
+    decomp, history = partialschur(H, nev=1, tol=10^-12, which=ArnoldiMethod.LM())
     λ, ϕ = partialeigen(decomp)
 
     return λ[1], ϕ[:,1], deepcopy(M)
@@ -350,9 +375,25 @@ end
 function complete_set(dets::Vector{Determinant{T}}) where T <: Integer
 
     one = typeof(dets[1].α)(1)
-    newdets = [Determinant{T}[] for i = 1:Threads.nthreads()]
-    @Threads.threads for d in dets
-        
+
+    # Streaming worker-pool: each task keeps its own local determinant list
+    # and pulls determinants off a shared queue, instead of indexing a
+    # per-thread array by Threads.threadid() (unsafe under task migration /
+    # dynamic scheduling, and worse here since it's a concurrent push!).
+    ntasks = Threads.nthreads()
+    requests = Channel{Determinant{T}}(length(dets))
+    for d in dets
+        put!(requests, d)
+    end
+    close(requests)
+
+    results = Channel{Vector{Determinant{T}}}(ntasks)
+
+    @sync for _ in 1:ntasks
+        Threads.@spawn begin
+        local_newdets = Determinant{T}[]
+        for d in requests
+
         asym = d.α ⊻ d.β
         if asym == 0
             continue
@@ -366,11 +407,11 @@ function complete_set(dets::Vector{Determinant{T}}) where T <: Integer
 
         str = vcat(repeat([1],e), repeat([0],e))
         perms = multiset_permutations(str, n)
-        
+
         i = 1
         while (one<<(i-1)) ≤ asym
             if one<<(i-1) & asym ≠ 0
-                push!(idx, i) 
+                push!(idx, i)
             end
             i += 1
         end
@@ -385,10 +426,17 @@ function complete_set(dets::Vector{Determinant{T}}) where T <: Integer
                     newβ = newβ | (one<<(i-1))
                 end
             end
-            push!(newdets[Threads.threadid()], Determinant(newα, newβ))
+            push!(local_newdets, Determinant(newα, newβ))
         end
+        end
+        put!(results, local_newdets)
+        end #Threads.@spawn
     end
-    newdets = vcat(newdets...)
+
+    newdets = Determinant{T}[]
+    for _ in 1:ntasks
+        append!(newdets, take!(results))
+    end
     return unique(vcat(dets,newdets))
 end
 

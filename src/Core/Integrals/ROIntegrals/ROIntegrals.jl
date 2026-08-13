@@ -1,10 +1,13 @@
 function compute!(I::IntegralHelper{T,<:AbstractERI,<:AbstractRestrictedOrbitals}, entry::String) where T <: AbstractFloat
-    # Create AO integral object
-    basis = I.orbitals.basis
-    aoorbs = AtomicOrbitals(I.molecule, basis)
-    aoints = IntegralHelper{T}(molecule=I.molecule, orbitals=aoorbs, basis=basis, eri_type=I.eri_type)
+    # Build the AO integral helper once and reuse it across calls, instead of
+    # a throwaway empty-cache one per entry.
+    if I.aoints[] === nothing
+        basis = I.orbitals.basis
+        aoorbs = AtomicOrbitals(I.molecule, basis)
+        I.aoints[] = IntegralHelper{T}(molecule=I.molecule, orbitals=aoorbs, basis=basis, eri_type=I.eri_type)
+    end
 
-    compute!(I, aoints, entry)
+    compute!(I, I.aoints[]::IntegralHelper, entry)
 end
 
 function compute!(I::IntegralHelper{T,<:AbstractERI,<:AbstractRestrictedOrbitals}, aoints::IntegralHelper{T,<:AbstractERI,AtomicOrbitals}, entry::String) where T<: AbstractFloat

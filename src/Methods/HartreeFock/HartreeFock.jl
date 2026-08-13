@@ -50,4 +50,7 @@ include("RHF/RHF.jl")
 # UHF
 include("UHF/UHF.jl")
 
+# Properties
+include("Properties/Dipole.jl")
+
 end #module
